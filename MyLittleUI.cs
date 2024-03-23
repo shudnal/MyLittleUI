@@ -10,6 +10,8 @@ using HarmonyLib;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.Rendering;
+using TMPro;
+using static PrivilegeManager;
 
 namespace MyLittleUI
 {
@@ -36,6 +38,7 @@ namespace MyLittleUI
         private static ConfigEntry<float> itemIconScale;
 
         private static ConfigEntry<bool> itemTooltip;
+        private static ConfigEntry<bool> itemTooltipColored;
 
         private static ConfigEntry<bool> statsMainMenu;
         private static ConfigEntry<bool> statsMainMenuAdvanced;
@@ -48,6 +51,10 @@ namespace MyLittleUI
         private static ConfigEntry<StationHover> hoverCooking;
         private static ConfigEntry<StationHover> hoverBeeHive;
         private static ConfigEntry<bool> hoverBeeHiveTotal;
+
+        private static ConfigEntry<StationHover> hoverTame;
+        private static ConfigEntry<bool> hoverTameTimeToTame;
+        private static ConfigEntry<bool> hoverTameTimeToFed;
 
         private static ConfigEntry<bool> hoverSmelterEstimatedTime;
         private static ConfigEntry<bool> hoverSmelterShowFuelAndItem;
@@ -68,8 +75,9 @@ namespace MyLittleUI
         private static UITooltip characterEffectsTooltip;
 
         private static readonly Dictionary<string, string> localizedTooltipTokens = new Dictionary<string, string>();
+        private static readonly List<string> tails = new List<string>();
 
-        private static bool epicLootEnabled = false;
+        public static Component epicLootPlugin;
 
         public enum StationHover
         {
@@ -108,21 +116,11 @@ namespace MyLittleUI
 
             ConfigInit();
 
-            var EpicLootPlugin = GetComponent("EpicLoot");
-            if (EpicLootPlugin != null)
-            {
-                epicLootEnabled = true;
-
-                /*var EpicLootPluginType = EpicLootPlugin.GetType();
-                var IsAdventureModeEnabledMethod = AccessTools.Method(EpicLootPluginType, "IsAdventureModeEnabled");
-                if (IsAdventureModeEnabledMethod != null)
-                {*/
-                    // (bool)MethodInvoker.GetHandler(IsAdventureModeEnabledMethod)(null);
-                    LogInfo($"EpicLoot found.");
-                
-            }
+            epicLootPlugin = GetComponent("EpicLoot");
 
             InitTooltipTokens();
+
+            FillTooltipTails();
 
             Game.isModded = true;
         }
@@ -154,7 +152,8 @@ namespace MyLittleUI
 
             itemIconScale = Config.Bind("Item - Icon", "Icon scale", defaultValue: 1.0f, "Relative scale size of item icons.");
 
-            itemTooltip = Config.Bind("Item - Tooltip", "Enabled", defaultValue: true, "Updated item tooltip");
+            itemTooltip = Config.Bind("Item - Tooltip", "Enabled", defaultValue: false, "Updated item tooltip");
+            itemTooltipColored = Config.Bind("Item - Tooltip", "Colored numbers", defaultValue: true, "Orange and yellow value numbers in tooltip, light blue if disabled");
 
             statsMainMenu = Config.Bind("Stats - Main menu", "Show stats in main menu", defaultValue: true, "Show character statistics in main menu");
             statsMainMenuAdvanced = Config.Bind("Stats - Main menu", "Show advanced stats in main menu", defaultValue: true, "Show advanced character statistics in main menu");
@@ -167,6 +166,10 @@ namespace MyLittleUI
             hoverCooking = Config.Bind("Hover - Stations", "Cooking stations Hover", defaultValue: StationHover.Vanilla, "Hover text for cooking stations.");
             hoverBeeHive = Config.Bind("Hover - Stations", "Bee Hive Hover", defaultValue: StationHover.Vanilla, "Hover text for bee hive.");
             hoverBeeHiveTotal = Config.Bind("Hover - Stations", "Bee Hive Show total", defaultValue: true, "Show total needed time/percent for bee hive.");
+            
+            hoverTame = Config.Bind("Hover - Tameable", "Tameable Hover", defaultValue: StationHover.Vanilla, "Show total needed time/percent to tame of to stay fed.");
+            hoverTameTimeToTame = Config.Bind("Hover - Tameable", "Show time to tame", defaultValue: true, "Show total needed time/percent to tame.");
+            hoverTameTimeToFed = Config.Bind("Hover - Tameable", "Show time to stay fed", defaultValue: true, "Show total needed time/percent to stay fed.");
 
             hoverSmelterEstimatedTime = Config.Bind("Hover - Smelters", "Show estimated time", defaultValue: true, "Show estimated end time for a smelter station (charcoal kiln, forge, etc. including non vanilla).");
             hoverSmelterShowFuelAndItem = Config.Bind("Hover - Smelters", "Always show fuel and item", defaultValue: true, "Show current smelting item and fuel loaded on both fuel and ore switches.");
@@ -223,7 +226,8 @@ namespace MyLittleUI
                 "$inventory_frost",
                 "$inventory_lightning",
                 "$inventory_poison",
-                "$inventory_spirit"
+                "$inventory_spirit",
+                "$se_staminaregen"
             };
 
             foreach (string token in tokens)
@@ -270,6 +274,23 @@ namespace MyLittleUI
             }
         }
 
+        private static void FillTooltipTails()
+        {
+            tails.Clear();
+            if (epicLootPlugin != null)
+            {
+                var methodGetRarityColor = AccessTools.Method(epicLootPlugin.GetType(), "GetRarityColor");
+                var enumItemRarity = AccessTools.TypeByName("EpicLoot.ItemRarity");
+                if (methodGetRarityColor != null && enumItemRarity != null)
+                    foreach (var rarity in enumItemRarity.GetEnumValues())
+                    {
+                        tails.Add($"<color={methodGetRarityColor.Invoke(methodGetRarityColor, new[] { rarity })}>\n");
+                        tails.Add($"\n<color={methodGetRarityColor.Invoke(methodGetRarityColor, new[] { rarity })}>");
+                    }
+            }
+            tails.Add("\n\n$item_seteffect");
+        }
+
         [HarmonyPatch(typeof(InventoryGrid), nameof(InventoryGrid.UpdateGui))]
         private class InventoryGrid_UpdateGui_DurabilityAndScale
         {
@@ -291,6 +312,8 @@ namespace MyLittleUI
         [HarmonyPatch(typeof(InventoryGui), nameof(InventoryGui.UpdateCharacterStats))]
         private class InventoryGui_UpdateCharacterStats_CharacterStats
         {
+            private static readonly StringBuilder sb = new StringBuilder();
+
             private static void InitCharacterStats(InventoryGui __instance, Player player)
             {
                 UITooltip prefabTooltip = __instance.m_containerGrid.m_elementPrefab.GetComponent<UITooltip>();
@@ -320,58 +343,44 @@ namespace MyLittleUI
             private static void AddRegenStat(ref float stat, float multiplier)
             {
                 if (multiplier > 1f)
-                {
                     stat += multiplier - 1f;
-                }
                 else
-                {
                     stat *= multiplier;
-                }
             }
 
             private static bool ShouldOverride(HitData.DamageModifier a, HitData.DamageModifier b)
             {
                 if (a == HitData.DamageModifier.Ignore)
-                {
                     return false;
-                }
 
                 if (b == HitData.DamageModifier.Immune)
-                {
                     return true;
-                }
 
                 if (a == HitData.DamageModifier.VeryResistant && b == HitData.DamageModifier.Resistant)
-                {
                     return false;
-                }
 
                 if (a == HitData.DamageModifier.VeryWeak && b == HitData.DamageModifier.Weak)
-                {
                     return false;
-                }
 
                 if ((a == HitData.DamageModifier.Resistant || a == HitData.DamageModifier.VeryResistant || a == HitData.DamageModifier.Immune) && (b == HitData.DamageModifier.Weak || b == HitData.DamageModifier.VeryWeak))
-                {
                     return false;
-                }
 
                 return true;
             }
 
             private static string TooltipEffects(Player player)
             {
-                StringBuilder sb = new StringBuilder();
+                sb.Clear();
                 if (player.GetEquipmentMovementModifier() != 0f)
                 {
                     string color = player.GetEquipmentMovementModifier() >= 0 ? "#00FF00" : "#FF0000";
-                    sb.AppendFormat("$item_movement_modifier: <color={0}>{1}%</color>\n", color, player.GetEquipmentMovementModifier() * 100f);
+                    sb.AppendFormat("$item_movement_modifier: <color={0}>{1:P0}</color>\n", color, player.GetEquipmentMovementModifier());
                 }
 
                 if (player.GetEquipmentBaseItemModifier() != 0f)
                 {
                     string color = player.GetEquipmentBaseItemModifier() >= 0 ? "#00FF00" : "#FF0000";
-                    sb.AppendFormat("$base_item_modifier: <color={0}>{1}%</color>\n", color, player.GetEquipmentBaseItemModifier() * 100f);
+                    sb.AppendFormat("$base_item_modifier: <color={0}>{1:P0}</color>\n", color, player.GetEquipmentBaseItemModifier());
                 }
 
                 Dictionary<Skills.SkillType, float> skills = new Dictionary<Skills.SkillType, float>();
@@ -487,7 +496,7 @@ namespace MyLittleUI
 
             private static string TooltipStats(Player player)
             {
-                StringBuilder sb = new StringBuilder();
+                sb.Clear();
                 sb.AppendFormat("$item_armor: <color=orange>{0}</color>", player.GetBodyArmor());
 
                 ItemDrop.ItemData weapon = player.GetCurrentWeapon();
@@ -569,6 +578,8 @@ namespace MyLittleUI
         [HarmonyPatch(typeof(Container), nameof(Container.GetHoverText))]
         private class Container_GetHoverText_Duration
         {
+            private static readonly StringBuilder result = new StringBuilder();
+
             private static void Postfix(Container __instance, ref string __result, bool ___m_checkGuardStone, string ___m_name, Inventory ___m_inventory)
             {
                 if (!modEnabled.Value)
@@ -580,7 +591,7 @@ namespace MyLittleUI
                 if (___m_checkGuardStone && !PrivateArea.CheckAccess(__instance.transform.position, 0f, flash: false))
                     return;
 
-                StringBuilder result = new StringBuilder();
+                result.Clear();
 
                 string chestName = __instance.m_nview.GetZDO().GetString(ZDOVars.s_text);
 
@@ -789,6 +800,8 @@ namespace MyLittleUI
         [HarmonyPatch(typeof(CookingStation), nameof(CookingStation.UpdateCooking))]
         private class CookingStation_UpdateCooking_Duration
         {
+            private static readonly StringBuilder sb = new StringBuilder();
+
             private static string GetItemName(CookingStation __instance, string currentItem, out bool itemReady, out CookingStation.ItemConversion conversion)
             {
                 string itemName = currentItem;
@@ -812,7 +825,7 @@ namespace MyLittleUI
 
             private static string HoverText(CookingStation __instance, string ___m_name, string ___m_addItemTooltip, ZNetView ___m_nview)
             {
-                StringBuilder sb = new StringBuilder();
+                sb.Clear();
 
                 if (___m_nview.IsOwner())
                 {
@@ -836,7 +849,8 @@ namespace MyLittleUI
                         sb.Append(itemListName);
                         sb.Append(" ");
 
-                        if (itemReady && Mathf.Sin(Time.time * 10f) > 0f)
+                        bool colorRed = itemReady && Mathf.Sin(Time.time * 10f) > 0f;
+                        if (colorRed)
                             sb.Append("<color=red>");
 
                         if (hoverCooking.Value == StationHover.Percentage)
@@ -844,7 +858,7 @@ namespace MyLittleUI
                         else if (hoverCooking.Value == StationHover.MinutesSeconds)
                             sb.Append(FromSeconds(itemConversion.m_cookTime - (cookedTime - (itemReady ? itemConversion.m_cookTime : 0))));
 
-                        if (itemReady && Mathf.Sin(Time.time * 10f) > 0f)
+                        if (colorRed)
                             sb.Append("</color>");
                     }
                 }
@@ -854,9 +868,6 @@ namespace MyLittleUI
 
             private static void Postfix(CookingStation __instance, Switch ___m_addFoodSwitch, string ___m_addItemTooltip, string ___m_name, ZNetView ___m_nview)
             {
-                if (!modEnabled.Value)
-                    return;
-
                 if (!modEnabled.Value)
                     return;
 
@@ -871,6 +882,8 @@ namespace MyLittleUI
         [HarmonyPatch(typeof(CookingStation), nameof(CookingStation.HoverText))]
         private class CookingStation_HoverText_Duration
         {
+            private static readonly StringBuilder sb = new StringBuilder();
+
             private static string GetItemName(CookingStation __instance, string currentItem, out bool itemReady, out CookingStation.ItemConversion conversion)
             {
                 string itemName = currentItem;
@@ -906,7 +919,7 @@ namespace MyLittleUI
                 if (!___m_nview.IsOwner())
                     return;
 
-                StringBuilder sb = new StringBuilder();
+                sb.Clear();
 
                 for (int slot = 0; slot < __instance.m_slots.Length; slot++)
                 {
@@ -946,6 +959,8 @@ namespace MyLittleUI
         [HarmonyPatch(typeof(Smelter), nameof(Smelter.OnHoverAddFuel))]
         private class Smelter_OnHoverAddFuel_SmelterHover
         {
+            private static readonly StringBuilder sb = new StringBuilder();
+
             private static void Postfix(Smelter __instance, ref string __result, string ___m_name, ItemDrop ___m_fuelItem, int ___m_maxFuel, int ___m_maxOre, int ___m_fuelPerProduct, float ___m_secPerProduct, Windmill ___m_windmill)
             {
                 if (!modEnabled.Value)
@@ -957,7 +972,7 @@ namespace MyLittleUI
                 float fuel = __instance.GetFuel();
                 int queueSize = __instance.GetQueueSize();
 
-                StringBuilder sb = new StringBuilder();
+                sb.Clear();
                 sb.Append(___m_name);
                 if (hoverSmelterShowFuelAndItem.Value && ___m_maxOre > 0)
                 {
@@ -988,6 +1003,8 @@ namespace MyLittleUI
         [HarmonyPatch(typeof(Smelter), nameof(Smelter.OnHoverAddOre))]
         private class Smelter_OnHoverAddOre_SmelterHover
         {
+            private static readonly StringBuilder sb = new StringBuilder();
+
             private static string GetItemName(Smelter __instance, string currentItem, ref bool nonconversionItem)
             {
                 string itemName = currentItem;
@@ -1020,7 +1037,7 @@ namespace MyLittleUI
                 float fuel = __instance.GetFuel();
                 int queueSize = __instance.GetQueueSize();
 
-                StringBuilder sb = new StringBuilder();
+                sb.Clear();
                 sb.Append(___m_name);
                 sb.Append($" ({queueSize}/{___m_maxOre})");
 
@@ -1103,11 +1120,15 @@ namespace MyLittleUI
                 string statName = Enum.GetName(typeof(PlayerStatType), stat);
 
                 StringBuilder builder = new StringBuilder();
+
                 foreach (char c in statName)
                 {
-                    if (Char.IsUpper(c) && builder.Length > 0) builder.Append(' ');
+                    if (Char.IsUpper(c) && builder.Length > 0)
+                        builder.Append(' ');
+
                     builder.Append(c);
                 }
+
                 return builder.ToString();
             }
 
@@ -1204,27 +1225,71 @@ namespace MyLittleUI
             }
         }
 
+        [HarmonyPatch(typeof(Tameable), nameof(Tameable.GetHoverText))]
+        private class Tameable_GetHoverText_Tameable
+        {
+            private static void Postfix(Tameable __instance, ZNetView ___m_nview, ref string __result)
+            {
+                if (!modEnabled.Value)
+                    return;
+
+                if (hoverTame.Value == StationHover.Vanilla)
+                    return;
+
+                if (!___m_nview.IsValid())
+                    return;
+
+                if (!__instance.m_character.IsTamed())
+                {
+                    if (__instance.m_tamingTime != 0 || !hoverTameTimeToTame.Value)
+                    {
+                        float timeLeftToTame = __instance.GetRemainingTime();
+                        if (timeLeftToTame != __instance.m_tamingTime)
+
+                            if (hoverTame.Value == StationHover.Percentage)
+                                __result += Localization.instance.Localize($"\n$hud_tame: {(__instance.m_tamingTime - timeLeftToTame) / __instance.m_tamingTime:P0}");
+                            else if (hoverTame.Value == StationHover.MinutesSeconds)
+                                __result += Localization.instance.Localize($"\n$hud_tame: {FromSeconds(timeLeftToTame)}");
+                    }
+                    return;
+                }
+
+                if (!hoverTameTimeToFed.Value)
+                    return;
+
+                DateTime dateTime = new DateTime(___m_nview.GetZDO().GetLong(ZDOVars.s_tameLastFeeding, 0L));
+                double totalSeconds = (ZNet.instance.GetTime() - dateTime).TotalSeconds;
+
+                if (totalSeconds >= __instance.m_fedDuration)
+                    return;
+
+                double timeLeft = __instance.m_fedDuration - totalSeconds;
+
+                if (hoverTame.Value == StationHover.Percentage)
+                    __result += Localization.instance.Localize($"\n$hud_tamehappy: {timeLeft / __instance.m_fedDuration:P0}");
+                else if (hoverTame.Value == StationHover.MinutesSeconds)
+                    __result += Localization.instance.Localize($"\n$hud_tamehappy: {FromSeconds(timeLeft)}");
+            }
+        }
+
         [HarmonyPatch(typeof(ItemDrop.ItemData), nameof(ItemDrop.ItemData.GetTooltip), typeof(ItemDrop.ItemData), typeof(int), typeof(bool), typeof(float))]
         private class ItemDropItemData_GetTooltip_ItemTooltip
         {
             private static readonly StringBuilder sb = new StringBuilder();
             private static readonly Dictionary<string, List<int>> tokenPositions = new Dictionary<string, List<int>>();
+            private static readonly List<string> tokens = new List<string>();
+            private static readonly List<string> arrResult = new List<string>();
 
-            private static void RebuildTooltip(string[] arrResult, ItemDrop.ItemData item, int ___m_quality, int ___m_worldLevel)
+            private static void RebuildTooltip(ItemDrop.ItemData item, int ___m_quality, int ___m_worldLevel)
             {
-                float skillLevel = Player.m_localPlayer.m_skills.GetSkillLevel(item.m_shared.m_skillType);
-                string statusEffectTooltip = item.GetStatusEffectTooltip(___m_quality, skillLevel);
-                bool statusEffectTooltipAdded = false;
-
-                List<string> tokens = new List<string>();
-                
+                tokens.Clear();
                 tokens.Add("$item_dlc");
                 tokens.Add("$item_onehanded");
                 tokens.Add("$item_twohanded");
                 tokens.Add("$item_noteleport");
                 tokens.Add("$item_value");
 
-                if (AppendTokenGroup(tokens, arrResult))
+                if (AppendTokenGroup())
                     sb.Append('\n');
 
                 tokens.Clear();
@@ -1233,14 +1298,10 @@ namespace MyLittleUI
                 tokens.Add("$item_food_eitr");
                 tokens.Add("$item_food_duration");
                 tokens.Add("$item_food_regen");
+                tokens.Add("$se_staminaregen");
 
-                if (AppendTokenGroup(tokens, arrResult) && statusEffectTooltip.Length > 0)
-                {
-                    sb.Append("\n\n");
-                    sb.Append(statusEffectTooltip);
+                if (AppendTokenGroup())
                     sb.Append('\n');
-                    statusEffectTooltipAdded = true;
-                }
 
                 tokens.Clear();
                 tokens.Add("$inventory_damage");
@@ -1260,7 +1321,7 @@ namespace MyLittleUI
                 tokens.Add("$item_healthuse");
                 tokens.Add("$item_staminahold");
 
-                if (AppendTokenGroup(tokens, arrResult))
+                if (AppendTokenGroup())
                     sb.Append('\n');
 
                 tokens.Clear();
@@ -1270,7 +1331,7 @@ namespace MyLittleUI
                 tokens.Add("$item_deflection");
                 tokens.Add("$item_parrybonus");
 
-                if (AppendTokenGroup(tokens, arrResult))
+                if (AppendTokenGroup())
                 {
                     string projectileTooltip = item.GetProjectileTooltip(___m_quality);
                     if (projectileTooltip.Length > 0)
@@ -1278,14 +1339,6 @@ namespace MyLittleUI
                         sb.Append("\n\n");
                         sb.Append(projectileTooltip);
                     }
-                    
-                    if (statusEffectTooltip.Length > 0 && !statusEffectTooltipAdded)
-                    {
-                        sb.Append("\n\n");
-                        sb.Append(statusEffectTooltip);
-                        statusEffectTooltipAdded = true;
-                    }
-
                     sb.Append('\n');
                 }
 
@@ -1293,19 +1346,14 @@ namespace MyLittleUI
                 tokens.Add("$item_armor");
                 tokens.Add("$inventory_dmgmod");
 
-                if (AppendTokenGroup(tokens, arrResult) && statusEffectTooltip.Length > 0 && !statusEffectTooltipAdded)
-                {
-                    sb.Append("\n\n");
-                    sb.Append(statusEffectTooltip);
+                if (AppendTokenGroup())
                     sb.Append('\n');
-                    statusEffectTooltipAdded = true;
-                }
 
                 tokens.Clear();
                 tokens.Add("$item_durability");
                 tokens.Add("$item_repairlevel");
 
-                if (AppendTokenGroup(tokens, arrResult))
+                if (AppendTokenGroup())
                     sb.Append('\n');
 
                 tokens.Clear();
@@ -1313,13 +1361,7 @@ namespace MyLittleUI
                 tokens.Add("$item_eitrregen_modifier");
                 tokens.Add("$base_item_modifier");
 
-                if (AppendTokenGroup(tokens, arrResult))
-                    sb.Append('\n');
-
-                tokens.Clear();
-                tokens.Add("$item_seteffect");
-
-                if (AppendTokenGroup(tokens, arrResult))
+                if (AppendTokenGroup())
                     sb.Append('\n');
 
                 tokens.Clear();
@@ -1327,16 +1369,13 @@ namespace MyLittleUI
                 tokens.Add("$item_crafter"); 
                 tokens.Add("$item_quality");
 
-                AppendTokenGroup(tokens, arrResult);
+                AppendTokenGroup();
             }
 
-            private static bool AppendToken(string key, string[] arrResult)
+            private static bool AppendToken(string key)
             {
                 if (!tokenPositions.ContainsKey(key))
-                {
-                    LogInfo($"no {key}");
                     return false;
-                }
 
                 List<int> tokPos = tokenPositions[key];
                 for (int i = 0; i < tokPos.Count; i++)
@@ -1345,18 +1384,17 @@ namespace MyLittleUI
                 return true;
             }
 
-            private static bool AppendTokenGroup(List<string> tokens, string[] arrResult)
+            private static bool AppendTokenGroup()
             {
                 bool addDelimiter = false;
                 for (int i = 0; i < tokens.Count; i++)
-                {
-                     addDelimiter = addDelimiter || AppendToken(tokens[i], arrResult);
-                }
+                     addDelimiter = AppendToken(tokens[i]) || addDelimiter;
 
                 return addDelimiter;
             }
 
             [HarmonyPriority(Priority.First)]
+            //[HarmonyAfter("randyknapp.mods.epicloot")]
             private static void Postfix(ItemDrop.ItemData item, ref string __result, int ___m_quality, int ___m_worldLevel)
             {
                 if (!modEnabled.Value)
@@ -1371,11 +1409,43 @@ namespace MyLittleUI
                 tokenPositions.Clear();
                 sb.Clear();
 
-                string[] arrResult = __result.Split(new char[] { '\n' }, StringSplitOptions.None);
+                int descriptionEnd = __result.IndexOf("\n\n", StringComparison.InvariantCulture);
+                if (descriptionEnd == -1)
+                    return;
+
+                string description = __result.Substring(0, descriptionEnd + 2);
+                __result = __result.Substring(description.Length);
+                sb.Append(description);
+
+                int tailIndex = -1;
+
+                string statusEffect = item.GetStatusEffectTooltip(___m_quality, Player.m_localPlayer.GetSkillLevel(item.m_shared.m_skillType));
+                if (!String.IsNullOrEmpty(statusEffect))
+                {
+                    string startOfStatusEffect = statusEffect.Substring(0, statusEffect.IndexOf("</color>\n", StringComparison.InvariantCulture));
+                    tailIndex = __result.IndexOf(startOfStatusEffect, StringComparison.InvariantCulture);
+                }
+
+                foreach (string tailString in tails)
+                {
+                    tailIndex = __result.IndexOf(tailString, StringComparison.InvariantCulture);
+                    if (tailIndex != -1)
+                        break;
+                }
+
+                string tail = "";
+                if (tailIndex != -1)
+                {
+                    tail = __result.Substring(tailIndex);
+                    __result = __result.Substring(0, tailIndex);
+                }
+
+                arrResult.Clear();
+                arrResult.AddRange(__result.Split(new char[] { '\n' }, StringSplitOptions.None).ToList());
                 int startLine = -1;
                 int endLine = 0;
 
-                for (int i = 0; i < arrResult.Length; i++)
+                for (int i = 0; i < arrResult.Count; i++)
                 {
                     if (arrResult[i] == "\n")
                         continue;
@@ -1384,7 +1454,6 @@ namespace MyLittleUI
 
                     if (tokens.Count() > 0)
                     {
-                        
                         if (tokenPositions.ContainsKey(tokens[0].Value))
                             tokenPositions[tokens[0].Value].Add(i);
                         else
@@ -1398,6 +1467,13 @@ namespace MyLittleUI
                     {
                         if (tokenPositions.Count > 0)
                             tokenPositions.Last().Value.Add(i);
+                        else
+                        {
+                            sb.Append(arrResult[i]);
+                            sb.Append("\n");
+                            arrResult.RemoveAt(i);
+                            i--;
+                        }
                     }
                 }
 
@@ -1409,31 +1485,20 @@ namespace MyLittleUI
                     sb.Append("\n");
                 }
 
-                RebuildTooltip(arrResult, item, ___m_quality, ___m_worldLevel);
+                RebuildTooltip(item, ___m_quality, ___m_worldLevel);
 
-                for (int i = endLine + 1; i < arrResult.Length; i++)
+                for (int i = endLine + 1; i < arrResult.Count; i++)
                 {
                     sb.Append("\n");
                     sb.Append(arrResult[i]);
                 }
 
-                LogInfo(__result);
-                LogInfo("---------------------");
+                if (tailIndex != -1)
+                    sb.Append(tail);
 
-                foreach (KeyValuePair<string, List<int>> token in tokenPositions)
-                {
-                    LogInfo($"{token.Key}:");
-                    token.Value.ForEach(tok => LogInfo(arrResult[tok]));
-                }
-                LogInfo("_____________________");
                 __result = sb.ToString();
-                __result = __result.Replace("<color=orange>", "<color=#ffa500ff>");
-                __result = __result.Replace("<color=yellow>", "<color=#ffff00ff>");
-
-                LogInfo(__result);
-                //LogInfo($"{startLine} - {endLine}");
-                //LogInfo($"{__result}");
-
+                __result = __result.Replace("<color=orange>", itemTooltipColored.Value ? "<color=#ffa500ff>" : "<color=#add8e6ff>");
+                __result = __result.Replace("<color=yellow>", itemTooltipColored.Value ? "<color=#ffff00ff>" : "<color=#add8e6ff>");
             }
         }
     }
