@@ -32,6 +32,8 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="InventoryCharacterStats.cs" />
+    <Compile Include="ItemTooltip.cs" />
     <Compile Include="MyLittleUI.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

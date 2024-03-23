@@ -2,16 +2,12 @@
 using System.Collections.Generic;
 using System.Reflection;
 using System.Text;
-using System.Linq;
 using BepInEx;
-using BepInEx.Logging;
 using BepInEx.Configuration;
 using HarmonyLib;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.Rendering;
-using TMPro;
-using static PrivilegeManager;
 
 namespace MyLittleUI
 {
@@ -26,7 +22,7 @@ namespace MyLittleUI
 
         private Harmony _harmony;
 
-        private static ConfigEntry<bool> modEnabled;
+        public static ConfigEntry<bool> modEnabled;
         private static ConfigEntry<bool> loggingEnabled;
 
         private static ConfigEntry<bool> durabilityEnabled;
@@ -37,14 +33,14 @@ namespace MyLittleUI
 
         private static ConfigEntry<float> itemIconScale;
 
-        private static ConfigEntry<bool> itemTooltip;
-        private static ConfigEntry<bool> itemTooltipColored;
+        public static ConfigEntry<bool> itemTooltip;
+        public static ConfigEntry<bool> itemTooltipColored;
 
         private static ConfigEntry<bool> statsMainMenu;
         private static ConfigEntry<bool> statsMainMenuAdvanced;
         private static ConfigEntry<bool> statsMainMenuAll;
 
-        private static ConfigEntry<bool> statsCharacter;
+        public static ConfigEntry<bool> statsCharacter;
 
         private static ConfigEntry<StationHover> hoverFermenter;
         private static ConfigEntry<StationHover> hoverPlant;
@@ -70,12 +66,6 @@ namespace MyLittleUI
         private static Container textInputForContainer;
 
         private static MyLittleUI instance;
-
-        private static UITooltip characterStatsTooltip;
-        private static UITooltip characterEffectsTooltip;
-
-        private static readonly Dictionary<string, string> localizedTooltipTokens = new Dictionary<string, string>();
-        private static readonly List<string> tails = new List<string>();
 
         public static Component epicLootPlugin;
 
@@ -118,9 +108,7 @@ namespace MyLittleUI
 
             epicLootPlugin = GetComponent("EpicLoot");
 
-            InitTooltipTokens();
-
-            FillTooltipTails();
+            ItemTooltip.Initialize();
 
             Game.isModded = true;
         }
@@ -152,7 +140,7 @@ namespace MyLittleUI
 
             itemIconScale = Config.Bind("Item - Icon", "Icon scale", defaultValue: 1.0f, "Relative scale size of item icons.");
 
-            itemTooltip = Config.Bind("Item - Tooltip", "Enabled", defaultValue: false, "Updated item tooltip");
+            itemTooltip = Config.Bind("Item - Tooltip", "Enabled", defaultValue: true, "Updated item tooltip. Hold Alt to see original tooltip");
             itemTooltipColored = Config.Bind("Item - Tooltip", "Colored numbers", defaultValue: true, "Orange and yellow value numbers in tooltip, light blue if disabled");
 
             statsMainMenu = Config.Bind("Stats - Main menu", "Show stats in main menu", defaultValue: true, "Show character statistics in main menu");
@@ -180,61 +168,6 @@ namespace MyLittleUI
             chestHoverName = Config.Bind("Hover - Chests", "Hover name format", defaultValue: ChestNameHover.TypeThenCustomName, "Chest name format to be shown in hover.");
             chestShowRename = Config.Bind("Hover - Chests", "Show rename hint in hover", defaultValue: true, "Show rename hotkey hint. You can hide it to make it less noisy.");
             chestShowHoldToStack = Config.Bind("Hover - Chests", "Show hold to stack hint in hover", defaultValue: true, "Show hold to stack hint. You can hide it to make it less noisy.");
-        }
-
-        private static void InitTooltipTokens()
-        {
-            string[] tokens =
-            {
-                "$item_dlc",
-                "$item_onehanded",
-                "$item_twohanded",
-                "$item_crafter",
-                "$item_noteleport",
-                "$item_value",
-                "$item_weight",
-                "$item_quality",
-                "$item_durability",
-                "$item_repairlevel",
-                "$item_food_health",
-                "$item_food_stamina",
-                "$item_food_eitr",
-                "$item_food_duration",
-                "$item_food_regen",
-                "$item_staminause",
-                "$item_eitruse",
-                "$item_healthuse",
-                "$item_staminahold",
-                "$item_knockback",
-                "$item_backstab",
-                "$item_blockpower",
-                "$item_blockarmor",
-                "$item_blockforce",
-                "$item_deflection",
-                "$item_parrybonus",
-                "$item_armor",
-                "$item_movement_modifier",
-                "$item_eitrregen_modifier",
-                "$base_item_modifier",
-                "$item_seteffect",
-                "$inventory_dmgmod",
-                "$inventory_damage",
-                "$inventory_blunt",
-                "$inventory_slash",
-                "$inventory_pierce",
-                "$inventory_fire",
-                "$inventory_frost",
-                "$inventory_lightning",
-                "$inventory_poison",
-                "$inventory_spirit",
-                "$se_staminaregen"
-            };
-
-            foreach (string token in tokens)
-            {
-                localizedTooltipTokens[Localization.instance.Localize(token)] = token;
-                localizedTooltipTokens[token] = token;
-            }
         }
 
         private static string FromSeconds(double seconds)
@@ -274,23 +207,6 @@ namespace MyLittleUI
             }
         }
 
-        private static void FillTooltipTails()
-        {
-            tails.Clear();
-            if (epicLootPlugin != null)
-            {
-                var methodGetRarityColor = AccessTools.Method(epicLootPlugin.GetType(), "GetRarityColor");
-                var enumItemRarity = AccessTools.TypeByName("EpicLoot.ItemRarity");
-                if (methodGetRarityColor != null && enumItemRarity != null)
-                    foreach (var rarity in enumItemRarity.GetEnumValues())
-                    {
-                        tails.Add($"<color={methodGetRarityColor.Invoke(methodGetRarityColor, new[] { rarity })}>\n");
-                        tails.Add($"\n<color={methodGetRarityColor.Invoke(methodGetRarityColor, new[] { rarity })}>");
-                    }
-            }
-            tails.Add("\n\n$item_seteffect");
-        }
-
         [HarmonyPatch(typeof(InventoryGrid), nameof(InventoryGrid.UpdateGui))]
         private class InventoryGrid_UpdateGui_DurabilityAndScale
         {
@@ -306,253 +222,6 @@ namespace MyLittleUI
 
                     UpdateItemIcon(element.m_durability, element.m_icon, item);
                 }
-            }
-        }
-
-        [HarmonyPatch(typeof(InventoryGui), nameof(InventoryGui.UpdateCharacterStats))]
-        private class InventoryGui_UpdateCharacterStats_CharacterStats
-        {
-            private static readonly StringBuilder sb = new StringBuilder();
-
-            private static void InitCharacterStats(InventoryGui __instance, Player player)
-            {
-                UITooltip prefabTooltip = __instance.m_containerGrid.m_elementPrefab.GetComponent<UITooltip>();
-                FieldInfo[] fields = prefabTooltip.GetType().GetFields();
-
-                characterStatsTooltip = __instance.m_armor.transform.parent.gameObject.AddComponent<UITooltip>();
-
-                foreach (FieldInfo field in fields)
-                {
-                    field.SetValue(characterStatsTooltip, field.GetValue(prefabTooltip));
-                }
-
-                characterStatsTooltip.m_topic = player.GetPlayerName();
-
-                characterEffectsTooltip = __instance.m_weight.transform.parent.gameObject.AddComponent<UITooltip>();
-
-                foreach (FieldInfo field in fields)
-                {
-                    field.SetValue(characterEffectsTooltip, field.GetValue(prefabTooltip));
-                }
-
-                characterEffectsTooltip.m_topic = "$inventory_activeeffects";
-
-                LogInfo("Character inventory stats patched");
-            }
-
-            private static void AddRegenStat(ref float stat, float multiplier)
-            {
-                if (multiplier > 1f)
-                    stat += multiplier - 1f;
-                else
-                    stat *= multiplier;
-            }
-
-            private static bool ShouldOverride(HitData.DamageModifier a, HitData.DamageModifier b)
-            {
-                if (a == HitData.DamageModifier.Ignore)
-                    return false;
-
-                if (b == HitData.DamageModifier.Immune)
-                    return true;
-
-                if (a == HitData.DamageModifier.VeryResistant && b == HitData.DamageModifier.Resistant)
-                    return false;
-
-                if (a == HitData.DamageModifier.VeryWeak && b == HitData.DamageModifier.Weak)
-                    return false;
-
-                if ((a == HitData.DamageModifier.Resistant || a == HitData.DamageModifier.VeryResistant || a == HitData.DamageModifier.Immune) && (b == HitData.DamageModifier.Weak || b == HitData.DamageModifier.VeryWeak))
-                    return false;
-
-                return true;
-            }
-
-            private static string TooltipEffects(Player player)
-            {
-                sb.Clear();
-                if (player.GetEquipmentMovementModifier() != 0f)
-                {
-                    string color = player.GetEquipmentMovementModifier() >= 0 ? "#00FF00" : "#FF0000";
-                    sb.AppendFormat("$item_movement_modifier: <color={0}>{1:P0}</color>\n", color, player.GetEquipmentMovementModifier());
-                }
-
-                if (player.GetEquipmentBaseItemModifier() != 0f)
-                {
-                    string color = player.GetEquipmentBaseItemModifier() >= 0 ? "#00FF00" : "#FF0000";
-                    sb.AppendFormat("$base_item_modifier: <color={0}>{1:P0}</color>\n", color, player.GetEquipmentBaseItemModifier());
-                }
-
-                Dictionary<Skills.SkillType, float> skills = new Dictionary<Skills.SkillType, float>();
-                Dictionary<HitData.DamageType, HitData.DamageModifier> mods = new Dictionary<HitData.DamageType, HitData.DamageModifier>();
-
-                SE_Stats stats = (SE_Stats)ScriptableObject.CreateInstance("SE_Stats");
-
-                foreach (StatusEffect statusEffect in player.GetSEMan().GetStatusEffects().ToList())
-                {
-                    if (statusEffect is SE_Stats)
-                    {
-                        SE_Stats se = (statusEffect as SE_Stats);
-
-                        stats.m_jumpStaminaUseModifier *= se.m_jumpStaminaUseModifier;
-                        stats.m_runStaminaDrainModifier *= se.m_runStaminaDrainModifier;
-                        stats.m_healthOverTime += se.m_healthOverTime;
-                        stats.m_staminaOverTime += se.m_staminaOverTime;
-                        stats.m_eitrOverTime += se.m_eitrOverTime;
-                        AddRegenStat(ref stats.m_healthRegenMultiplier, se.m_healthRegenMultiplier);
-                        AddRegenStat(ref stats.m_staminaRegenMultiplier, se.m_staminaRegenMultiplier);
-
-                        if (player.GetMaxEitr() > 0)
-                            AddRegenStat(ref stats.m_eitrRegenMultiplier, se.m_eitrRegenMultiplier);
-
-                        stats.m_addMaxCarryWeight += se.m_addMaxCarryWeight;
-                        stats.m_noiseModifier *= se.m_noiseModifier;
-                        stats.m_stealthModifier *= se.m_stealthModifier;
-                        stats.m_speedModifier *= se.m_speedModifier;
-                        stats.m_maxMaxFallSpeed += se.m_maxMaxFallSpeed;
-                        stats.m_fallDamageModifier += se.m_fallDamageModifier;
-
-                        if (skills.ContainsKey(se.m_skillLevel))
-                            skills[se.m_skillLevel] += se.m_skillLevelModifier;
-                        else
-                            skills.Add(se.m_skillLevel, se.m_skillLevelModifier);
-
-                        if (skills.ContainsKey(se.m_skillLevel2))
-                            skills[se.m_skillLevel2] += se.m_skillLevelModifier2;
-                        else
-                            skills.Add(se.m_skillLevel2, se.m_skillLevelModifier2);
-
-                        foreach (HitData.DamageModPair mod in se.m_mods)
-                            if (mods.ContainsKey(mod.m_type))
-                            {
-                                if (ShouldOverride(mods[mod.m_type], mod.m_modifier))
-                                    mods[mod.m_type] = mod.m_modifier;
-                            }
-                            else
-                                mods[mod.m_type] = mod.m_modifier;
-                    }
-                    else
-                    {
-                        string tooltips = statusEffect.GetTooltipString().Replace(statusEffect.m_tooltip, "");
-                        if (tooltips.IsNullOrWhiteSpace())
-                            continue;
-
-                        sb.Append("\n");
-                        sb.Append("<color=orange>" + statusEffect.m_name + "</color>");
-                        sb.Append(tooltips);
-
-                    }
-                }
-
-                List<ItemDrop.ItemData> items = new List<ItemDrop.ItemData>
-                {
-                    player.m_chestItem,
-                    player.m_legItem,
-                    player.m_helmetItem,
-                    player.m_shoulderItem,
-                    player.m_leftItem,
-                    player.m_rightItem,
-                    player.m_utilityItem
-                };
-
-                foreach (ItemDrop.ItemData item in items)
-                {
-                    if (item == null || item.m_shared.m_damageModifiers.Count == 0)
-                        continue;
-
-                    foreach (HitData.DamageModPair mod in item.m_shared.m_damageModifiers)
-                        if (mods.ContainsKey(mod.m_type))
-                        {
-                            if (ShouldOverride(mods[mod.m_type], mod.m_modifier))
-                                mods[mod.m_type] = mod.m_modifier;
-                        }
-                        else
-                            mods[mod.m_type] = mod.m_modifier;
-                }
-
-                foreach (KeyValuePair<HitData.DamageType, HitData.DamageModifier> mod in mods)
-                {
-                    stats.m_mods.Add(new HitData.DamageModPair { m_modifier = mod.Value, m_type = mod.Key });
-                }
-
-                if (player.GetMaxEitr() > 0)
-                    stats.m_eitrRegenMultiplier += player.GetEquipmentEitrRegenModifier();
-
-                string tooltip = stats.GetTooltipString();
-                if (!tooltip.IsNullOrWhiteSpace())
-                {
-                    sb.Append("\n");
-                    sb.Append(tooltip);
-                }
-
-                foreach (KeyValuePair<Skills.SkillType, float> skill in skills)
-                {
-                    if (skill.Value != 0)
-                        sb.AppendFormat("\n{0} <color=orange>{1}</color>", "$skill_" + skill.Key.ToString().ToLower(), skill.Value.ToString("+0;-0"));
-                }
-
-                return Localization.instance.Localize(sb.ToString());
-            }
-
-            private static string TooltipStats(Player player)
-            {
-                sb.Clear();
-                sb.AppendFormat("$item_armor: <color=orange>{0}</color>", player.GetBodyArmor());
-
-                ItemDrop.ItemData weapon = player.GetCurrentWeapon();
-                if (weapon != null)
-                {
-                    HitData.DamageTypes damage = weapon.GetDamage(weapon.m_quality, Game.m_worldLevel);
-
-                    if (weapon.m_shared.m_skillType == Skills.SkillType.Bows && player.GetAmmoItem() != null)
-                    {
-                        damage.Add(player.GetAmmoItem().GetDamage());
-                    }
-
-                    sb.Append("\n");
-                    ItemDrop.ItemData.AddHandedTip(weapon, sb);
-                    sb.Append($"{damage.GetTooltipString(weapon.m_shared.m_skillType)}");
-                    sb.Append($"\n$item_knockback: <color=orange>{weapon.m_shared.m_attackForce}</color>");
-                    sb.Append($"\n$item_backstab: <color=orange>{weapon.m_shared.m_backstabBonus}x</color>");
-                }
-
-                ItemDrop.ItemData shield = player.GetCurrentBlocker();
-                if (shield != null)
-                {
-                    int qualityLevel = shield.m_quality;
-
-                    sb.Append("\n");
-                    sb.Append($"\n$item_blockpower: <color=orange>{shield.GetBlockPowerTooltip(qualityLevel).ToString("0")}</color>");
-                    if (shield.m_shared.m_timedBlockBonus > 1f)
-                    {
-                        sb.Append($"\n$item_blockforce: <color=orange>{shield.GetDeflectionForce(qualityLevel)}</color>");
-                        sb.Append($"\n$item_parrybonus: <color=orange>{shield.m_shared.m_timedBlockBonus}x</color>");
-                    }
-
-                    string damageModifiersTooltipString = SE_Stats.GetDamageModifiersTooltipString(shield.m_shared.m_damageModifiers);
-                    if (damageModifiersTooltipString.Length > 0)
-                    {
-                        sb.Append(damageModifiersTooltipString);
-                    }
-                }
-
-                return Localization.instance.Localize(sb.ToString());
-            }
-
-            private static void Postfix(InventoryGui __instance, Player player)
-            {
-                if (!modEnabled.Value)
-                    return;
-
-                if (!statsCharacter.Value)
-                    return;
-
-                if (characterStatsTooltip == null)
-                    InitCharacterStats(__instance, player);
-
-                characterStatsTooltip.m_text = TooltipStats(player);
-
-                characterEffectsTooltip.m_text = TooltipEffects(player);
             }
         }
 
@@ -1272,235 +941,6 @@ namespace MyLittleUI
             }
         }
 
-        [HarmonyPatch(typeof(ItemDrop.ItemData), nameof(ItemDrop.ItemData.GetTooltip), typeof(ItemDrop.ItemData), typeof(int), typeof(bool), typeof(float))]
-        private class ItemDropItemData_GetTooltip_ItemTooltip
-        {
-            private static readonly StringBuilder sb = new StringBuilder();
-            private static readonly Dictionary<string, List<int>> tokenPositions = new Dictionary<string, List<int>>();
-            private static readonly List<string> tokens = new List<string>();
-            private static readonly List<string> arrResult = new List<string>();
-
-            private static void RebuildTooltip(ItemDrop.ItemData item, int ___m_quality, int ___m_worldLevel)
-            {
-                tokens.Clear();
-                tokens.Add("$item_dlc");
-                tokens.Add("$item_onehanded");
-                tokens.Add("$item_twohanded");
-                tokens.Add("$item_noteleport");
-                tokens.Add("$item_value");
-
-                if (AppendTokenGroup())
-                    sb.Append('\n');
-
-                tokens.Clear();
-                tokens.Add("$item_food_health");
-                tokens.Add("$item_food_stamina");
-                tokens.Add("$item_food_eitr");
-                tokens.Add("$item_food_duration");
-                tokens.Add("$item_food_regen");
-                tokens.Add("$se_staminaregen");
-
-                if (AppendTokenGroup())
-                    sb.Append('\n');
-
-                tokens.Clear();
-                tokens.Add("$inventory_damage");
-                tokens.Add("$inventory_blunt");
-                tokens.Add("$inventory_slash");
-                tokens.Add("$inventory_pierce");
-                tokens.Add("$inventory_fire");
-                tokens.Add("$inventory_frost");
-                tokens.Add("$inventory_lightning");
-                tokens.Add("$inventory_poison");
-                tokens.Add("$inventory_spirit");
-
-                tokens.Add("$item_knockback");
-                tokens.Add("$item_backstab");
-                tokens.Add("$item_staminause");
-                tokens.Add("$item_eitruse");
-                tokens.Add("$item_healthuse");
-                tokens.Add("$item_staminahold");
-
-                if (AppendTokenGroup())
-                    sb.Append('\n');
-
-                tokens.Clear();
-                tokens.Add("$item_blockpower");
-                tokens.Add("$item_blockarmor");
-                tokens.Add("$item_blockforce");
-                tokens.Add("$item_deflection");
-                tokens.Add("$item_parrybonus");
-
-                if (AppendTokenGroup())
-                {
-                    string projectileTooltip = item.GetProjectileTooltip(___m_quality);
-                    if (projectileTooltip.Length > 0)
-                    {
-                        sb.Append("\n\n");
-                        sb.Append(projectileTooltip);
-                    }
-                    sb.Append('\n');
-                }
-
-                tokens.Clear();
-                tokens.Add("$item_armor");
-                tokens.Add("$inventory_dmgmod");
-
-                if (AppendTokenGroup())
-                    sb.Append('\n');
-
-                tokens.Clear();
-                tokens.Add("$item_durability");
-                tokens.Add("$item_repairlevel");
-
-                if (AppendTokenGroup())
-                    sb.Append('\n');
-
-                tokens.Clear();
-                tokens.Add("$item_movement_modifier");
-                tokens.Add("$item_eitrregen_modifier");
-                tokens.Add("$base_item_modifier");
-
-                if (AppendTokenGroup())
-                    sb.Append('\n');
-
-                tokens.Clear();
-                tokens.Add("$item_weight");
-                tokens.Add("$item_crafter"); 
-                tokens.Add("$item_quality");
-
-                AppendTokenGroup();
-            }
-
-            private static bool AppendToken(string key)
-            {
-                if (!tokenPositions.ContainsKey(key))
-                    return false;
-
-                List<int> tokPos = tokenPositions[key];
-                for (int i = 0; i < tokPos.Count; i++)
-                    sb.AppendFormat("\n{0}", arrResult[tokPos[i]]);
-
-                return true;
-            }
-
-            private static bool AppendTokenGroup()
-            {
-                bool addDelimiter = false;
-                for (int i = 0; i < tokens.Count; i++)
-                     addDelimiter = AppendToken(tokens[i]) || addDelimiter;
-
-                return addDelimiter;
-            }
-
-            [HarmonyPriority(Priority.First)]
-            //[HarmonyAfter("randyknapp.mods.epicloot")]
-            private static void Postfix(ItemDrop.ItemData item, ref string __result, int ___m_quality, int ___m_worldLevel)
-            {
-                if (!modEnabled.Value)
-                    return;
-
-                if (!itemTooltip.Value)
-                    return;
-
-                if (item == null)
-                    return;
-
-                tokenPositions.Clear();
-                sb.Clear();
-
-                int descriptionEnd = __result.IndexOf("\n\n", StringComparison.InvariantCulture);
-                if (descriptionEnd == -1)
-                    return;
-
-                string description = __result.Substring(0, descriptionEnd + 2);
-                __result = __result.Substring(description.Length);
-                sb.Append(description);
-
-                int tailIndex = -1;
-
-                string statusEffect = item.GetStatusEffectTooltip(___m_quality, Player.m_localPlayer.GetSkillLevel(item.m_shared.m_skillType));
-                if (!String.IsNullOrEmpty(statusEffect))
-                {
-                    string startOfStatusEffect = statusEffect.Substring(0, statusEffect.IndexOf("</color>\n", StringComparison.InvariantCulture));
-                    tailIndex = __result.IndexOf(startOfStatusEffect, StringComparison.InvariantCulture);
-                }
-
-                foreach (string tailString in tails)
-                {
-                    tailIndex = __result.IndexOf(tailString, StringComparison.InvariantCulture);
-                    if (tailIndex != -1)
-                        break;
-                }
-
-                string tail = "";
-                if (tailIndex != -1)
-                {
-                    tail = __result.Substring(tailIndex);
-                    __result = __result.Substring(0, tailIndex);
-                }
-
-                arrResult.Clear();
-                arrResult.AddRange(__result.Split(new char[] { '\n' }, StringSplitOptions.None).ToList());
-                int startLine = -1;
-                int endLine = 0;
-
-                for (int i = 0; i < arrResult.Count; i++)
-                {
-                    if (arrResult[i] == "\n")
-                        continue;
-
-                    var tokens = localizedTooltipTokens.Where(kvp => arrResult[i].IndexOf(kvp.Key) > -1).ToList();
-
-                    if (tokens.Count() > 0)
-                    {
-                        if (tokenPositions.ContainsKey(tokens[0].Value))
-                            tokenPositions[tokens[0].Value].Add(i);
-                        else
-                            tokenPositions.Add(tokens[0].Value, new List<int>{ i });
-
-                        if (startLine == -1)
-                            startLine = i;
-                        endLine = i;
-                    }
-                    else
-                    {
-                        if (tokenPositions.Count > 0)
-                            tokenPositions.Last().Value.Add(i);
-                        else
-                        {
-                            sb.Append(arrResult[i]);
-                            sb.Append("\n");
-                            arrResult.RemoveAt(i);
-                            i--;
-                        }
-                    }
-                }
-
-                List<string> newResult = new List<string>();
-
-                for (int i = 0; i < startLine; i++)
-                {
-                    sb.Append(arrResult[i]);
-                    sb.Append("\n");
-                }
-
-                RebuildTooltip(item, ___m_quality, ___m_worldLevel);
-
-                for (int i = endLine + 1; i < arrResult.Count; i++)
-                {
-                    sb.Append("\n");
-                    sb.Append(arrResult[i]);
-                }
-
-                if (tailIndex != -1)
-                    sb.Append(tail);
-
-                __result = sb.ToString();
-                __result = __result.Replace("<color=orange>", itemTooltipColored.Value ? "<color=#ffa500ff>" : "<color=#add8e6ff>");
-                __result = __result.Replace("<color=yellow>", itemTooltipColored.Value ? "<color=#ffff00ff>" : "<color=#add8e6ff>");
-            }
-        }
     }
 }
 
