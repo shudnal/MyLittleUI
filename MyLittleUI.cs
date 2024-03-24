@@ -40,7 +40,9 @@ namespace MyLittleUI
         private static ConfigEntry<bool> statsMainMenuAdvanced;
         private static ConfigEntry<bool> statsMainMenuAll;
 
-        public static ConfigEntry<bool> statsCharacter;
+        public static ConfigEntry<bool> statsCharacterArmor;
+        public static ConfigEntry<bool> statsCharacterEffects;
+        public static ConfigEntry<bool> statsCharacterEffectsMagic;
 
         private static ConfigEntry<StationHover> hoverFermenter;
         private static ConfigEntry<StationHover> hoverPlant;
@@ -147,7 +149,12 @@ namespace MyLittleUI
             statsMainMenuAdvanced = Config.Bind("Stats - Main menu", "Show advanced stats in main menu", defaultValue: true, "Show advanced character statistics in main menu");
             statsMainMenuAll = Config.Bind("Stats - Main menu", "Show all stats in main menu", defaultValue: false, "Show all character statistics in main menu");
 
-            statsCharacter = Config.Bind("Stats - Character", "Show character stats on armor hover", defaultValue: true, "Show character stats in armor tooltip");
+            statsCharacterArmor = Config.Bind("Stats - Character", "Show character stats on armor hover", defaultValue: true, "Show character stats in armor tooltip");
+            statsCharacterEffects = Config.Bind("Stats - Character", "Show character active effects on weight hover", defaultValue: true, "Show character active effects in weight tooltip");
+            statsCharacterEffectsMagic = Config.Bind("Stats - Character", "Show character active magic effects (EpicLoot) on weight hover", defaultValue: true, "Show character active magic effects in weight tooltip");
+
+            statsCharacterArmor.SettingChanged += (sender, args) => InventoryCharacterStats.UpdateTooltipState();
+            statsCharacterEffects.SettingChanged += (sender, args) => InventoryCharacterStats.UpdateTooltipState();
 
             hoverFermenter = Config.Bind("Hover - Stations", "Fermenter Hover", defaultValue: StationHover.Vanilla, "Hover text for fermenter.");
             hoverPlant = Config.Bind("Hover - Stations", "Plants Hover", defaultValue: StationHover.Vanilla, "Hover text for plants.");
@@ -168,6 +175,11 @@ namespace MyLittleUI
             chestHoverName = Config.Bind("Hover - Chests", "Hover name format", defaultValue: ChestNameHover.TypeThenCustomName, "Chest name format to be shown in hover.");
             chestShowRename = Config.Bind("Hover - Chests", "Show rename hint in hover", defaultValue: true, "Show rename hotkey hint. You can hide it to make it less noisy.");
             chestShowHoldToStack = Config.Bind("Hover - Chests", "Show hold to stack hint in hover", defaultValue: true, "Show hold to stack hint. You can hide it to make it less noisy.");
+        }
+
+        private void StatsCharacterArmor_SettingChanged(object sender, EventArgs e)
+        {
+            throw new NotImplementedException();
         }
 
         private static string FromSeconds(double seconds)

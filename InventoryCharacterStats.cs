@@ -15,34 +15,46 @@ namespace MyLittleUI
         private static UITooltip characterStatsTooltip;
         private static UITooltip characterEffectsTooltip;
 
+        private static double totalSecondTooltipWasUpdated = 0;
+
         private static readonly StringBuilder sb = new StringBuilder();
         private static readonly Dictionary<Skills.SkillType, float> skills = new Dictionary<Skills.SkillType, float>();
         private static readonly Dictionary<HitData.DamageType, HitData.DamageModifier> mods = new Dictionary<HitData.DamageType, HitData.DamageModifier>();
 
-        private static void InitCharacterStats(InventoryGui __instance, Player player)
+        public static void UpdateTooltipState()
+        {
+            if (characterStatsTooltip != null)
+                characterStatsTooltip.enabled = statsCharacterArmor.Value;
+
+            if (characterEffectsTooltip != null)
+                characterEffectsTooltip.enabled = statsCharacterEffects.Value;
+        }
+
+        private static void InitCharacterTooltips(InventoryGui __instance, Player player)
         {
             UITooltip prefabTooltip = __instance.m_containerGrid.m_elementPrefab.GetComponent<UITooltip>();
-            FieldInfo[] fields = prefabTooltip.GetType().GetFields();
 
-            characterStatsTooltip = __instance.m_armor.transform.parent.gameObject.AddComponent<UITooltip>();
+            if (characterStatsTooltip == null)
+                characterStatsTooltip = InitTooltip(prefabTooltip, __instance.m_armor, player.GetPlayerName());
 
-            foreach (FieldInfo field in fields)
-            {
-                field.SetValue(characterStatsTooltip, field.GetValue(prefabTooltip));
-            }
-
-            characterStatsTooltip.m_topic = player.GetPlayerName();
-
-            characterEffectsTooltip = __instance.m_weight.transform.parent.gameObject.AddComponent<UITooltip>();
-
-            foreach (FieldInfo field in fields)
-            {
-                field.SetValue(characterEffectsTooltip, field.GetValue(prefabTooltip));
-            }
-
-            characterEffectsTooltip.m_topic = "$inventory_activeeffects";
+            if (characterEffectsTooltip == null)
+                characterEffectsTooltip = InitTooltip(prefabTooltip, __instance.m_weight, "$inventory_activeeffects");
 
             LogInfo("Character inventory stats patched");
+        }
+
+        private static UITooltip InitTooltip(UITooltip prefabTooltip, TMPro.TMP_Text text, string topic)
+        {
+            FieldInfo[] fields = prefabTooltip.GetType().GetFields();
+
+            UITooltip tooltip = text.transform.parent.gameObject.AddComponent<UITooltip>();
+
+            foreach (FieldInfo field in fields)
+                field.SetValue(tooltip, field.GetValue(prefabTooltip));
+
+            tooltip.m_topic = topic;
+            
+            return tooltip;
         }
 
         private static void AddRegenStat(ref float stat, float multiplier)
@@ -73,7 +85,7 @@ namespace MyLittleUI
             return true;
         }
 
-        private static string TooltipEffects(Player player)
+        private static string TooltipEffects(Player player, TextsDialog textsDialog)
         {
             sb.Clear();
             if (player.GetEquipmentMovementModifier() != 0f)
@@ -175,9 +187,7 @@ namespace MyLittleUI
             }
 
             foreach (KeyValuePair<HitData.DamageType, HitData.DamageModifier> mod in mods)
-            {
                 stats.m_mods.Add(new HitData.DamageModPair { m_modifier = mod.Value, m_type = mod.Key });
-            }
 
             if (player.GetMaxEitr() > 0)
                 stats.m_eitrRegenMultiplier += player.GetEquipmentEitrRegenModifier();
@@ -190,9 +200,34 @@ namespace MyLittleUI
             }
 
             foreach (KeyValuePair<Skills.SkillType, float> skill in skills)
-            {
                 if (skill.Value != 0)
                     sb.AppendFormat("\n{0} <color=orange>{1}</color>", "$skill_" + skill.Key.ToString().ToLower(), skill.Value.ToString("+0;-0"));
+
+            if (epicLootPlugin != null && statsCharacterEffectsMagic.Value)
+            {
+                var patchUpdateTextsList = AccessTools.TypeByName("EpicLoot.TextsDialog_UpdateTextsList_Patch");
+                if (patchUpdateTextsList != null)
+                {
+                    var methodAddMagicEffectsPage = AccessTools.Method(patchUpdateTextsList, "AddMagicEffectsPage");
+                    if (methodAddMagicEffectsPage != null)
+                    {
+                        textsDialog.m_texts.Clear();
+                        textsDialog.m_texts.Add(new TextsDialog.TextInfo("", ""));
+                        textsDialog.m_texts.Add(new TextsDialog.TextInfo("", ""));
+                        methodAddMagicEffectsPage.Invoke(methodAddMagicEffectsPage, new[] { (object)textsDialog, (object)player });
+                        TextsDialog.TextInfo text = textsDialog.m_texts[2];
+
+                        sb.Append("\n");
+                        sb.Append(text.m_topic);
+                        sb.Append("\n");
+                        sb.Append(String.Join("\n", text.m_text.Split(new char[] { '\n' }, StringSplitOptions.RemoveEmptyEntries).Where(line => LineIsValid(line))).Replace("<size=20>", "").Replace("</size>", ""));
+
+                        bool LineIsValid(string line)
+                        {
+                            return line != "" && !line.StartsWith(" <") && !line.StartsWith("\n") && !line.IsNullOrWhiteSpace();
+                        }
+                    }
+                }
             }
 
             return Localization.instance.Localize(sb.ToString());
@@ -226,7 +261,7 @@ namespace MyLittleUI
                 int qualityLevel = shield.m_quality;
 
                 sb.Append("\n");
-                sb.Append($"\n$item_blockpower: <color=orange>{shield.GetBlockPowerTooltip(qualityLevel).ToString("0")}</color>");
+                sb.Append($"\n$item_blockpower: <color=orange>{shield.GetBlockPowerTooltip(qualityLevel):0}</color>");
                 if (shield.m_shared.m_timedBlockBonus > 1f)
                 {
                     sb.Append($"\n$item_blockforce: <color=orange>{shield.GetDeflectionForce(qualityLevel)}</color>");
@@ -246,21 +281,93 @@ namespace MyLittleUI
         [HarmonyPatch(typeof(InventoryGui), nameof(InventoryGui.UpdateCharacterStats))]
         private class InventoryGui_UpdateCharacterStats_CharacterStats
         {
-            private static void Postfix(InventoryGui __instance, Player player)
+            private static void Postfix(InventoryGui __instance, Player player, TextsDialog ___m_textsDialog)
             {
                 if (!modEnabled.Value)
                     return;
 
-                if (!statsCharacter.Value)
+                if (!statsCharacterArmor.Value && !statsCharacterEffects.Value)
                     return;
 
-                if (characterStatsTooltip == null)
-                    InitCharacterStats(__instance, player);
+                if (statsCharacterArmor.Value && characterStatsTooltip == null || statsCharacterEffects.Value && characterEffectsTooltip == null)
+                    InitCharacterTooltips(__instance, player);
 
-                characterStatsTooltip.m_text = TooltipStats(player);
+                if (ZNet.instance.GetTimeSeconds() - totalSecondTooltipWasUpdated > 5)
+                {
+                    totalSecondTooltipWasUpdated = ZNet.instance.GetTimeSeconds();
 
-                characterEffectsTooltip.m_text = TooltipEffects(player);
+                    if (statsCharacterArmor.Value)
+                        characterStatsTooltip.m_text = TooltipStats(player);
+
+                    if (statsCharacterEffects.Value)
+                        characterEffectsTooltip.m_text = TooltipEffects(player, ___m_textsDialog);
+                }
             }
         }
+
+        [HarmonyPatch]
+        public static class Humanoid_TooltipUpdate
+        {
+            private static IEnumerable<MethodBase> TargetMethods()
+            {
+                yield return AccessTools.Method(typeof(Humanoid), nameof(Humanoid.EquipItem));
+                yield return AccessTools.Method(typeof(Humanoid), nameof(Humanoid.UnequipItem));
+            }
+
+            private static void Postfix(Humanoid __instance)
+            {
+                if (__instance == Player.m_localPlayer)
+                    totalSecondTooltipWasUpdated = 0;
+            }
+        }
+
+        [HarmonyPatch(typeof(SEMan), nameof(SEMan.RemoveAllStatusEffects))]
+        private class SEMan_RemoveAllStatusEffects_TooltipUpdate
+        {
+            private static void Postfix(SEMan __instance)
+            {
+                if (!modEnabled.Value)
+                    return;
+
+                if (!statsCharacterArmor.Value && !statsCharacterEffects.Value)
+                    return;
+
+                if (__instance == Player.m_localPlayer?.GetSEMan())
+                    totalSecondTooltipWasUpdated = 0;
+            }
+        }
+
+        [HarmonyPatch(typeof(SEMan), nameof(SEMan.AddStatusEffect), new[] { typeof(StatusEffect), typeof(bool), typeof(int), typeof(float) })]
+        private class SEMan_AddStatusEffect_TooltipUpdate
+        {
+            private static void Postfix(SEMan __instance, StatusEffect __result)
+            {
+                if (!modEnabled.Value)
+                    return;
+
+                if (!statsCharacterArmor.Value && !statsCharacterEffects.Value)
+                    return;
+
+                if (__result != null && __instance == Player.m_localPlayer?.GetSEMan())
+                    totalSecondTooltipWasUpdated = 0;
+            }
+        }
+
+        [HarmonyPatch(typeof(SEMan), nameof(SEMan.RemoveStatusEffect), new[] { typeof(int), typeof(bool) })]
+        private class SEMan_RemoveStatusEffect_TooltipUpdate
+        {
+            private static void Postfix(SEMan __instance, bool __result)
+            {
+                if (!modEnabled.Value)
+                    return;
+
+                if (!statsCharacterArmor.Value && !statsCharacterEffects.Value)
+                    return;
+
+                if (__result && __instance == Player.m_localPlayer?.GetSEMan())
+                    totalSecondTooltipWasUpdated = 0;
+            }
+        }
+
     }
 }

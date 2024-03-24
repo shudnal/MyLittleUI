@@ -4,9 +4,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using UnityEngine;
-using UnityEngine.UI;
-using static ClutterSystem;
-using static ItemDrop;
 using static MyLittleUI.MyLittleUI;
 
 namespace MyLittleUI
@@ -374,21 +371,21 @@ namespace MyLittleUI
                 arrResult.Clear();
 
                 // Result now stripped of description and footer and should only consist of tokens
-                arrResult.AddRange(__result.Split(new char[] { '\n' }, StringSplitOptions.None).ToList());
+                arrResult.AddRange(__result.Split(new char[] { '\n' }, StringSplitOptions.None));
 
                 for (int i = 0; i < arrResult.Count; i++)
                 {
                     if (arrResult[i] == "\n")
                         continue;
 
-                    var tokens = localizedTooltipTokens.Where(kvp => arrResult[i].IndexOf(kvp.Key) > -1).ToList();
+                    var localizedTokens = localizedTooltipTokens.Where(kvp => arrResult[i].IndexOf(kvp.Key) > -1).ToList();
 
-                    if (tokens.Count() > 0)
+                    if (localizedTokens.Count() > 0)
                     {
-                        if (tokenPositions.ContainsKey(tokens[0].Value))
-                            tokenPositions[tokens[0].Value].Add(i);
+                        if (tokenPositions.ContainsKey(localizedTokens[0].Value))
+                            tokenPositions[localizedTokens[0].Value].Add(i);
                         else
-                            tokenPositions.Add(tokens[0].Value, new List<int> { i });
+                            tokenPositions.Add(localizedTokens[0].Value, new List<int> { i });
                     }
                     else
                     {

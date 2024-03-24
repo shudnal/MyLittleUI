@@ -94,7 +94,8 @@
   <PropertyGroup>
     <PostBuildEvent>xcopy "$(TargetDir)\$(TargetFileName)" "F:\Steam\steamapps\common\Valheim\BepInEx\plugins\" /q /y /i
 
-xcopy "$(TargetDir)\$(TargetFileName)" "$(ProjectDir)\thunderstore\" /q /y /i
-</PostBuildEvent>
+xcopy "$(TargetDir)\$(TargetFileName)" "$(ProjectDir)\package\thunderstore\$(SolutionName)\" /q /y /i
+
+powershell Compress-Archive -Path '$(ProjectDir)\package\thunderstore\$(SolutionName)\*' -DestinationPath '$(ProjectDir)\package\thunderstore\$(SolutionName).zip' -Force</PostBuildEvent>
   </PropertyGroup>
 </Project>
