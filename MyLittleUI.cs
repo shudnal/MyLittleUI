@@ -940,7 +940,6 @@ namespace MyLittleUI
                     __result += Localization.instance.Localize($"\n$hud_tamehappy: {FromSeconds(timeLeft)}");
             }
         }
-
     }
 }
 

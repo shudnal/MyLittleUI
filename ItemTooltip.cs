@@ -4,6 +4,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using UnityEngine;
+using UnityEngine.UI;
+using static ClutterSystem;
+using static ItemDrop;
 using static MyLittleUI.MyLittleUI;
 
 namespace MyLittleUI
@@ -15,6 +18,7 @@ namespace MyLittleUI
         private static readonly Dictionary<string, string> localizedTooltipTokens = new Dictionary<string, string>();
         private static readonly List<string> tails = new List<string>();
         private static readonly List<string> tokens = new List<string>();
+        private static readonly HashSet<string> craftingTokens = new HashSet<string>();
 
         private static readonly StringBuilder sb = new StringBuilder();
         private static readonly Dictionary<string, List<int>> tokenPositions = new Dictionary<string, List<int>>();
@@ -89,7 +93,9 @@ namespace MyLittleUI
                 "$inventory_lightning",
                 "$inventory_poison",
                 "$inventory_spirit",
-                "$se_staminaregen"
+                "$se_staminaregen",
+                "$item_newgameplusitem",
+                "$item_tamedonly"
             };
 
             foreach (string token in tokens)
@@ -97,16 +103,37 @@ namespace MyLittleUI
                 localizedTooltipTokens[Localization.instance.Localize(token)] = token;
                 localizedTooltipTokens[token] = token;
             }
+
+            craftingTokens.Clear();
+            craftingTokens.Add("$item_weight");
+            craftingTokens.Add("$item_quality");
+            craftingTokens.Add("$item_durability");
+            craftingTokens.Add("$item_repairlevel");
+            craftingTokens.Add("$item_blockpower");
+            craftingTokens.Add("$item_blockarmor");
+            craftingTokens.Add("$item_blockforce");
+
+            craftingTokens.Add("$inventory_damage");
+            craftingTokens.Add("$inventory_blunt");
+            craftingTokens.Add("$inventory_slash");
+            craftingTokens.Add("$inventory_pierce");
+            craftingTokens.Add("$inventory_fire");
+            craftingTokens.Add("$inventory_frost");
+            craftingTokens.Add("$inventory_lightning");
+            craftingTokens.Add("$inventory_poison");
+            craftingTokens.Add("$inventory_spirit");
         }
 
         private static void InitializeTokenGroups()
         {
             tokens.Clear();
             tokens.Add("$item_dlc");
+            tokens.Add("$item_newgameplusitem");
             tokens.Add("$item_onehanded");
             tokens.Add("$item_twohanded");
             tokens.Add("$item_noteleport");
             tokens.Add("$item_value");
+            tokens.Add("$item_tamedonly");
 
             tokens.Add("");
 
@@ -167,14 +194,16 @@ namespace MyLittleUI
             tokens.Add("$item_quality");
         }
 
-        private static void ReorderTooltip(ItemDrop.ItemData item, int m_quality, int m_worldLevel)
+        private static void ReorderTooltip(ItemDrop.ItemData item, int m_quality, float m_worldLevel, bool upgradingTooltip)
         {
             bool addDelimiter = false;
             foreach (string token in tokens)
             {
-                if (token == "" && addDelimiter)
+                if (token == "")
                 {
-                    sb.Append('\n');
+                    if (addDelimiter)
+                        sb.Append('\n');
+
                     addDelimiter = false;
                 }
                 else if (token == projectileTooltipGroup)
@@ -193,20 +222,89 @@ namespace MyLittleUI
                     addDelimiter = false;
                 }
                 else
-                    addDelimiter = AppendToken(token) || addDelimiter;
+                    addDelimiter = AppendToken(token, item, m_quality, m_worldLevel, upgradingTooltip) || addDelimiter;
             }
         }
 
-        private static bool AppendToken(string key)
+        private static bool AppendToken(string token, ItemDrop.ItemData item, int m_quality, float m_worldLevel, bool upgrading)
         {
-            if (!tokenPositions.ContainsKey(key))
+            if (!tokenPositions.ContainsKey(token))
                 return false;
 
-            List<int> tokPos = tokenPositions[key];
+            List<int> tokPos = tokenPositions[token];
             for (int i = 0; i < tokPos.Count; i++)
-                sb.AppendFormat("\n{0}", arrResult[tokPos[i]]);
+                sb.AppendFormat("\n{0}", GetTokenString(tokPos, i, token, item, m_quality, m_worldLevel, upgrading));
 
             return true;
+        }
+
+        private static string GetTokenString(List<int> tokPos, int i, string token, ItemDrop.ItemData item, int m_quality, float m_worldLevel, bool upgrading)
+        {
+            if (!upgrading || i > 0 || !craftingTokens.Contains(token))
+                return arrResult[tokPos[i]];
+
+            string statString = arrResult[tokPos[i]];
+            int index = statString.IndexOf(": ");
+            if (index == -1)
+                return statString;
+
+            index += 2;
+
+            if (token.StartsWith("$inventory_"))
+            {
+                HitData.DamageTypes damagesNew = item.GetDamage(m_quality, m_worldLevel);
+                HitData.DamageTypes damagesCurrent = item.GetDamage(m_quality - 1, m_worldLevel);
+                Player.m_localPlayer.GetSkills().GetRandomSkillRange(out var min, out var max, item.m_shared.m_skillType);
+
+                float damage = GetDamageByToken(token, damagesCurrent);
+                if (damage != -1f && damage != GetDamageByToken(token, damagesNew))
+                    return statString.Insert(index, GetStringUpgradeFrom(damagesCurrent.DamageRange(damage, min, max)));
+            }
+            else if (token == "$item_weight")
+            {
+                if (item.m_shared.m_scaleWeightByQuality != 0f)
+                {
+                    int currentQuality = item.m_quality;
+                    item.m_quality = m_quality - 1;
+                    string weight = item.GetWeight().ToString("0.0");
+                    item.m_quality = currentQuality;
+                    
+                    return statString.Insert(index, GetStringUpgradeFrom(weight));
+                }
+            }
+            else if (token == "$item_quality")
+                return statString.Insert(index, GetStringUpgradeFrom(String.Format("<color=orange>{0}</color>", m_quality - 1)));
+            else if (token == "$item_durability" && item.GetMaxDurability(m_quality) != item.GetMaxDurability(m_quality - 1))
+                return statString.Insert(index, GetStringUpgradeFrom(String.Format("<color=orange>{0}</color>", item.GetMaxDurability(m_quality - 1))));
+            else if (token == "$item_blockarmor" && item.GetBaseBlockPower(m_quality) != item.GetBaseBlockPower(m_quality - 1))
+                return statString.Insert(index, GetStringUpgradeFrom(String.Format("<color=orange>{0}</color> <color=yellow>({1})</color>", item.GetBaseBlockPower(m_quality - 1), item.GetBlockPowerTooltip(m_quality - 1).ToString("0"))));
+            else if (token == "$item_blockforce" && item.GetDeflectionForce(m_quality) != item.GetDeflectionForce(m_quality - 1))
+                return statString.Insert(index, GetStringUpgradeFrom(String.Format("<color=orange>{0}</color>", item.GetDeflectionForce(m_quality - 1))));
+
+            return statString;
+
+
+            string GetStringUpgradeFrom(string value)
+            {
+                return $"{value.Replace("<color=yellow>", "<color=silver>").Replace("<color=orange>", "<color=lightblue>")} → ";
+            }
+        }
+
+        private static float GetDamageByToken(string token, HitData.DamageTypes damages)
+        {
+            return token switch
+            {
+                "$inventory_damage" => damages.m_damage,
+                "$inventory_blunt" => damages.m_blunt,
+                "$inventory_slash" => damages.m_slash,
+                "$inventory_pierce" => damages.m_pierce,
+                "$inventory_fire" => damages.m_fire,
+                "$inventory_frost" => damages.m_frost,
+                "$inventory_lightning" => damages.m_lightning,
+                "$inventory_poison" => damages.m_poison,
+                "$inventory_spirit" => damages.m_spirit,
+                _ => -1f,
+            };
         }
 
         [HarmonyPatch(typeof(InventoryGui), nameof(InventoryGui.Awake))]
@@ -214,11 +312,9 @@ namespace MyLittleUI
         {
             private static void Postfix(InventoryGui __instance)
             {
-                if (__instance.m_recipeDecription == null)
-                    return;
-
-                TMPro.TextMeshProUGUI description = __instance.m_recipeDecription.GetComponent<TMPro.TextMeshProUGUI>();
-                description.fontSizeMin = 12;
+                TMPro.TextMeshProUGUI description = __instance.m_recipeDecription?.GetComponent<TMPro.TextMeshProUGUI>();
+                if (description != null)
+                    description.fontSizeMin = 12;
             }
         }
 
@@ -226,7 +322,7 @@ namespace MyLittleUI
         private class ItemDropItemData_GetTooltip_ItemTooltip
         {
             [HarmonyPriority(Priority.First)]
-            private static void Postfix(ItemDrop.ItemData item, ref string __result, int ___m_quality, int ___m_worldLevel)
+            private static void Postfix(ItemDrop.ItemData item, int qualityLevel, bool crafting, float worldLevel, ref string __result)
             {
                 if (!modEnabled.Value)
                     return;
@@ -253,7 +349,7 @@ namespace MyLittleUI
 
                 // End of tooltip is not needed to be touched, anything that is after first status effect, EpicLoot magic tooltip or item set info
                 int footerIndex = -1;
-                string statusEffect = item.GetStatusEffectTooltip(___m_quality, Player.m_localPlayer.GetSkillLevel(item.m_shared.m_skillType));
+                string statusEffect = item.GetStatusEffectTooltip(qualityLevel, Player.m_localPlayer.GetSkillLevel(item.m_shared.m_skillType));
                 if (!String.IsNullOrEmpty(statusEffect))
                     tails.Insert(0, "\n\n" + statusEffect.Substring(0, statusEffect.IndexOf("</color>\n", StringComparison.OrdinalIgnoreCase)));
 
@@ -311,7 +407,7 @@ namespace MyLittleUI
                 }
 
                 // Regroup tokens by new order respecting original string formats
-                ReorderTooltip(item, ___m_quality, ___m_worldLevel);
+                ReorderTooltip(item, qualityLevel, worldLevel, upgradingTooltip: crafting && 1 < qualityLevel && qualityLevel <= item.m_shared.m_maxQuality);
 
                 if (footerIndex != -1)
                     sb.Append(footer);
@@ -319,8 +415,12 @@ namespace MyLittleUI
                 __result = sb.ToString();
                 
                 // Use hex code for EpicLoot to not change it to lightblue
-                __result = __result.Replace("<color=orange>", itemTooltipColored.Value ? "<color=#ffa500ff>" : "<color=#add8e6ff>");
-                __result = __result.Replace("<color=yellow>", itemTooltipColored.Value ? "<color=#ffff00ff>" : "<color=#add8e6ff>");
+                __result = __result.Replace("<color=orange>", itemTooltipColored.Value ? "<color=#ffa500ff>" : "<color=#add8e6ff>")
+                                   .Replace("<color=yellow>", itemTooltipColored.Value ? "<color=#ffff00ff>" : "<color=#c0c0c0ff>")
+                                   .Replace("<color=silver>", "<color=#c0c0c0ff>")
+                                   .Replace("<color=lightblue>", "<color=#add8e6ff>")
+                                   .Replace("\n\n\n", "\n\n");
+                ;
             }
         }
 
