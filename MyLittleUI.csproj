@@ -38,6 +38,7 @@
   <ItemGroup>
     <Compile Include="InventoryCharacterStats.cs" />
     <Compile Include="ItemTooltip.cs" />
+    <Compile Include="CustomStatusEffectsList.cs" />
     <Compile Include="MyLittleUI.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

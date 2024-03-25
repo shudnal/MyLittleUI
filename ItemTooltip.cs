@@ -8,7 +8,7 @@ using static MyLittleUI.MyLittleUI;
 
 namespace MyLittleUI
 {
-    public class ItemTooltip
+    public static class ItemTooltip
     {
         private const string projectileTooltipGroup = "projectile";
 

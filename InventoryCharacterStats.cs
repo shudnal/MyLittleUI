@@ -10,7 +10,7 @@ using static MyLittleUI.MyLittleUI;
 
 namespace MyLittleUI
 {
-    internal class InventoryCharacterStats
+    internal static class InventoryCharacterStats
     {
         private static UITooltip characterStatsTooltip;
         private static UITooltip characterEffectsTooltip;

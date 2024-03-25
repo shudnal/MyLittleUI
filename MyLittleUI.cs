@@ -8,6 +8,7 @@ using HarmonyLib;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.Rendering;
+using TMPro;
 
 namespace MyLittleUI
 {
@@ -24,6 +25,9 @@ namespace MyLittleUI
 
         public static ConfigEntry<bool> modEnabled;
         private static ConfigEntry<bool> loggingEnabled;
+
+        private static ConfigEntry<bool> showAvailableItemsAmount;
+        private static ConfigEntry<Color> availableItemsAmountColor;
 
         private static ConfigEntry<bool> durabilityEnabled;
         private static ConfigEntry<Color> durabilityFine;
@@ -64,6 +68,34 @@ namespace MyLittleUI
         private static ConfigEntry<bool> chestShowHoldToStack;
         private static ConfigEntry<bool> chestShowRename;
 
+        public static ConfigEntry<bool> statusEffectsPositionEnabled;
+        public static ConfigEntry<Vector2> statusEffectsPositionAnchor;
+        public static ConfigEntry<StatusEffectDirection> statusEffectsFillingDirection;
+        public static ConfigEntry<int> statusEffectsPositionSpacing;
+
+        public static ConfigEntry<bool> statusEffectsElementEnabled;
+        public static ConfigEntry<int> statusEffectsElementSize;
+
+        public static ConfigEntry<bool> statusEffectsPositionEnabledNomap;
+        public static ConfigEntry<Vector2> statusEffectsPositionAnchorNomap;
+        public static ConfigEntry<StatusEffectDirection> statusEffectsFillingDirectionNomap;
+        public static ConfigEntry<int> statusEffectsPositionSpacingNomap;
+
+        public static ConfigEntry<bool> statusEffectsElementEnabledNomap;
+        public static ConfigEntry<int> statusEffectsElementSizeNomap;
+
+        public static ConfigEntry<bool> sailingIndicatorEnabled;
+        public static ConfigEntry<Vector2> sailingIndicatorPowerIconPosition;
+        public static ConfigEntry<float> sailingIndicatorPowerIconScale;
+        public static ConfigEntry<Vector2> sailingIndicatorWindIndicatorPosition;
+        public static ConfigEntry<float> sailingIndicatorWindIndicatorScale;
+
+        public static ConfigEntry<bool> sailingIndicatorEnabledNomap;
+        public static ConfigEntry<Vector2> sailingIndicatorPowerIconPositionNomap;
+        public static ConfigEntry<float> sailingIndicatorPowerIconScaleNomap;
+        public static ConfigEntry<Vector2> sailingIndicatorWindIndicatorPositionNomap;
+        public static ConfigEntry<float> sailingIndicatorWindIndicatorScaleNomap;
+
         private static Vector3 itemIconScaleOriginal = Vector3.zero;
         private static Container textInputForContainer;
 
@@ -92,6 +124,14 @@ namespace MyLittleUI
             CustomName,
             TypeThenCustomName,
             CustomNameThenType
+        }
+
+        public enum StatusEffectDirection
+        {
+            RightToLeft,
+            LeftToRight,
+            TopToBottom,
+            BottomToTop
         }
 
         private void Awake()
@@ -134,6 +174,9 @@ namespace MyLittleUI
             modEnabled = Config.Bind("General", "Enabled", defaultValue: true, "Enable the mod.");
             loggingEnabled = Config.Bind("General", "Logging enabled", defaultValue: false, "Enable logging.");
 
+            showAvailableItemsAmount = Config.Bind("Item - Available resources amount", "Enabled", defaultValue: true, "Show amount of available resources for crafting in requirements list");
+            availableItemsAmountColor = Config.Bind("Item - Available resources amount", "Color", defaultValue: new Color(0.68f, 0.85f, 0.90f), "Color of amount of available resources.");
+
             durabilityEnabled = Config.Bind("Item - Durability", "0 - Enabled", defaultValue: true, "Enable color of durability.");
             durabilityFine = Config.Bind("Item - Durability", "1 - Fine", defaultValue: new Color(0.11765f, 0.72941f, 0.03529f, 1f), "Color of durability > 75%.");
             durabilityWorn = Config.Bind("Item - Durability", "2 - Worn", defaultValue: new Color(0.72941f, 0.72941f, 0.03529f, 1f), "Color of durability > 50%.");
@@ -175,11 +218,58 @@ namespace MyLittleUI
             chestHoverName = Config.Bind("Hover - Chests", "Hover name format", defaultValue: ChestNameHover.TypeThenCustomName, "Chest name format to be shown in hover.");
             chestShowRename = Config.Bind("Hover - Chests", "Show rename hint in hover", defaultValue: true, "Show rename hotkey hint. You can hide it to make it less noisy.");
             chestShowHoldToStack = Config.Bind("Hover - Chests", "Show hold to stack hint in hover", defaultValue: true, "Show hold to stack hint. You can hide it to make it less noisy.");
-        }
 
-        private void StatsCharacterArmor_SettingChanged(object sender, EventArgs e)
-        {
-            throw new NotImplementedException();
+            statusEffectsPositionEnabled = Config.Bind("Status effects - List", "Enable", defaultValue: true, "Enable repositioning of status effect list.");
+            statusEffectsPositionAnchor = Config.Bind("Status effects - List", "Position", defaultValue: new Vector2(-170f, -240f), "Anchored position of list.");
+            statusEffectsFillingDirection = Config.Bind("Status effects - List", "Direction", defaultValue: StatusEffectDirection.TopToBottom, "Direction of filling");
+            statusEffectsPositionSpacing = Config.Bind("Status effects - List", "Spacing", defaultValue: 8, "Spacing between status effects");
+
+            statusEffectsElementEnabled = Config.Bind("Status effects - List element", "Custom element enabled", defaultValue: true, "Enables using of horizontal status effect element");
+            statusEffectsElementSize = Config.Bind("Status effects - List element", "Size", defaultValue: 32, "Vertical capsule size");
+
+            modEnabled.SettingChanged += (sender, args) => CustomStatusEffectsList.InitializeStatusEffectTemplate();
+            statusEffectsPositionEnabled.SettingChanged += (sender, args) => CustomStatusEffectsList.InitializeStatusEffectTemplate();
+            statusEffectsPositionAnchor.SettingChanged += (sender, args) => CustomStatusEffectsList.InitializeStatusEffectTemplate();
+            statusEffectsElementEnabled.SettingChanged += (sender, args) => CustomStatusEffectsList.InitializeStatusEffectTemplate();
+            statusEffectsElementSize.SettingChanged += (sender, args) => CustomStatusEffectsList.InitializeStatusEffectTemplate();
+
+            sailingIndicatorEnabled = Config.Bind("Status effects - Sailing indicator", "Enabled", defaultValue: true, "Enable changing of sailing indicator");
+            sailingIndicatorPowerIconPosition = Config.Bind("Status effects - Sailing indicator", "Sail power indicator position", defaultValue: new Vector2(-350f, -290f), "Sail size and rudder indicator position");
+            sailingIndicatorPowerIconScale = Config.Bind("Status effects - Sailing indicator", "Sail power indicator scale", defaultValue: 1.0f, "Sail size and rudder indicator scale");
+            sailingIndicatorWindIndicatorPosition = Config.Bind("Status effects - Sailing indicator", "Wind indicator position", defaultValue: new Vector2(-350f, -140f), "Wind indicator (ship and wind direction) position");
+            sailingIndicatorWindIndicatorScale = Config.Bind("Status effects - Sailing indicator", "Wind indicator scale", defaultValue: 1.0f, "Wind indicator (ship and wind direction) scale");
+
+            modEnabled.SettingChanged += (sender, args) => CustomStatusEffectsList.ChangeSailingIndicator();
+            sailingIndicatorEnabled.SettingChanged += (sender, args) => CustomStatusEffectsList.ChangeSailingIndicator();
+            sailingIndicatorPowerIconPosition.SettingChanged += (sender, args) => CustomStatusEffectsList.ChangeSailingIndicator();
+            sailingIndicatorPowerIconScale.SettingChanged += (sender, args) => CustomStatusEffectsList.ChangeSailingIndicator();
+            sailingIndicatorWindIndicatorPosition.SettingChanged += (sender, args) => CustomStatusEffectsList.ChangeSailingIndicator();
+            sailingIndicatorWindIndicatorScale.SettingChanged += (sender, args) => CustomStatusEffectsList.ChangeSailingIndicator();
+
+            statusEffectsPositionEnabledNomap = Config.Bind("Status effects - Nomap - List", "Enable", defaultValue: true, "Enable repositioning of status effect list.");
+            statusEffectsPositionAnchorNomap = Config.Bind("Status effects - Nomap - List", "Position", defaultValue: new Vector2(-170f, -70f), "Anchored position of list.");
+            statusEffectsFillingDirectionNomap = Config.Bind("Status effects - Nomap - List", "Direction", defaultValue: StatusEffectDirection.TopToBottom, "Direction of filling");
+            statusEffectsPositionSpacingNomap = Config.Bind("Status effects - Nomap - List", "Spacing", defaultValue: 10, "Spacing between status effects");
+
+            statusEffectsElementEnabledNomap = Config.Bind("Status effects - Nomap - List element", "Custom element enabled", defaultValue: true, "Enables using of horizontal status effect element");
+            statusEffectsElementSizeNomap = Config.Bind("Status effects - Nomap - List element", "Size", defaultValue: 36, "Vertical capsule size");
+
+            statusEffectsPositionEnabledNomap.SettingChanged += (sender, args) => CustomStatusEffectsList.InitializeStatusEffectTemplate();
+            statusEffectsPositionAnchorNomap.SettingChanged += (sender, args) => CustomStatusEffectsList.InitializeStatusEffectTemplate();
+            statusEffectsElementEnabledNomap.SettingChanged += (sender, args) => CustomStatusEffectsList.InitializeStatusEffectTemplate();
+            statusEffectsElementSizeNomap.SettingChanged += (sender, args) => CustomStatusEffectsList.InitializeStatusEffectTemplate();
+
+            sailingIndicatorEnabledNomap = Config.Bind("Status effects - Nomap - Sailing indicator", "Enabled", defaultValue: true, "Enable changing of sailing indicator");
+            sailingIndicatorPowerIconPositionNomap = Config.Bind("Status effects - Nomap - Sailing indicator", "Sail power indicator position", defaultValue: new Vector2(-350f, -320f), "Sail size and rudder indicator position");
+            sailingIndicatorPowerIconScaleNomap = Config.Bind("Status effects - Nomap - Sailing indicator", "Sail power indicator scale", defaultValue: 1.1f, "Sail size and rudder indicator scale");
+            sailingIndicatorWindIndicatorPositionNomap = Config.Bind("Status effects - Nomap - Sailing indicator", "Wind indicator position", defaultValue: new Vector2(-350f, -170f), "Wind indicator (ship and wind direction) position");
+            sailingIndicatorWindIndicatorScaleNomap = Config.Bind("Status effects - Nomap - Sailing indicator", "Wind indicator scale", defaultValue: 1.1f, "Wind indicator (ship and wind direction) scale");
+
+            sailingIndicatorEnabledNomap.SettingChanged += (sender, args) => CustomStatusEffectsList.ChangeSailingIndicator();
+            sailingIndicatorPowerIconPositionNomap.SettingChanged += (sender, args) => CustomStatusEffectsList.ChangeSailingIndicator();
+            sailingIndicatorPowerIconScaleNomap.SettingChanged += (sender, args) => CustomStatusEffectsList.ChangeSailingIndicator();
+            sailingIndicatorWindIndicatorPositionNomap.SettingChanged += (sender, args) => CustomStatusEffectsList.ChangeSailingIndicator();
+            sailingIndicatorWindIndicatorScaleNomap.SettingChanged += (sender, args) => CustomStatusEffectsList.ChangeSailingIndicator();
         }
 
         private static string FromSeconds(double seconds)
@@ -950,6 +1040,28 @@ namespace MyLittleUI
                     __result += Localization.instance.Localize($"\n$hud_tamehappy: {timeLeft / __instance.m_fedDuration:P0}");
                 else if (hoverTame.Value == StationHover.MinutesSeconds)
                     __result += Localization.instance.Localize($"\n$hud_tamehappy: {FromSeconds(timeLeft)}");
+            }
+        }
+
+        [HarmonyPatch(typeof(InventoryGui), nameof(InventoryGui.SetupRequirement))]
+        public static class InventoryGui_SetupRequirement_AddAvailableAmount
+        {
+            public static void Postfix(Transform elementRoot, Piece.Requirement req, Player player, bool __result)
+            {
+                if (!modEnabled.Value)
+                    return;
+
+                if (!showAvailableItemsAmount.Value)
+                    return;
+
+                if (!__result)
+                    return;
+
+                TMP_Text component3 = elementRoot.transform.Find("res_amount").GetComponent<TMP_Text>();
+                if (component3 == null)
+                    return;
+
+                component3.SetText(component3.text + $" <color=#{ColorUtility.ToHtmlStringRGBA(availableItemsAmountColor.Value)}>({player.GetInventory().CountItems(req.m_resItem.m_itemData.m_shared.m_name)})</color>");
             }
         }
     }
