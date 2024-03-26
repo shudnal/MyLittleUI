@@ -1,6 +1,5 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
-using BepInEx.Configuration;
 using HarmonyLib;
 using TMPro;
 using UnityEngine;
@@ -23,7 +22,7 @@ namespace MyLittleUI
         private static Vector3 GetStatusEffectPosition(int i)
         {
             float offset = i * (Game.m_noMap ? statusEffectsPositionSpacingNomap.Value + statusEffectsElementSizeNomap.Value : statusEffectsPositionSpacing.Value + statusEffectsElementSize.Value);
-            return statusEffectsFillingDirection.Value switch
+            return (Game.m_noMap ? statusEffectsFillingDirectionNomap.Value : statusEffectsFillingDirection.Value) switch
             {
                 StatusEffectDirection.LeftToRight => new Vector3(offset, 0, 0),
                 StatusEffectDirection.RightToLeft => new Vector3(-offset, 0, 0),
@@ -93,16 +92,9 @@ namespace MyLittleUI
                 Hud.instance.m_statusEffects.RemoveAt(Hud.instance.m_statusEffects.Count - 1);
             }
 
-            if (Game.m_noMap)
-            {
-                Hud.instance.m_statusEffectListRoot.anchoredPosition = modEnabled.Value && statusEffectsPositionEnabledNomap.Value ? statusEffectsPositionAnchorNomap.Value : m_statusEffectListRootPositionOriginal;
-                Hud.instance.m_statusEffectTemplate = modEnabled.Value && statusEffectsElementEnabledNomap.Value ? m_statusEffectTemplate : m_statusEffectTemplateOriginal;
-            }
-            else
-            {
-                Hud.instance.m_statusEffectListRoot.anchoredPosition = modEnabled.Value && statusEffectsPositionEnabled.Value ? statusEffectsPositionAnchor.Value : m_statusEffectListRootPositionOriginal;
-                Hud.instance.m_statusEffectTemplate = modEnabled.Value && statusEffectsElementEnabled.Value ? m_statusEffectTemplate : m_statusEffectTemplateOriginal;
-            }
+
+            Hud.instance.m_statusEffectListRoot.anchoredPosition = modEnabled.Value && GetStatusEffectsPositionEnabled() ? GetStatusEffectsPositionAnchor() : m_statusEffectListRootPositionOriginal;
+            Hud.instance.m_statusEffectTemplate = modEnabled.Value && GetStatusEffectsElementEnabled() ? m_statusEffectTemplate : m_statusEffectTemplateOriginal;
         }
 
         public static void ChangeSailingIndicator()
@@ -116,22 +108,11 @@ namespace MyLittleUI
                 m_shipWindIconRootPositionOriginal = Hud.instance.m_shipHudRoot.transform.Find("PowerIcon").GetComponent<RectTransform>().anchoredPosition;
             }
 
-            if (Game.m_noMap)
-            {
-                Hud.instance.m_shipWindIndicatorRoot.anchoredPosition = modEnabled.Value && sailingIndicatorEnabledNomap.Value ? sailingIndicatorWindIndicatorPositionNomap.Value : m_shipWindIndicatorRootPositionOriginal;
-                Hud.instance.m_shipWindIndicatorRoot.localScale = Vector3.one * (modEnabled.Value && sailingIndicatorEnabledNomap.Value ? sailingIndicatorWindIndicatorScaleNomap.Value : 1f);
+            Hud.instance.m_shipWindIndicatorRoot.anchoredPosition = modEnabled.Value && GetSailingIndicatorEnabled() ? GetSailingIndicatorWindIndicatorPosition() : m_shipWindIndicatorRootPositionOriginal;
+            Hud.instance.m_shipWindIndicatorRoot.localScale = Vector3.one * (modEnabled.Value && GetSailingIndicatorEnabled() ? GetSailingIndicatorWindIndicatorScale() : 1f);
 
-                Hud.instance.m_shipHudRoot.transform.Find("PowerIcon").GetComponent<RectTransform>().anchoredPosition = modEnabled.Value && sailingIndicatorEnabledNomap.Value ? sailingIndicatorPowerIconPositionNomap.Value : m_shipWindIconRootPositionOriginal;
-                Hud.instance.m_shipHudRoot.transform.Find("PowerIcon").GetComponent<RectTransform>().localScale = Vector3.one * (modEnabled.Value && sailingIndicatorEnabledNomap.Value ? sailingIndicatorPowerIconScaleNomap.Value : 1f);
-            }
-            else
-            {
-                Hud.instance.m_shipWindIndicatorRoot.anchoredPosition = modEnabled.Value && sailingIndicatorEnabled.Value ? sailingIndicatorWindIndicatorPosition.Value : m_shipWindIndicatorRootPositionOriginal;
-                Hud.instance.m_shipWindIndicatorRoot.localScale = Vector3.one * (modEnabled.Value && sailingIndicatorEnabled.Value ? sailingIndicatorWindIndicatorScale.Value : 1f);
-
-                Hud.instance.m_shipHudRoot.transform.Find("PowerIcon").GetComponent<RectTransform>().anchoredPosition = modEnabled.Value && sailingIndicatorEnabled.Value ? sailingIndicatorPowerIconPosition.Value : m_shipWindIconRootPositionOriginal;
-                Hud.instance.m_shipHudRoot.transform.Find("PowerIcon").GetComponent<RectTransform>().localScale = Vector3.one * (modEnabled.Value && sailingIndicatorEnabled.Value ? sailingIndicatorPowerIconScale.Value : 1f);
-            }
+            Hud.instance.m_shipHudRoot.transform.Find("PowerIcon").GetComponent<RectTransform>().anchoredPosition = modEnabled.Value && GetSailingIndicatorEnabled() ? GetSailingIndicatorPowerIconPosition() : m_shipWindIconRootPositionOriginal;
+            Hud.instance.m_shipHudRoot.transform.Find("PowerIcon").GetComponent<RectTransform>().localScale = Vector3.one * (modEnabled.Value && GetSailingIndicatorEnabled() ? GetSailingIndicatorPowerIconScale() : 1f);
         }
 
         [HarmonyPatch(typeof(Hud), nameof(Hud.Awake))]
@@ -153,7 +134,7 @@ namespace MyLittleUI
                 m_statusEffectTemplateOriginal = null;
             }
         }
-        
+
         [HarmonyPatch(typeof(Hud), nameof(Hud.UpdateStatusEffects))]
         public static class Hud_UpdateStatusEffects_Patch
         {
@@ -162,37 +143,59 @@ namespace MyLittleUI
                 if (!modEnabled.Value)
                     return;
 
-                if (Game.m_noMap)
-                {
-                    if (!statusEffectsPositionEnabledNomap.Value)
-                        return;
+                if (!GetStatusEffectsPositionEnabled())
+                    return;
 
-                    for (int i = 0; i < ___m_statusEffects.Count; i++)
-                    {
-                        ___m_statusEffects[i].anchoredPosition = GetStatusEffectPosition(i);
-                        if (statusEffectsElementEnabledNomap.Value)
-                        {
-                            bool textHidden = !___m_statusEffects[i].Find("TimeText").gameObject.activeSelf;
-                            ___m_statusEffects[i].Find("Name").GetComponent<TMP_Text>().verticalAlignment = textHidden ? VerticalAlignmentOptions.Middle : VerticalAlignmentOptions.Top;
-                        }
-                    }
-                }
-                else
+                for (int i = 0; i < ___m_statusEffects.Count; i++)
                 {
-                    if (!statusEffectsPositionEnabled.Value)
-                        return;
-
-                    for (int i = 0; i < ___m_statusEffects.Count; i++)
+                    ___m_statusEffects[i].anchoredPosition = GetStatusEffectPosition(i);
+                    if (GetStatusEffectsElementEnabled())
                     {
-                        ___m_statusEffects[i].anchoredPosition = GetStatusEffectPosition(i);
-                        if (statusEffectsElementEnabled.Value)
-                        {
-                            bool textHidden = !___m_statusEffects[i].Find("TimeText").gameObject.activeSelf;
-                            ___m_statusEffects[i].Find("Name").GetComponent<TMP_Text>().verticalAlignment = textHidden ? VerticalAlignmentOptions.Middle : VerticalAlignmentOptions.Top;
-                        }
+                        bool textHidden = !___m_statusEffects[i].Find("TimeText").gameObject.activeSelf;
+                        ___m_statusEffects[i].Find("Name").GetComponent<TMP_Text>().verticalAlignment = textHidden ? VerticalAlignmentOptions.Middle : VerticalAlignmentOptions.Top;
                     }
                 }
             }
+        }
+
+        private static Vector2 GetStatusEffectsPositionAnchor()
+        {
+            return Game.m_noMap ? statusEffectsPositionAnchorNomap.Value : statusEffectsPositionAnchor.Value;
+        }
+
+        private static bool GetSailingIndicatorEnabled()
+        {
+            return Game.m_noMap ? sailingIndicatorEnabledNomap.Value : sailingIndicatorEnabled.Value;
+        }
+
+        private static Vector2 GetSailingIndicatorWindIndicatorPosition()
+        {
+            return Game.m_noMap ? sailingIndicatorWindIndicatorPositionNomap.Value : sailingIndicatorWindIndicatorPosition.Value;
+        }
+
+        private static float GetSailingIndicatorWindIndicatorScale()
+        {
+            return Game.m_noMap ? sailingIndicatorWindIndicatorScaleNomap.Value : sailingIndicatorWindIndicatorScale.Value;
+        }
+
+        private static Vector2 GetSailingIndicatorPowerIconPosition()
+        {
+            return Game.m_noMap ? sailingIndicatorPowerIconPositionNomap.Value : sailingIndicatorPowerIconPosition.Value;
+        }
+
+        private static float GetSailingIndicatorPowerIconScale()
+        {
+            return Game.m_noMap ? sailingIndicatorPowerIconScaleNomap.Value : sailingIndicatorPowerIconScale.Value;
+        }
+
+        private static bool GetStatusEffectsPositionEnabled()
+        {
+            return Game.m_noMap ? statusEffectsPositionEnabledNomap.Value : statusEffectsPositionEnabled.Value;
+        }
+
+        private static bool GetStatusEffectsElementEnabled()
+        {
+            return Game.m_noMap ? statusEffectsElementEnabledNomap.Value : statusEffectsElementEnabled.Value;
         }
     }
 }

@@ -205,7 +205,7 @@ namespace MyLittleUI
             hoverBeeHive = Config.Bind("Hover - Stations", "Bee Hive Hover", defaultValue: StationHover.Vanilla, "Hover text for bee hive.");
             hoverBeeHiveTotal = Config.Bind("Hover - Stations", "Bee Hive Show total", defaultValue: true, "Show total needed time/percent for bee hive.");
             
-            hoverTame = Config.Bind("Hover - Tameable", "Tameable Hover", defaultValue: StationHover.Vanilla, "Show total needed time/percent to tame of to stay fed.");
+            hoverTame = Config.Bind("Hover - Tameable", "Tameable Hover", defaultValue: StationHover.Vanilla, "Format of total needed time/percent to tame or to stay fed.");
             hoverTameTimeToTame = Config.Bind("Hover - Tameable", "Show time to tame", defaultValue: true, "Show total needed time/percent to tame.");
             hoverTameTimeToFed = Config.Bind("Hover - Tameable", "Show time to stay fed", defaultValue: true, "Show total needed time/percent to stay fed.");
 
@@ -219,13 +219,13 @@ namespace MyLittleUI
             chestShowRename = Config.Bind("Hover - Chests", "Show rename hint in hover", defaultValue: true, "Show rename hotkey hint. You can hide it to make it less noisy.");
             chestShowHoldToStack = Config.Bind("Hover - Chests", "Show hold to stack hint in hover", defaultValue: true, "Show hold to stack hint. You can hide it to make it less noisy.");
 
-            statusEffectsPositionEnabled = Config.Bind("Status effects - List", "Enable", defaultValue: true, "Enable repositioning of status effect list.");
-            statusEffectsPositionAnchor = Config.Bind("Status effects - List", "Position", defaultValue: new Vector2(-170f, -240f), "Anchored position of list.");
-            statusEffectsFillingDirection = Config.Bind("Status effects - List", "Direction", defaultValue: StatusEffectDirection.TopToBottom, "Direction of filling");
-            statusEffectsPositionSpacing = Config.Bind("Status effects - List", "Spacing", defaultValue: 8, "Spacing between status effects");
+            statusEffectsPositionEnabled = Config.Bind("Status effects - Map - List", "Enable", defaultValue: true, "Enable repositioning of status effect list.");
+            statusEffectsPositionAnchor = Config.Bind("Status effects - Map - List", "Position", defaultValue: new Vector2(-170f, -240f), "Anchored position of list.");
+            statusEffectsFillingDirection = Config.Bind("Status effects - Map - List", "Direction", defaultValue: StatusEffectDirection.TopToBottom, "Direction of filling");
+            statusEffectsPositionSpacing = Config.Bind("Status effects - Map - List", "Spacing", defaultValue: 8, "Spacing between status effects");
 
-            statusEffectsElementEnabled = Config.Bind("Status effects - List element", "Custom element enabled", defaultValue: true, "Enables using of horizontal status effect element");
-            statusEffectsElementSize = Config.Bind("Status effects - List element", "Size", defaultValue: 32, "Vertical capsule size");
+            statusEffectsElementEnabled = Config.Bind("Status effects - Map - List element", "Custom element enabled", defaultValue: true, "Enables using of horizontal status effect element");
+            statusEffectsElementSize = Config.Bind("Status effects - Map - List element", "Size", defaultValue: 32, "Vertical capsule size");
 
             modEnabled.SettingChanged += (sender, args) => CustomStatusEffectsList.InitializeStatusEffectTemplate();
             statusEffectsPositionEnabled.SettingChanged += (sender, args) => CustomStatusEffectsList.InitializeStatusEffectTemplate();
@@ -233,11 +233,11 @@ namespace MyLittleUI
             statusEffectsElementEnabled.SettingChanged += (sender, args) => CustomStatusEffectsList.InitializeStatusEffectTemplate();
             statusEffectsElementSize.SettingChanged += (sender, args) => CustomStatusEffectsList.InitializeStatusEffectTemplate();
 
-            sailingIndicatorEnabled = Config.Bind("Status effects - Sailing indicator", "Enabled", defaultValue: true, "Enable changing of sailing indicator");
-            sailingIndicatorPowerIconPosition = Config.Bind("Status effects - Sailing indicator", "Sail power indicator position", defaultValue: new Vector2(-350f, -290f), "Sail size and rudder indicator position");
-            sailingIndicatorPowerIconScale = Config.Bind("Status effects - Sailing indicator", "Sail power indicator scale", defaultValue: 1.0f, "Sail size and rudder indicator scale");
-            sailingIndicatorWindIndicatorPosition = Config.Bind("Status effects - Sailing indicator", "Wind indicator position", defaultValue: new Vector2(-350f, -140f), "Wind indicator (ship and wind direction) position");
-            sailingIndicatorWindIndicatorScale = Config.Bind("Status effects - Sailing indicator", "Wind indicator scale", defaultValue: 1.0f, "Wind indicator (ship and wind direction) scale");
+            sailingIndicatorEnabled = Config.Bind("Status effects - Map - Sailing indicator", "Enabled", defaultValue: true, "Enable changing of sailing indicator");
+            sailingIndicatorPowerIconPosition = Config.Bind("Status effects - Map - Sailing indicator", "Sail power indicator position", defaultValue: new Vector2(-350f, -290f), "Sail size and rudder indicator position");
+            sailingIndicatorPowerIconScale = Config.Bind("Status effects - Map - Sailing indicator", "Sail power indicator scale", defaultValue: 1.0f, "Sail size and rudder indicator scale");
+            sailingIndicatorWindIndicatorPosition = Config.Bind("Status effects - Map - Sailing indicator", "Wind indicator position", defaultValue: new Vector2(-350f, -140f), "Wind indicator (ship and wind direction) position");
+            sailingIndicatorWindIndicatorScale = Config.Bind("Status effects - Map - Sailing indicator", "Wind indicator scale", defaultValue: 1.0f, "Wind indicator (ship and wind direction) scale");
 
             modEnabled.SettingChanged += (sender, args) => CustomStatusEffectsList.ChangeSailingIndicator();
             sailingIndicatorEnabled.SettingChanged += (sender, args) => CustomStatusEffectsList.ChangeSailingIndicator();
