@@ -19,7 +19,7 @@ namespace MyLittleUI
     {
         const string pluginID = "shudnal.MyLittleUI";
         const string pluginName = "My Little UI";
-        const string pluginVersion = "1.0.0";
+        const string pluginVersion = "1.0.1";
 
         private Harmony _harmony;
 
@@ -312,17 +312,21 @@ namespace MyLittleUI
         [HarmonyPatch(typeof(InventoryGrid), nameof(InventoryGrid.UpdateGui))]
         private class InventoryGrid_UpdateGui_DurabilityAndScale
         {
-            private static void Postfix(InventoryGrid __instance, Inventory ___m_inventory)
+            private static void Postfix(InventoryGrid __instance, Inventory ___m_inventory, List<InventoryGrid.Element> ___m_elements)
             {
-                if (!modEnabled.Value) return;
+                if (!modEnabled.Value)
+                    return;
 
                 int width = ___m_inventory.GetWidth();
 
                 foreach (ItemDrop.ItemData item in ___m_inventory.GetAllItems())
                 {
-                    InventoryGrid.Element element = __instance.GetElement(item.m_gridPos.x, item.m_gridPos.y, width);
-
-                    UpdateItemIcon(element.m_durability, element.m_icon, item);
+                    int index = item.m_gridPos.y * width + item.m_gridPos.x;
+                    if (0 <= index && index < ___m_elements.Count)
+                    {
+                        InventoryGrid.Element element = ___m_elements[index];
+                        UpdateItemIcon(element.m_durability, element.m_icon, item);
+                    }
                 }
             }
         }
@@ -332,16 +336,20 @@ namespace MyLittleUI
         {
             private static void Postfix(HotkeyBar __instance, Player player, List<ItemDrop.ItemData> ___m_items, List<HotkeyBar.ElementData> ___m_elements)
             {
-                if (!modEnabled.Value) return;
+                if (!modEnabled.Value)
+                    return;
 
-                if (!player || player.IsDead()) return;
+                if (!player || player.IsDead())
+                    return;
 
                 for (int j = 0; j < ___m_items.Count; j++)
                 {
                     ItemDrop.ItemData item = ___m_items[j];
-                    HotkeyBar.ElementData element = ___m_elements[item.m_gridPos.x];
-
-                    UpdateItemIcon(element.m_durability, element.m_icon, item);
+                    if (item != null && 0 <= item.m_gridPos.x && item.m_gridPos.x < ___m_elements.Count)
+                    {
+                        HotkeyBar.ElementData element = ___m_elements[item.m_gridPos.x];
+                        UpdateItemIcon(element.m_durability, element.m_icon, item);
+                    }
                 }
             }
         }
