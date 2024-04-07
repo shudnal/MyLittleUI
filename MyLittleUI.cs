@@ -96,6 +96,8 @@ namespace MyLittleUI
         public static ConfigEntry<Vector2> sailingIndicatorWindIndicatorPositionNomap;
         public static ConfigEntry<float> sailingIndicatorWindIndicatorScaleNomap;
 
+        public static ConfigEntry<StationHover> hoverCharacter;
+        public static ConfigEntry<bool> hoverCharacterGrowth;
         private static Vector3 itemIconScaleOriginal = Vector3.zero;
         private static Container textInputForContainer;
 
@@ -208,6 +210,9 @@ namespace MyLittleUI
             hoverTame = Config.Bind("Hover - Tameable", "Tameable Hover", defaultValue: StationHover.Vanilla, "Format of total needed time/percent to tame or to stay fed.");
             hoverTameTimeToTame = Config.Bind("Hover - Tameable", "Show time to tame", defaultValue: true, "Show total needed time/percent to tame.");
             hoverTameTimeToFed = Config.Bind("Hover - Tameable", "Show time to stay fed", defaultValue: true, "Show total needed time/percent to stay fed.");
+
+            hoverCharacter = Config.Bind("Hover - Character", "Character Hover", defaultValue: StationHover.Vanilla, "Format of baby development's total needed time/percent.");
+            hoverCharacterGrowth = Config.Bind("Hover - Character", "Show baby growth", true, "Show total growth percentage/remaining for babies.");
 
             hoverSmelterEstimatedTime = Config.Bind("Hover - Smelters", "Show estimated time", defaultValue: true, "Show estimated end time for a smelter station (charcoal kiln, forge, etc. including non vanilla).");
             hoverSmelterShowFuelAndItem = Config.Bind("Hover - Smelters", "Always show fuel and item", defaultValue: true, "Show current smelting item and fuel loaded on both fuel and ore switches.");
@@ -1051,6 +1056,47 @@ namespace MyLittleUI
             }
         }
 
+        [HarmonyPatch(typeof(Character), nameof(Character.GetHoverText))]
+        private class Character_GetHoverText_GrowUpDevelopment
+        {
+            private static void Postfix(Character __instance, ref string __result)
+            {
+                if(!modEnabled.Value || !hoverCharacterGrowth.Value) return;
+
+                if (!__instance.m_nview.IsValid())
+                {
+                    __result = "";
+                    return;
+                }
+                Growup growup = __instance.GetComponent<Growup>();
+                if (growup)
+                {
+                    double growthPercentage = growup.m_baseAI.GetTimeSinceSpawned().TotalSeconds / growup.m_growTime;
+                    double remainingTime;
+                    if (growthPercentage <= 1.0)
+                    {
+                        remainingTime = growup.m_growTime - growup.m_baseAI.GetTimeSinceSpawned().TotalSeconds;
+                    }
+                    else
+                    {
+                        growthPercentage = 1;
+                        remainingTime = 0;
+                    }
+
+                    switch (hoverCharacter.Value)
+                    {
+                        case StationHover.Percentage:
+                            __result += $"\nDevelopment: {growthPercentage:P0}";
+                            break;
+                        case StationHover.MinutesSeconds:
+                            __result += $"\nDevelopment: {FromSeconds(remainingTime)}";
+                            break;
+                        default: break;
+                    }
+                }
+            }
+
+        }
         [HarmonyPatch(typeof(InventoryGui), nameof(InventoryGui.SetupRequirement))]
         public static class InventoryGui_SetupRequirement_AddAvailableAmount
         {
