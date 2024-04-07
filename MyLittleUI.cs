@@ -19,7 +19,7 @@ namespace MyLittleUI
     {
         const string pluginID = "shudnal.MyLittleUI";
         const string pluginName = "My Little UI";
-        const string pluginVersion = "1.0.1";
+        const string pluginVersion = "1.0.2";
 
         private Harmony _harmony;
 
@@ -53,6 +53,10 @@ namespace MyLittleUI
         private static ConfigEntry<StationHover> hoverCooking;
         private static ConfigEntry<StationHover> hoverBeeHive;
         private static ConfigEntry<bool> hoverBeeHiveTotal;
+
+        public static ConfigEntry<StationHover> hoverCharacter;
+        public static ConfigEntry<bool> hoverCharacterGrowth;
+        public static ConfigEntry<bool> hoverCharacterProcreation;
 
         private static ConfigEntry<StationHover> hoverTame;
         private static ConfigEntry<bool> hoverTameTimeToTame;
@@ -96,10 +100,9 @@ namespace MyLittleUI
         public static ConfigEntry<Vector2> sailingIndicatorWindIndicatorPositionNomap;
         public static ConfigEntry<float> sailingIndicatorWindIndicatorScaleNomap;
 
-        public static ConfigEntry<StationHover> hoverCharacter;
-        public static ConfigEntry<bool> hoverCharacterGrowth;
         private static Vector3 itemIconScaleOriginal = Vector3.zero;
         private static Container textInputForContainer;
+        private static readonly Dictionary<string, string> characterNames = new Dictionary<string, string>();
 
         private static MyLittleUI instance;
 
@@ -201,6 +204,10 @@ namespace MyLittleUI
             statsCharacterArmor.SettingChanged += (sender, args) => InventoryCharacterStats.UpdateTooltipState();
             statsCharacterEffects.SettingChanged += (sender, args) => InventoryCharacterStats.UpdateTooltipState();
 
+            hoverCharacter = Config.Bind("Hover - Character", "Character Hover", defaultValue: StationHover.Vanilla, "Format of baby development's total needed time/percent.");
+            hoverCharacterGrowth = Config.Bind("Hover - Character", "Show baby growth", true, "Show total growth percentage/remaining for babies.");
+            hoverCharacterProcreation = Config.Bind("Hover - Character", "Show offspring", true, "Show percentage/remaining for new offspring.");
+
             hoverFermenter = Config.Bind("Hover - Stations", "Fermenter Hover", defaultValue: StationHover.Vanilla, "Hover text for fermenter.");
             hoverPlant = Config.Bind("Hover - Stations", "Plants Hover", defaultValue: StationHover.Vanilla, "Hover text for plants.");
             hoverCooking = Config.Bind("Hover - Stations", "Cooking stations Hover", defaultValue: StationHover.Vanilla, "Hover text for cooking stations.");
@@ -210,9 +217,6 @@ namespace MyLittleUI
             hoverTame = Config.Bind("Hover - Tameable", "Tameable Hover", defaultValue: StationHover.Vanilla, "Format of total needed time/percent to tame or to stay fed.");
             hoverTameTimeToTame = Config.Bind("Hover - Tameable", "Show time to tame", defaultValue: true, "Show total needed time/percent to tame.");
             hoverTameTimeToFed = Config.Bind("Hover - Tameable", "Show time to stay fed", defaultValue: true, "Show total needed time/percent to stay fed.");
-
-            hoverCharacter = Config.Bind("Hover - Character", "Character Hover", defaultValue: StationHover.Vanilla, "Format of baby development's total needed time/percent.");
-            hoverCharacterGrowth = Config.Bind("Hover - Character", "Show baby growth", true, "Show total growth percentage/remaining for babies.");
 
             hoverSmelterEstimatedTime = Config.Bind("Hover - Smelters", "Show estimated time", defaultValue: true, "Show estimated end time for a smelter station (charcoal kiln, forge, etc. including non vanilla).");
             hoverSmelterShowFuelAndItem = Config.Bind("Hover - Smelters", "Always show fuel and item", defaultValue: true, "Show current smelting item and fuel loaded on both fuel and ore switches.");
@@ -616,7 +620,7 @@ namespace MyLittleUI
 
                     for (int slot = 0; slot < __instance.m_slots.Length; slot++)
                     {
-                        __instance.GetSlot(slot, out string itemName, out float cookedTime, out CookingStation.Status status);
+                        __instance.GetSlot(slot, out string itemName, out float cookedTime, out _);
                         if (itemName == "")
                             continue;
 
@@ -707,7 +711,7 @@ namespace MyLittleUI
 
                 for (int slot = 0; slot < __instance.m_slots.Length; slot++)
                 {
-                    __instance.GetSlot(slot, out string itemName, out float cookedTime, out CookingStation.Status status);
+                    __instance.GetSlot(slot, out string itemName, out float cookedTime, out _);
                     if (itemName == "")
                         continue;
 
@@ -1059,44 +1063,66 @@ namespace MyLittleUI
         [HarmonyPatch(typeof(Character), nameof(Character.GetHoverText))]
         private class Character_GetHoverText_GrowUpDevelopment
         {
-            private static void Postfix(Character __instance, ref string __result)
+            private static void Postfix(Character __instance, ZNetView ___m_nview, ref string __result)
             {
-                if(!modEnabled.Value || !hoverCharacterGrowth.Value) return;
-
-                if (!__instance.m_nview.IsValid())
-                {
-                    __result = "";
+                if (!modEnabled.Value)
                     return;
-                }
-                Growup growup = __instance.GetComponent<Growup>();
-                if (growup)
+
+                if (!___m_nview.IsValid())
+                    return;
+
+                if (hoverCharacter.Value == StationHover.Vanilla)
+                    return;
+
+                if (hoverCharacterGrowth.Value && __instance.TryGetComponent(out Growup growup) && growup.m_growTime != 0f)
                 {
-                    double growthPercentage = growup.m_baseAI.GetTimeSinceSpawned().TotalSeconds / growup.m_growTime;
-                    double remainingTime;
-                    if (growthPercentage <= 1.0)
-                    {
-                        remainingTime = growup.m_growTime - growup.m_baseAI.GetTimeSinceSpawned().TotalSeconds;
-                    }
-                    else
-                    {
-                        growthPercentage = 1;
-                        remainingTime = 0;
-                    }
+                    double timeSinceSpawned = growup.m_baseAI.GetTimeSinceSpawned().TotalSeconds;
+                    if (timeSinceSpawned > growup.m_growTime)
+                        return;
+
+                    string grownup = growup.GetPrefab().name;
+                    if (!characterNames.ContainsKey(grownup))
+                        characterNames.Add(grownup, growup.GetPrefab().GetComponent<Character>()?.m_name);
 
                     switch (hoverCharacter.Value)
                     {
                         case StationHover.Percentage:
-                            __result += $"\nDevelopment: {growthPercentage:P0}";
-                            break;
+                            __result += $"\n{Localization.instance.Localize(characterNames[grownup])}: {timeSinceSpawned / growup.m_growTime:P0}";
+                            return;
                         case StationHover.MinutesSeconds:
-                            __result += $"\nDevelopment: {FromSeconds(remainingTime)}";
-                            break;
-                        default: break;
+                            __result += $"\n{Localization.instance.Localize(characterNames[grownup])}: {FromSeconds(growup.m_growTime - timeSinceSpawned)}";
+                            return;
+                        default:
+                            return;
+                    }
+                }
+
+                if (hoverCharacterProcreation.Value && __instance.TryGetComponent(out Procreation procreation) && procreation.IsPregnant())
+                {
+                    long @long = ___m_nview.GetZDO().GetLong(ZDOVars.s_pregnant, 0L);
+                    double timeSincePregnant = (ZNet.instance.GetTime() - new DateTime(@long)).TotalSeconds;
+                    if (timeSincePregnant > procreation.m_pregnancyDuration)
+                        return;
+
+                    string offspring = procreation.m_offspring.name;
+                    if (!characterNames.ContainsKey(offspring))
+                        characterNames.Add(offspring, procreation.m_offspring.GetComponent<Character>()?.m_name);
+
+                    switch (hoverCharacter.Value)
+                    {
+                        case StationHover.Percentage:
+                            __result += $"\n{Localization.instance.Localize(characterNames[offspring])}: {timeSincePregnant / procreation.m_pregnancyDuration:P0}";
+                            return;
+                        case StationHover.MinutesSeconds:
+                            __result += $"\n{Localization.instance.Localize(characterNames[offspring])}: {FromSeconds(procreation.m_pregnancyDuration - timeSincePregnant)}";
+                            return;
+                        default:
+                            return;
                     }
                 }
             }
-
         }
+
         [HarmonyPatch(typeof(InventoryGui), nameof(InventoryGui.SetupRequirement))]
         public static class InventoryGui_SetupRequirement_AddAvailableAmount
         {
