@@ -19,7 +19,7 @@ namespace MyLittleUI
     {
         const string pluginID = "shudnal.MyLittleUI";
         const string pluginName = "My Little UI";
-        const string pluginVersion = "1.0.2";
+        const string pluginVersion = "1.0.3";
 
         private Harmony _harmony;
 
@@ -980,7 +980,6 @@ namespace MyLittleUI
                         AddStat(PlayerStatType.PlayerHits);
                         AddStat(PlayerStatType.PlayerKills);
                         AddStat(PlayerStatType.BossKills);
-                        AddStat(PlayerStatType.SetGuardianPower);
                         AddStat(PlayerStatType.UseGuardianPower);
 
                         AddLine();

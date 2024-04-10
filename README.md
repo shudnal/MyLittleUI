@@ -27,6 +27,8 @@ Mod is purely client-sided. It makes only UI rearrangements and shows extra info
 * Smelters (show ore and fuel on both sides, time to end, queued items in order)
 * Kiln (time to end and queued wood)
 * Tameable (time to stay fed for tamed, time to tame for untamed)
+* Tamed (time to grow up)
+* Eggs (time to hatch)
 
 ## Chests
 * Rename chests

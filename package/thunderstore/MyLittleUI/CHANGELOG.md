@@ -1,3 +1,6 @@
+# 1.0.3
+* eggs hover
+
 # 1.0.2
 * tamed hover
 
