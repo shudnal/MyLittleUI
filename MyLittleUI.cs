@@ -57,6 +57,7 @@ namespace MyLittleUI
         public static ConfigEntry<StationHover> hoverCharacter;
         public static ConfigEntry<bool> hoverCharacterGrowth;
         public static ConfigEntry<bool> hoverCharacterProcreation;
+        public static ConfigEntry<bool> hoverCharacterEggGrow;
 
         private static ConfigEntry<StationHover> hoverTame;
         private static ConfigEntry<bool> hoverTameTimeToTame;
@@ -207,6 +208,7 @@ namespace MyLittleUI
             hoverCharacter = Config.Bind("Hover - Character", "Character Hover", defaultValue: StationHover.Vanilla, "Format of baby development's total needed time/percent.");
             hoverCharacterGrowth = Config.Bind("Hover - Character", "Show baby growth", true, "Show total growth percentage/remaining for babies.");
             hoverCharacterProcreation = Config.Bind("Hover - Character", "Show offspring", true, "Show percentage/remaining for new offspring.");
+            hoverCharacterEggGrow = Config.Bind("Hover - Character", "Show egg hatching", true, "Show percentage/remaining for egg hatching.");
 
             hoverFermenter = Config.Bind("Hover - Stations", "Fermenter Hover", defaultValue: StationHover.Vanilla, "Hover text for fermenter.");
             hoverPlant = Config.Bind("Hover - Stations", "Plants Hover", defaultValue: StationHover.Vanilla, "Hover text for plants.");
@@ -1115,6 +1117,53 @@ namespace MyLittleUI
                             return;
                         case StationHover.MinutesSeconds:
                             __result += $"\n{Localization.instance.Localize(characterNames[offspring])}: {FromSeconds(procreation.m_pregnancyDuration - timeSincePregnant)}";
+                            return;
+                        default:
+                            return;
+                    }
+                }
+            }
+        }
+
+        [HarmonyPatch(typeof(EggGrow), nameof(EggGrow.GetHoverText))]
+        private class EggGrow_GetHoverText_EggGrow
+        {
+            private static void Postfix(EggGrow __instance, ItemDrop ___m_item, ZNetView ___m_nview, ref string __result)
+            {
+                if (!modEnabled.Value)
+                    return;
+
+                if (hoverCharacter.Value == StationHover.Vanilla)
+                    return;
+
+                if (!___m_item)
+                    return;
+
+                if (!___m_nview || !___m_nview.IsValid())
+                    return;
+
+                var growStart = ___m_nview.GetZDO().GetFloat(ZDOVars.s_growStart);
+                bool isWarm = growStart > 0f;
+                
+                if (hoverCharacterEggGrow.Value && isWarm)
+                {
+                    double timeSinceGrowStart = ZNet.instance.GetTimeSeconds() - growStart;
+                    if (timeSinceGrowStart > __instance.m_growTime)
+                        return;
+
+                    var growupPrefab = __instance.m_grownPrefab;
+                    string offspring = growupPrefab.name;
+
+                    if (!characterNames.ContainsKey(offspring))
+                        characterNames.Add(offspring, growupPrefab.GetComponent<Character>()?.m_name);
+
+                    switch (hoverCharacter.Value)
+                    {
+                        case StationHover.Percentage:
+                            __result += $"\n{Localization.instance.Localize(characterNames[offspring])}: {timeSinceGrowStart/__instance.m_growTime:P0}";
+                            return;
+                        case StationHover.MinutesSeconds:
+                            __result += $"\n{Localization.instance.Localize(characterNames[offspring])}: {FromSeconds(__instance.m_growTime - timeSinceGrowStart)}";
                             return;
                         default:
                             return;
