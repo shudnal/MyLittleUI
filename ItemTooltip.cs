@@ -97,7 +97,7 @@ namespace MyLittleUI
 
             foreach (string token in tokens)
             {
-                localizedTooltipTokens[Localization.instance.Localize(token)] = token;
+                //localizedTooltipTokens[Localization.instance.Localize(token)] = token;
                 localizedTooltipTokens[token] = token;
             }
 
