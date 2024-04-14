@@ -6,9 +6,7 @@ using BepInEx;
 using BepInEx.Configuration;
 using HarmonyLib;
 using UnityEngine;
-using UnityEngine.UI;
 using UnityEngine.Rendering;
-using TMPro;
 
 namespace MyLittleUI
 {
@@ -19,7 +17,7 @@ namespace MyLittleUI
     {
         const string pluginID = "shudnal.MyLittleUI";
         const string pluginName = "My Little UI";
-        const string pluginVersion = "1.0.3";
+        const string pluginVersion = "1.0.4";
 
         private Harmony _harmony;
 
@@ -29,16 +27,25 @@ namespace MyLittleUI
         private static ConfigEntry<bool> showAvailableItemsAmount;
         private static ConfigEntry<Color> availableItemsAmountColor;
 
-        private static ConfigEntry<bool> durabilityEnabled;
-        private static ConfigEntry<Color> durabilityFine;
-        private static ConfigEntry<Color> durabilityWorn;
-        private static ConfigEntry<Color> durabilityAtRisk;
-        private static ConfigEntry<Color> durabilityBroken;
+        public static ConfigEntry<bool> durabilityEnabled;
+        public static ConfigEntry<Color> durabilityFine;
+        public static ConfigEntry<Color> durabilityWorn;
+        public static ConfigEntry<Color> durabilityAtRisk;
+        public static ConfigEntry<Color> durabilityBroken;
 
-        private static ConfigEntry<float> itemIconScale;
+        public static ConfigEntry<float> itemIconScale;
 
         public static ConfigEntry<bool> itemTooltip;
         public static ConfigEntry<bool> itemTooltipColored;
+
+        public static ConfigEntry<bool> itemQuality;
+        public static ConfigEntry<string> itemQualitySymbol;
+        public static ConfigEntry<Color> itemQualitySymbolColor;
+        public static ConfigEntry<float> itemQualitySymbolSize;
+        public static ConfigEntry<int> itemQualityMax;
+        public static ConfigEntry<int> itemQualityRows;
+        public static ConfigEntry<int> itemQualityColumns;
+        public static ConfigEntry<float> itemQualityLineSpacing;
 
         private static ConfigEntry<bool> statsMainMenu;
         private static ConfigEntry<bool> statsMainMenuAdvanced;
@@ -101,7 +108,6 @@ namespace MyLittleUI
         public static ConfigEntry<Vector2> sailingIndicatorWindIndicatorPositionNomap;
         public static ConfigEntry<float> sailingIndicatorWindIndicatorScaleNomap;
 
-        private static Vector3 itemIconScaleOriginal = Vector3.zero;
         private static Container textInputForContainer;
         private static readonly Dictionary<string, string> characterNames = new Dictionary<string, string>();
 
@@ -193,6 +199,24 @@ namespace MyLittleUI
 
             itemTooltip = Config.Bind("Item - Tooltip", "Enabled", defaultValue: true, "Updated item tooltip. Hold Alt to see original tooltip");
             itemTooltipColored = Config.Bind("Item - Tooltip", "Colored numbers", defaultValue: true, "Orange and yellow value numbers in tooltip, light blue if disabled");
+
+            itemQuality = Config.Bind("Item - Quality", "Enabled", defaultValue: false, "Show item quality as symbol");
+            itemQualitySymbol = Config.Bind("Item - Quality", "Symbol", defaultValue: "★", "Symbol to show.");
+            itemQualitySymbolColor = Config.Bind("Item - Quality", "Symbol Color", defaultValue: new Color(1f, 0.65f, 0f, 1f), "Symbol color");
+            itemQualitySymbolSize = Config.Bind("Item - Quality", "Symbol Size", defaultValue: 10f, "Symbol size");
+            itemQualityMax = Config.Bind("Item - Quality", "Maximum symbols", defaultValue: 8, "Maximum amount of symbols to show.");
+            itemQualityRows = Config.Bind("Item - Quality", "Maximum rows", defaultValue: 2, "Maximum amount of rows to show.");
+            itemQualityColumns = Config.Bind("Item - Quality", "Maximum columns", defaultValue: 4, "Maximum amount of columns to show.");
+            itemQualityLineSpacing = Config.Bind("Item - Quality", "Line spacing", defaultValue: -35.0f, "Line spacing.");
+
+            itemQualitySymbol.SettingChanged += (sender, args) => itemQualitySymbol.Value = itemQualitySymbol.Value[0].ToString();
+            
+            itemQualitySymbol.SettingChanged += (sender, args) => ItemIcon.FillItemQualityCache();
+            itemQualityMax.SettingChanged += (sender, args) => ItemIcon.FillItemQualityCache();
+            itemQualityRows.SettingChanged += (sender, args) => ItemIcon.FillItemQualityCache();
+            itemQualityColumns.SettingChanged += (sender, args) => ItemIcon.FillItemQualityCache();
+
+            ItemIcon.FillItemQualityCache();
 
             statsMainMenu = Config.Bind("Stats - Main menu", "Show stats in main menu", defaultValue: true, "Show character statistics in main menu");
             statsMainMenuAdvanced = Config.Bind("Stats - Main menu", "Show advanced stats in main menu", defaultValue: true, "Show advanced character statistics in main menu");
@@ -289,81 +313,7 @@ namespace MyLittleUI
             return ts.ToString(ts.Hours > 0 ? @"h\:mm\:ss" : @"m\:ss");
         }
 
-        private static void UpdateItemIcon(GuiBar durability, Image icon, ItemDrop.ItemData item)
-        {
-            if (itemIconScaleOriginal == Vector3.zero)
-                itemIconScaleOriginal = icon.transform.localScale;
 
-            if (itemIconScale.Value != 1f)
-                icon.transform.localScale = itemIconScaleOriginal * Mathf.Clamp(itemIconScale.Value, 0.2f, 2f);
-
-            if (durabilityEnabled.Value && item.m_shared.m_useDurability && item.m_durability < item.GetMaxDurability())
-            {
-                if (item.m_durability <= 0f)
-                {
-                    durability.SetValue(1f);
-                    durability.SetColor((Mathf.Sin(Time.time * 10f) > 0f) ? durabilityBroken.Value : new Color(0f, 0f, 0f, 0f));
-                }
-                else
-                {
-                    float percentage = item.GetDurabilityPercentage();
-                    durability.SetValue(percentage);
-                    if (percentage >= 0.75f)
-                        durability.SetColor(durabilityFine.Value);
-                    else if (percentage >= 0.50f)
-                        durability.SetColor(durabilityWorn.Value);
-                    else if (percentage >= 0.25f)
-                        durability.SetColor(durabilityAtRisk.Value);
-                    else
-                        durability.SetColor(durabilityBroken.Value);
-                }
-            }
-        }
-
-        [HarmonyPatch(typeof(InventoryGrid), nameof(InventoryGrid.UpdateGui))]
-        private class InventoryGrid_UpdateGui_DurabilityAndScale
-        {
-            private static void Postfix(InventoryGrid __instance, Inventory ___m_inventory, List<InventoryGrid.Element> ___m_elements)
-            {
-                if (!modEnabled.Value)
-                    return;
-
-                int width = ___m_inventory.GetWidth();
-
-                foreach (ItemDrop.ItemData item in ___m_inventory.GetAllItems())
-                {
-                    int index = item.m_gridPos.y * width + item.m_gridPos.x;
-                    if (0 <= index && index < ___m_elements.Count)
-                    {
-                        InventoryGrid.Element element = ___m_elements[index];
-                        UpdateItemIcon(element.m_durability, element.m_icon, item);
-                    }
-                }
-            }
-        }
-
-        [HarmonyPatch(typeof(HotkeyBar), nameof(HotkeyBar.UpdateIcons))]
-        private class HotkeyBar_UpdateIcons_DurabilityAndScale
-        {
-            private static void Postfix(HotkeyBar __instance, Player player, List<ItemDrop.ItemData> ___m_items, List<HotkeyBar.ElementData> ___m_elements)
-            {
-                if (!modEnabled.Value)
-                    return;
-
-                if (!player || player.IsDead())
-                    return;
-
-                for (int j = 0; j < ___m_items.Count; j++)
-                {
-                    ItemDrop.ItemData item = ___m_items[j];
-                    if (item != null && 0 <= item.m_gridPos.x && item.m_gridPos.x < ___m_elements.Count)
-                    {
-                        HotkeyBar.ElementData element = ___m_elements[item.m_gridPos.x];
-                        UpdateItemIcon(element.m_durability, element.m_icon, item);
-                    }
-                }
-            }
-        }
 
         [HarmonyPatch(typeof(Container), nameof(Container.GetHoverText))]
         private class Container_GetHoverText_Duration
@@ -439,6 +389,9 @@ namespace MyLittleUI
                 if (!modEnabled.Value)
                     return true;
 
+                if (!chestCustomName.Value)
+                    return true;
+
                 if (!alt)
                     return true;
 
@@ -468,7 +421,7 @@ namespace MyLittleUI
         [HarmonyPatch(typeof(TextInput), nameof(TextInput.setText))]
         private class TextInput_setText_ChestRename
         {
-            private static void Postfix(TextInput __instance, string text)
+            private static void Postfix(string text)
             {
                 if (!modEnabled.Value)
                     return;
@@ -946,7 +899,7 @@ namespace MyLittleUI
                 statCount = 0;
             }
 
-            private static void Postfix(FejdStartup __instance, TMPro.TMP_Text ___m_csSourceInfo, List<PlayerProfile> ___m_profiles, int ___m_profileIndex)
+            private static void Postfix(TMPro.TMP_Text ___m_csSourceInfo, List<PlayerProfile> ___m_profiles, int ___m_profileIndex)
             {
                 if (!modEnabled.Value)
                     return;
@@ -1185,7 +1138,10 @@ namespace MyLittleUI
                 if (!__result)
                     return;
 
-                TMP_Text component3 = elementRoot.transform.Find("res_amount").GetComponent<TMP_Text>();
+                if (UnityInput.Current.GetKey(KeyCode.LeftAlt) || UnityInput.Current.GetKey(KeyCode.RightAlt))
+                    return;
+
+                TMPro.TMP_Text component3 = elementRoot.transform.Find("res_amount").GetComponent<TMPro.TMP_Text>();
                 if (component3 == null)
                     return;
 

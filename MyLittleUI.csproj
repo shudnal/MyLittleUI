@@ -37,6 +37,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="InventoryCharacterStats.cs" />
+    <Compile Include="ItemIcon.cs" />
     <Compile Include="ItemTooltip.cs" />
     <Compile Include="CustomStatusEffectsList.cs" />
     <Compile Include="MyLittleUI.cs" />
@@ -94,6 +95,8 @@
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
     <PostBuildEvent>xcopy "$(TargetDir)\$(TargetFileName)" "F:\Steam\steamapps\common\Valheim\BepInEx\plugins\" /q /y /i
+
+xcopy "$(TargetDir)\$(TargetFileName)" "C:\Users\Suden\AppData\Roaming\r2modmanPlus-local\Valheim\profiles\beta\BepInEx\plugins\shudnal-MyLittleUI\" /q /y /i
 
 xcopy "$(TargetDir)\$(TargetFileName)" "$(ProjectDir)\package\thunderstore\$(SolutionName)\" /q /y /i
 

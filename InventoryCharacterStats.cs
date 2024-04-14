@@ -222,7 +222,7 @@ namespace MyLittleUI
                         sb.Append("\n");
                         sb.Append(String.Join("\n", text.m_text.Split(new char[] { '\n' }, StringSplitOptions.RemoveEmptyEntries).Where(line => LineIsValid(line))).Replace("<size=20>", "").Replace("</size>", ""));
 
-                        bool LineIsValid(string line)
+                        static bool LineIsValid(string line)
                         {
                             return line != "" && !line.StartsWith(" <") && !line.StartsWith("\n") && !line.IsNullOrWhiteSpace();
                         }

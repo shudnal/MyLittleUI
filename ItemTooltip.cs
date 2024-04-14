@@ -1,4 +1,5 @@
-﻿using HarmonyLib;
+﻿using BepInEx;
+using HarmonyLib;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -20,6 +21,9 @@ namespace MyLittleUI
         private static readonly StringBuilder sb = new StringBuilder();
         private static readonly Dictionary<string, List<int>> tokenPositions = new Dictionary<string, List<int>>();
         private static readonly List<string> arrResult = new List<string>();
+
+        private static readonly Dictionary<int, string> tooltipCache = new Dictionary<int, string>();
+        private const int tooltipCachedEntriesMax = 200;
 
         public static void Initialize()
         {
@@ -281,7 +285,7 @@ namespace MyLittleUI
             return statString;
 
 
-            string GetStringUpgradeFrom(string value)
+            static string GetStringUpgradeFrom(string value)
             {
                 return $"{value.Replace("<color=yellow>", "<color=silver>").Replace("<color=orange>", "<color=lightblue>")} → ";
             }
@@ -327,8 +331,18 @@ namespace MyLittleUI
                 if (!itemTooltip.Value)
                     return;
 
-                if (Input.GetKey(KeyCode.LeftAlt) || Input.GetKey(KeyCode.RightAlt))
+                if (UnityInput.Current.GetKey(KeyCode.LeftAlt) || UnityInput.Current.GetKey(KeyCode.RightAlt))
                     return;
+
+                if (tooltipCache.Count > tooltipCachedEntriesMax)
+                    tooltipCache.Clear();
+
+                int tooltipHash = __result.GetStableHashCode();
+                if (tooltipCache.ContainsKey(tooltipHash))
+                {
+                    __result = tooltipCache[tooltipHash];
+                    return;
+                }
 
                 if (item == null)
                     return;
@@ -417,7 +431,8 @@ namespace MyLittleUI
                                    .Replace("<color=silver>", "<color=#c0c0c0ff>")
                                    .Replace("<color=lightblue>", "<color=#add8e6ff>")
                                    .Replace("\n\n\n", "\n\n");
-                ;
+
+                tooltipCache.Add(tooltipHash, __result);
             }
         }
 
