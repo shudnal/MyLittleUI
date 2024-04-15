@@ -313,8 +313,6 @@ namespace MyLittleUI
             return ts.ToString(ts.Hours > 0 ? @"h\:mm\:ss" : @"m\:ss");
         }
 
-
-
         [HarmonyPatch(typeof(Container), nameof(Container.GetHoverText))]
         private class Container_GetHoverText_Duration
         {

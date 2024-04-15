@@ -94,10 +94,13 @@
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
-    <PostBuildEvent>xcopy "$(TargetDir)\$(TargetFileName)" "F:\Steam\steamapps\common\Valheim\BepInEx\plugins\" /q /y /i
+    <PostBuildEvent>echo Copy to plugins folder
+xcopy "$(TargetDir)\$(TargetFileName)" "F:\Steam\steamapps\common\Valheim\BepInEx\plugins\" /q /y /i
 
+echo Copy to r2 folder
 xcopy "$(TargetDir)\$(TargetFileName)" "C:\Users\Suden\AppData\Roaming\r2modmanPlus-local\Valheim\profiles\beta\BepInEx\plugins\shudnal-MyLittleUI\" /q /y /i
 
+echo Copy to thunderstore folder
 xcopy "$(TargetDir)\$(TargetFileName)" "$(ProjectDir)\package\thunderstore\$(SolutionName)\" /q /y /i
 
 powershell Compress-Archive -Path '$(ProjectDir)\package\thunderstore\$(SolutionName)\*' -DestinationPath '$(ProjectDir)\package\thunderstore\$(SolutionName).zip' -Force</PostBuildEvent>

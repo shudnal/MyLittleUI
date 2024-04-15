@@ -1,3 +1,7 @@
+# 1.0.4
+* item quality as symbols
+* major tooltip optimization
+
 # 1.0.3
 * eggs hover
 

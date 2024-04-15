@@ -2,8 +2,6 @@
 ![logo](https://staticdelivery.nexusmods.com/mods/3667/images/headers/2562_1711322538.jpg)
 Bunch of little UI tweaks. Tooltips for production timers, player status, items. Custom chest names, buff list, and so on.
 
-Mod is purely client-sided. It makes only UI rearrangements and shows extra info.
-
 ## Items
 * Amount of required resources from your inventory when crafting
 * Colored durability bars on items
@@ -11,6 +9,7 @@ Mod is purely client-sided. It makes only UI rearrangements and shows extra info
 * Reordered item tooltips (EpicLoot supported)
 * Highlight stats to be upgraded in crafting description
 * Hold Alt to disable item tooltip altering
+* Present quality level as configurable symbols (star by default)
 
 ## Stats
 * Advanced character stats in character selection screen
@@ -47,6 +46,8 @@ extract MyLittleUI.dll folder to your BepInEx\Plugins\ folder.
 
 ## Configurating
 The best way to handle configs is configuration manager. Choose one that works for you:
+
+https://thunderstore.io/c/valheim/p/shudnal/ConfigurationManager/
 
 https://www.nexusmods.com/site/mods/529
 
