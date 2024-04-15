@@ -76,6 +76,7 @@ namespace MyLittleUI
             public static Color color;
             public static bool isRightToLeftText;
             public static float lineSpacing;
+            public static float characterSpacing;
 
             public static void Save(TMP_Text quality)
             {
@@ -85,6 +86,7 @@ namespace MyLittleUI
                 color = quality.color;
                 isRightToLeftText = quality.isRightToLeftText;
                 lineSpacing = quality.lineSpacing;
+                characterSpacing = quality.characterSpacing;
             }
 
             public static void Load(TMP_Text quality)
@@ -94,6 +96,7 @@ namespace MyLittleUI
                 quality.color = color;
                 quality.isRightToLeftText = isRightToLeftText;
                 quality.lineSpacing = lineSpacing;
+                quality.characterSpacing = characterSpacing;
             }
 
             public static bool IsTextWasChanged(TMP_Text quality)
@@ -102,7 +105,8 @@ namespace MyLittleUI
                      || quality.fontSize != fontSize
                      || quality.color != color
                      || quality.isRightToLeftText != isRightToLeftText
-                     || quality.lineSpacing != lineSpacing;
+                     || quality.lineSpacing != lineSpacing
+                     || quality.lineSpacing != characterSpacing;
             }
         };
 
@@ -127,6 +131,7 @@ namespace MyLittleUI
             quality.color = itemQualitySymbolColor.Value;
             quality.isRightToLeftText = true;
             quality.lineSpacing = itemQualityLineSpacing.Value;
+            quality.characterSpacing = itemQualityCharacterSpacing.Value;
         }
 
         [HarmonyPatch(typeof(InventoryGrid), nameof(InventoryGrid.UpdateGui))]

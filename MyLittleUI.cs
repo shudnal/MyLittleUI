@@ -17,7 +17,7 @@ namespace MyLittleUI
     {
         const string pluginID = "shudnal.MyLittleUI";
         const string pluginName = "My Little UI";
-        const string pluginVersion = "1.0.4";
+        const string pluginVersion = "1.0.5";
 
         private Harmony _harmony;
 
@@ -46,6 +46,7 @@ namespace MyLittleUI
         public static ConfigEntry<int> itemQualityRows;
         public static ConfigEntry<int> itemQualityColumns;
         public static ConfigEntry<float> itemQualityLineSpacing;
+        public static ConfigEntry<float> itemQualityCharacterSpacing;
 
         private static ConfigEntry<bool> statsMainMenu;
         private static ConfigEntry<bool> statsMainMenuAdvanced;
@@ -207,7 +208,8 @@ namespace MyLittleUI
             itemQualityMax = Config.Bind("Item - Quality", "Maximum symbols", defaultValue: 8, "Maximum amount of symbols to show.");
             itemQualityRows = Config.Bind("Item - Quality", "Maximum rows", defaultValue: 2, "Maximum amount of rows to show.");
             itemQualityColumns = Config.Bind("Item - Quality", "Maximum columns", defaultValue: 4, "Maximum amount of columns to show.");
-            itemQualityLineSpacing = Config.Bind("Item - Quality", "Line spacing", defaultValue: -35.0f, "Line spacing.");
+            itemQualityLineSpacing = Config.Bind("Item - Quality", "Space between lines", defaultValue: -35.0f, "Line spacing.");
+            itemQualityCharacterSpacing = Config.Bind("Item - Quality", "Space between characters", defaultValue: 8f, "Character spacing.");
 
             itemQualitySymbol.SettingChanged += (sender, args) => itemQualitySymbol.Value = itemQualitySymbol.Value[0].ToString();
             
