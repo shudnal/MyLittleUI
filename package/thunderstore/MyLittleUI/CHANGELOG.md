@@ -1,5 +1,6 @@
 # 1.0.5
 * horizontal spacing in item quality symbols
+* inventory animation speed
 
 # 1.0.4
 * item quality as symbols

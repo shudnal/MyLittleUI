@@ -48,6 +48,8 @@ namespace MyLittleUI
         public static ConfigEntry<float> itemQualityLineSpacing;
         public static ConfigEntry<float> itemQualityCharacterSpacing;
 
+        private static ConfigEntry<float> inventoryOpenCloseAnimationSpeed;
+
         private static ConfigEntry<bool> statsMainMenu;
         private static ConfigEntry<bool> statsMainMenuAdvanced;
         private static ConfigEntry<bool> statsMainMenuAll;
@@ -219,6 +221,10 @@ namespace MyLittleUI
             itemQualityColumns.SettingChanged += (sender, args) => ItemIcon.FillItemQualityCache();
 
             ItemIcon.FillItemQualityCache();
+
+            inventoryOpenCloseAnimationSpeed = Config.Bind("Inventory", "Animation speed", defaultValue: 1f, "Inventory show/close animation speed");
+
+            inventoryOpenCloseAnimationSpeed.SettingChanged += (sender, args) => SetInventoryAnimationSpeed();
 
             statsMainMenu = Config.Bind("Stats - Main menu", "Show stats in main menu", defaultValue: true, "Show character statistics in main menu");
             statsMainMenuAdvanced = Config.Bind("Stats - Main menu", "Show advanced stats in main menu", defaultValue: true, "Show advanced character statistics in main menu");
@@ -1148,6 +1154,28 @@ namespace MyLittleUI
                 component3.SetText(component3.text + $" <color=#{ColorUtility.ToHtmlStringRGBA(availableItemsAmountColor.Value)}>({player.GetInventory().CountItems(req.m_resItem.m_itemData.m_shared.m_name)})</color>");
             }
         }
+
+        private static void SetInventoryAnimationSpeed()
+        {
+            if (InventoryGui.instance && InventoryGui.instance.m_animator)
+                InventoryGui.instance.m_animator.speed = Mathf.Max(inventoryOpenCloseAnimationSpeed.Value, 0f);
+        }
+
+        [HarmonyPatch(typeof(InventoryGui), nameof(InventoryGui.Awake))]
+        public static class InventoryGui_Awake_AddAvailableAmount
+        {
+            public static void Postfix(InventoryGui __instance)
+            {
+                if (!modEnabled.Value)
+                    return;
+
+                if (inventoryOpenCloseAnimationSpeed.Value != 1f)
+                {
+                    SetInventoryAnimationSpeed();
+                }
+            }
+        }
+        
     }
 }
 
