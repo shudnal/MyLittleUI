@@ -17,7 +17,7 @@ namespace MyLittleUI
     {
         const string pluginID = "shudnal.MyLittleUI";
         const string pluginName = "My Little UI";
-        const string pluginVersion = "1.0.5";
+        const string pluginVersion = "1.0.6";
 
         private Harmony _harmony;
 
@@ -905,12 +905,15 @@ namespace MyLittleUI
                 statCount = 0;
             }
 
-            private static void Postfix(TMPro.TMP_Text ___m_csSourceInfo, List<PlayerProfile> ___m_profiles, int ___m_profileIndex)
+            private static void Postfix(TMPro.TMP_Text ___m_csSourceInfo, List<PlayerProfile> ___m_profiles, int ___m_profileIndex, GameObject ___m_playerInstance)
             {
                 if (!modEnabled.Value)
                     return;
 
                 if (!statsMainMenu.Value)
+                    return;
+
+                if (!(bool)___m_playerInstance)
                     return;
 
                 playerProfile = ___m_profiles[___m_profileIndex];

@@ -1,3 +1,6 @@
+# 1.0.6
+* fixed character stats error with no character selected
+
 # 1.0.5
 * horizontal spacing in item quality symbols
 * inventory animation speed
