@@ -33,6 +33,7 @@ Bunch of little UI tweaks. Tooltips for production timers, player status, items.
 * Rename chests
 * Configure what to show on chest hover
 * Free slots or current/max item count
+* Show chest content
 
 ## Status effects
 * Move status effects anchor

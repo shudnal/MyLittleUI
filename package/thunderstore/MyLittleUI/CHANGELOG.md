@@ -1,3 +1,8 @@
+# 1.0.7
+* Ashlands
+* show container content
+* container info will not be shown for unowned private chests
+
 # 1.0.6
 * fixed character stats error with no character selected
 

@@ -85,20 +85,18 @@ namespace MyLittleUI
             return true;
         }
 
+        static string TooltipModifierColored(string tooltip, float value)
+        {
+            string color = value >= 0 ? "#00FF00" : "#FF0000";
+            return $"{tooltip}: <color={color}>{value:P0}</color>\n";
+        }
+
         private static string TooltipEffects(Player player, TextsDialog textsDialog)
         {
             sb.Clear();
-            if (player.GetEquipmentMovementModifier() != 0f)
-            {
-                string color = player.GetEquipmentMovementModifier() >= 0 ? "#00FF00" : "#FF0000";
-                sb.AppendFormat("$item_movement_modifier: <color={0}>{1:P0}</color>\n", color, player.GetEquipmentMovementModifier());
-            }
-
-            if (player.GetEquipmentBaseItemModifier() != 0f)
-            {
-                string color = player.GetEquipmentBaseItemModifier() >= 0 ? "#00FF00" : "#FF0000";
-                sb.AppendFormat("$base_item_modifier: <color={0}>{1:P0}</color>\n", color, player.GetEquipmentBaseItemModifier());
-            }
+            for (int i = 0; i < player.m_equipmentModifierValues.Length; i++)
+                if (player.m_equipmentModifierValues[i] != 0f)
+                    sb.Append(TooltipModifierColored(Player.s_equipmentModifierTooltips[i], player.m_equipmentModifierValues[i]));
 
             skills.Clear();
             mods.Clear();
@@ -150,7 +148,11 @@ namespace MyLittleUI
                 }
                 else
                 {
-                    string tooltips = statusEffect.GetTooltipString().Replace(statusEffect.m_tooltip, "");
+                    string tooltips = statusEffect.GetTooltipString();
+                    
+                    if (!statusEffect.m_tooltip.IsNullOrWhiteSpace())
+                        tooltips = tooltips.Replace(statusEffect.m_tooltip, "");
+
                     if (tooltips.IsNullOrWhiteSpace())
                         continue;
 
@@ -230,7 +232,7 @@ namespace MyLittleUI
                 }
             }
 
-            return Localization.instance.Localize(sb.ToString());
+            return Localization.instance.Localize(sb.ToString()).Trim();
         }
 
         private static string TooltipStats(Player player)
@@ -275,7 +277,7 @@ namespace MyLittleUI
                 }
             }
 
-            return Localization.instance.Localize(sb.ToString());
+            return Localization.instance.Localize(sb.ToString()).Trim();
         }
 
         [HarmonyPatch(typeof(InventoryGui), nameof(InventoryGui.UpdateCharacterStats))]

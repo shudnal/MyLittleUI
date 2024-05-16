@@ -17,7 +17,7 @@ namespace MyLittleUI
     {
         const string pluginID = "shudnal.MyLittleUI";
         const string pluginName = "My Little UI";
-        const string pluginVersion = "1.0.6";
+        const string pluginVersion = "1.0.7";
 
         private Harmony _harmony;
 
@@ -77,11 +77,19 @@ namespace MyLittleUI
         private static ConfigEntry<bool> hoverSmelterShowFuelAndItem;
         private static ConfigEntry<bool> hoverSmelterShowQueuedItems;
 
-        private static ConfigEntry<ChestItemsHover> chestHoverItems;
-        private static ConfigEntry<ChestNameHover> chestHoverName;
-        private static ConfigEntry<bool> chestCustomName;
-        private static ConfigEntry<bool> chestShowHoldToStack;
-        private static ConfigEntry<bool> chestShowRename;
+        internal static ConfigEntry<ChestItemsHover> chestHoverItems;
+        internal static ConfigEntry<ChestNameHover> chestHoverName;
+        internal static ConfigEntry<bool> chestCustomName;
+        internal static ConfigEntry<bool> chestShowHoldToStack;
+        internal static ConfigEntry<bool> chestShowRename;
+
+        internal static ConfigEntry<bool> chestContentEnabled;
+        internal static ConfigEntry<int> chestContentLinesToShow;
+        internal static ConfigEntry<ContentSortType> chestContentSortType;
+        internal static ConfigEntry<ContentSortDir> chestContentSortDir;
+        internal static ConfigEntry<string> chestContentEntryFormat;
+        internal static ConfigEntry<Color> chestContentItemColor;
+        internal static ConfigEntry<Color> chestContentAmountColor;
 
         public static ConfigEntry<bool> statusEffectsPositionEnabled;
         public static ConfigEntry<Vector2> statusEffectsPositionAnchor;
@@ -111,7 +119,6 @@ namespace MyLittleUI
         public static ConfigEntry<Vector2> sailingIndicatorWindIndicatorPositionNomap;
         public static ConfigEntry<float> sailingIndicatorWindIndicatorScaleNomap;
 
-        private static Container textInputForContainer;
         private static readonly Dictionary<string, string> characterNames = new Dictionary<string, string>();
 
         private static MyLittleUI instance;
@@ -147,6 +154,21 @@ namespace MyLittleUI
             LeftToRight,
             TopToBottom,
             BottomToTop
+        }
+
+        public enum ContentSortType
+        {
+            Position,
+            Name,
+            Weight,
+            Amount,
+            Value
+        }
+
+        public enum ContentSortDir
+        {
+            Asc,
+            Desc
         }
 
         private void Awake()
@@ -214,7 +236,7 @@ namespace MyLittleUI
             itemQualityCharacterSpacing = Config.Bind("Item - Quality", "Space between characters", defaultValue: 8f, "Character spacing.");
 
             itemQualitySymbol.SettingChanged += (sender, args) => itemQualitySymbol.Value = itemQualitySymbol.Value[0].ToString();
-            
+
             itemQualitySymbol.SettingChanged += (sender, args) => ItemIcon.FillItemQualityCache();
             itemQualityMax.SettingChanged += (sender, args) => ItemIcon.FillItemQualityCache();
             itemQualityRows.SettingChanged += (sender, args) => ItemIcon.FillItemQualityCache();
@@ -247,7 +269,7 @@ namespace MyLittleUI
             hoverCooking = Config.Bind("Hover - Stations", "Cooking stations Hover", defaultValue: StationHover.Vanilla, "Hover text for cooking stations.");
             hoverBeeHive = Config.Bind("Hover - Stations", "Bee Hive Hover", defaultValue: StationHover.Vanilla, "Hover text for bee hive.");
             hoverBeeHiveTotal = Config.Bind("Hover - Stations", "Bee Hive Show total", defaultValue: true, "Show total needed time/percent for bee hive.");
-            
+
             hoverTame = Config.Bind("Hover - Tameable", "Tameable Hover", defaultValue: StationHover.Vanilla, "Format of total needed time/percent to tame or to stay fed.");
             hoverTameTimeToTame = Config.Bind("Hover - Tameable", "Show time to tame", defaultValue: true, "Show total needed time/percent to tame.");
             hoverTameTimeToFed = Config.Bind("Hover - Tameable", "Show time to stay fed", defaultValue: true, "Show total needed time/percent to stay fed.");
@@ -261,6 +283,22 @@ namespace MyLittleUI
             chestHoverName = Config.Bind("Hover - Chests", "Hover name format", defaultValue: ChestNameHover.TypeThenCustomName, "Chest name format to be shown in hover.");
             chestShowRename = Config.Bind("Hover - Chests", "Show rename hint in hover", defaultValue: true, "Show rename hotkey hint. You can hide it to make it less noisy.");
             chestShowHoldToStack = Config.Bind("Hover - Chests", "Show hold to stack hint in hover", defaultValue: true, "Show hold to stack hint. You can hide it to make it less noisy.");
+
+            chestContentEnabled = Config.Bind("Hover - Chests - Content", "Enable chest content", defaultValue: true, "Enable custom names for chests.");
+            chestContentLinesToShow = Config.Bind("Hover - Chests - Content", "Lines to show", defaultValue: 11, "Amount of lines to be shown.");
+            chestContentSortType = Config.Bind("Hover - Chests - Content", "Sorting type", defaultValue: ContentSortType.Position, "Sorting type. Position means item position in chest grid.");
+            chestContentSortDir = Config.Bind("Hover - Chests - Content", "Sorting direction", defaultValue: ContentSortDir.Asc, "Sorting direction.");
+            chestContentEntryFormat = Config.Bind("Hover - Chests - Content", "Entry format", defaultValue: "{1} {0}", "0 for item name, 1 for total amount");
+            chestContentAmountColor = Config.Bind("Hover - Chests - Content", "Entry amount color", defaultValue: new Color(1f, 1f, 0f, 0.6f), "Color for amount");
+            chestContentItemColor = Config.Bind("Hover - Chests - Content", "Entry item name color", defaultValue: new Color(0.75f, 0.75f, 0.75f, 0.6f), "Color for item name");
+
+            chestContentEnabled.SettingChanged += (sender, args) => ChestHoverText.ResetHoverCache();
+            chestContentLinesToShow.SettingChanged += (sender, args) => ChestHoverText.ResetHoverCache();
+            chestContentSortType.SettingChanged += (sender, args) => ChestHoverText.ResetHoverCache();
+            chestContentSortDir.SettingChanged += (sender, args) => ChestHoverText.ResetHoverCache();
+            chestContentEntryFormat.SettingChanged += (sender, args) => ChestHoverText.ResetHoverCache();
+            chestContentItemColor.SettingChanged += (sender, args) => ChestHoverText.ResetHoverCache();
+            chestContentAmountColor.SettingChanged += (sender, args) => ChestHoverText.ResetHoverCache();
 
             statusEffectsPositionEnabled = Config.Bind("Status effects - Map - List", "Enable", defaultValue: true, "Enable repositioning of status effect list.");
             statusEffectsPositionAnchor = Config.Bind("Status effects - Map - List", "Position", defaultValue: new Vector2(-170f, -240f), "Anchored position of list.");
@@ -319,141 +357,6 @@ namespace MyLittleUI
         {
             TimeSpan ts = TimeSpan.FromSeconds(seconds);
             return ts.ToString(ts.Hours > 0 ? @"h\:mm\:ss" : @"m\:ss");
-        }
-
-        [HarmonyPatch(typeof(Container), nameof(Container.GetHoverText))]
-        private class Container_GetHoverText_Duration
-        {
-            private static readonly StringBuilder result = new StringBuilder();
-
-            private static void Postfix(Container __instance, ref string __result, bool ___m_checkGuardStone, string ___m_name, Inventory ___m_inventory)
-            {
-                if (!modEnabled.Value)
-                    return;
-
-                if (chestHoverName.Value == ChestNameHover.Vanilla && chestHoverItems.Value == ChestItemsHover.Vanilla)
-                    return;
-
-                if (___m_checkGuardStone && !PrivateArea.CheckAccess(__instance.transform.position, 0f, flash: false))
-                    return;
-
-                result.Clear();
-
-                string chestName = __instance.m_nview.GetZDO().GetString(ZDOVars.s_text);
-
-                if (chestHoverName.Value == ChestNameHover.Vanilla || !chestCustomName.Value || chestName.IsNullOrWhiteSpace())
-                    result.Append(___m_name);
-                else if (chestHoverName.Value == ChestNameHover.CustomName)
-                    result.Append(chestName);
-                else if (chestHoverName.Value == ChestNameHover.TypeThenCustomName)
-                {
-                    result.Append(___m_name);
-                    result.Append(" (");
-                    result.Append(chestName);
-                    result.Append(")");
-                }
-                else if (chestHoverName.Value == ChestNameHover.CustomNameThenType)
-                {
-                    result.Append(chestName);
-                    result.Append(" (");
-                    result.Append(___m_name);
-                    result.Append(")");
-                }
-
-                result.Append(" ");
-
-                if (chestHoverItems.Value == ChestItemsHover.Percentage)
-                    result.Append($"{___m_inventory.SlotsUsedPercentage():F0}%");
-                else if (chestHoverItems.Value == ChestItemsHover.FreeSlots)
-                    result.Append($"{___m_inventory.GetEmptySlots()}");
-                else if (chestHoverItems.Value == ChestItemsHover.ItemsMaxRoom)
-                    result.Append($"{___m_inventory.NrOfItems()}/{___m_inventory.GetWidth() * ___m_inventory.GetHeight()}");
-                else if (___m_inventory.NrOfItems() == 0)
-                    result.Append("( $piece_container_empty )");
-
-                result.Append("\n[<color=yellow><b>$KEY_Use</b></color>] $piece_container_open");
-
-                if (chestShowHoldToStack.Value)
-                    result.Append(" $msg_stackall_hover");
-
-                long playerID = Game.instance.GetPlayerProfile().GetPlayerID();
-                if (__instance.CheckAccess(playerID) && chestShowRename.Value)
-                    if (!ZInput.IsNonClassicFunctionality() || !ZInput.IsGamepadActive())
-                        result.Append("\n[<color=yellow><b>$KEY_AltPlace + $KEY_Use</b></color>] $hud_rename");
-                    else
-                        result.Append("\n[<color=yellow><b>$KEY_JoyAltKeys + $KEY_Use</b></color>] $hud_rename");
-
-                __result = Localization.instance.Localize(result.ToString());
-            }
-        }
-
-        [HarmonyPatch(typeof(Container), nameof(Container.Interact))]
-        private class Container_Interact_ChestRename
-        {
-            private static bool Prefix(Container __instance, Humanoid character, bool hold, bool alt, bool ___m_checkGuardStone)
-            {
-                if (!modEnabled.Value)
-                    return true;
-
-                if (!chestCustomName.Value)
-                    return true;
-
-                if (!alt)
-                    return true;
-
-                if (hold)
-                    return true;
-
-                if (___m_checkGuardStone && !PrivateArea.CheckAccess(__instance.transform.position))
-                {
-                    character.Message(MessageHud.MessageType.Center, "$piece_noaccess");
-                    return true;
-                }
-
-                long playerID = Game.instance.GetPlayerProfile().GetPlayerID();
-                if (!__instance.CheckAccess(playerID))
-                {
-                    character.Message(MessageHud.MessageType.Center, "$piece_noaccess");
-                    return true;
-                }
-
-                textInputForContainer = __instance;
-                TextInput.instance.Show("$hud_rename " + __instance.m_name, __instance.m_nview.GetZDO().GetString(ZDOVars.s_text), 32);
-
-                return false;
-            }
-        }
-
-        [HarmonyPatch(typeof(TextInput), nameof(TextInput.setText))]
-        private class TextInput_setText_ChestRename
-        {
-            private static void Postfix(string text)
-            {
-                if (!modEnabled.Value)
-                    return;
-
-                if (textInputForContainer == null)
-                    return;
-
-                textInputForContainer.m_nview.GetZDO().Set(ZDOVars.s_text, text);
-                textInputForContainer.OnContainerChanged();
-                textInputForContainer = null;
-            }
-        }
-
-        [HarmonyPatch(typeof(TextInput), nameof(TextInput.Hide))]
-        private class TextInput_Hide_ChestRename
-        {
-            private static void Postfix()
-            {
-                if (!modEnabled.Value)
-                    return;
-
-                if (textInputForContainer == null)
-                    return;
-
-                textInputForContainer = null;
-            }
         }
 
         [HarmonyPatch(typeof(Fermenter), nameof(Fermenter.GetHoverText))]
@@ -1167,7 +1070,7 @@ namespace MyLittleUI
         [HarmonyPatch(typeof(InventoryGui), nameof(InventoryGui.Awake))]
         public static class InventoryGui_Awake_AddAvailableAmount
         {
-            public static void Postfix(InventoryGui __instance)
+            public static void Postfix()
             {
                 if (!modEnabled.Value)
                     return;

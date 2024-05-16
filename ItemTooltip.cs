@@ -96,7 +96,7 @@ namespace MyLittleUI
                 "$inventory_spirit",
                 "$se_staminaregen",
                 "$item_newgameplusitem",
-                "$item_tamedonly"
+                "$item_tamedonly",
             };
 
             foreach (string token in tokens)
@@ -239,6 +239,13 @@ namespace MyLittleUI
             return true;
         }
 
+        private static string DamageRange(float damage, float minFactor, float maxFactor)
+        {
+            int num = Mathf.RoundToInt(damage * minFactor);
+            int num2 = Mathf.RoundToInt(damage * maxFactor);
+            return "<color=orange>" + Mathf.RoundToInt(damage) + "</color> <color=yellow>(" + num + "-" + num2 + ") </color>";
+        }
+
         private static string GetTokenString(List<int> tokPos, int i, string token, ItemDrop.ItemData item, int m_quality, float m_worldLevel, bool upgrading)
         {
             if (!upgrading || i > 0 || !craftingTokens.Contains(token))
@@ -259,7 +266,7 @@ namespace MyLittleUI
 
                 float damage = GetDamageByToken(token, damagesCurrent);
                 if (damage != -1f && damage != GetDamageByToken(token, damagesNew))
-                    return statString.Insert(index, GetStringUpgradeFrom(damagesCurrent.DamageRange(damage, min, max)));
+                    return statString.Insert(index, GetStringUpgradeFrom(DamageRange(damage, min, max)));
             }
             else if (token == "$item_weight")
             {
