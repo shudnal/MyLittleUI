@@ -46,13 +46,9 @@ Bunch of little UI tweaks. Tooltips for production timers, player status, items.
 extract MyLittleUI.dll folder to your BepInEx\Plugins\ folder.
 
 ## Configurating
-The best way to handle configs is configuration manager. Choose one that works for you:
+The best way to handle configs is [Configuration Manager](https://thunderstore.io/c/valheim/p/shudnal/ConfigurationManager/).
 
-https://thunderstore.io/c/valheim/p/shudnal/ConfigurationManager/
-
-https://www.nexusmods.com/site/mods/529
-
-https://valheim.thunderstore.io/package/Azumatt/Official_BepInEx_ConfigurationManager/
+Or [Official BepInEx Configuration Manager](https://valheim.thunderstore.io/package/Azumatt/Official_BepInEx_ConfigurationManager/).
 
 ## Mirrors
 
