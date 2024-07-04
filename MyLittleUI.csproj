@@ -37,6 +37,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="ChestHoverText.cs" />
+    <Compile Include="InfoBlocks.cs" />
     <Compile Include="InventoryCharacterStats.cs" />
     <Compile Include="ItemIcon.cs" />
     <Compile Include="ItemTooltip.cs" />
