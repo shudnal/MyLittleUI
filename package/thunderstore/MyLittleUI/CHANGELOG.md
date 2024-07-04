@@ -1,3 +1,6 @@
+# 1.0.8
+* fixed item tooltips for gamepad
+
 # 1.0.7
 * Ashlands
 * show container content

@@ -35,15 +35,15 @@ namespace MyLittleUI
             UITooltip prefabTooltip = __instance.m_containerGrid.m_elementPrefab.GetComponent<UITooltip>();
 
             if (characterStatsTooltip == null)
-                characterStatsTooltip = InitTooltip(prefabTooltip, __instance.m_armor, player.GetPlayerName());
+                characterStatsTooltip = InitTooltip(prefabTooltip, __instance.m_armor, player.GetPlayerName(), __instance.m_containerGrid.m_tooltipAnchor);
 
             if (characterEffectsTooltip == null)
-                characterEffectsTooltip = InitTooltip(prefabTooltip, __instance.m_weight, "$inventory_activeeffects");
+                characterEffectsTooltip = InitTooltip(prefabTooltip, __instance.m_weight, "$inventory_activeeffects", __instance.m_containerGrid.m_tooltipAnchor);
 
             LogInfo("Character inventory stats patched");
         }
 
-        private static UITooltip InitTooltip(UITooltip prefabTooltip, TMPro.TMP_Text text, string topic)
+        private static UITooltip InitTooltip(UITooltip prefabTooltip, TMPro.TMP_Text text, string topic, RectTransform tooltipAnchor)
         {
             FieldInfo[] fields = prefabTooltip.GetType().GetFields();
 
@@ -53,7 +53,9 @@ namespace MyLittleUI
                 field.SetValue(tooltip, field.GetValue(prefabTooltip));
 
             tooltip.m_topic = topic;
-            
+            tooltip.m_anchor = tooltipAnchor;
+            tooltip.m_gamepadFocusObject = null;
+
             return tooltip;
         }
 
