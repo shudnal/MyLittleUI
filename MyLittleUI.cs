@@ -24,6 +24,18 @@ namespace MyLittleUI
         public static ConfigEntry<bool> modEnabled;
         private static ConfigEntry<bool> loggingEnabled;
 
+        internal static ConfigEntry<bool> clockShowDay;
+        internal static ConfigEntry<bool> clockShowTime;
+        internal static ConfigEntry<bool> clockTimeFormat24h;
+        internal static ConfigEntry<bool> clockShowBackground;
+        internal static ConfigEntry<Color> clockBackgroundColor;
+        internal static ConfigEntry<float> clockTextPadding;
+        internal static ConfigEntry<Vector2> clockPosition;
+        internal static ConfigEntry<Vector2> clockSize;
+        internal static ConfigEntry<bool> clockSwapDayTime;
+        internal static ConfigEntry<float> clockFontSize;
+        internal static ConfigEntry<Color> clockFontColor;
+
         private static ConfigEntry<bool> showAvailableItemsAmount;
         private static ConfigEntry<Color> availableItemsAmountColor;
 
@@ -210,6 +222,30 @@ namespace MyLittleUI
 
             modEnabled = Config.Bind("General", "Enabled", defaultValue: true, "Enable the mod.");
             loggingEnabled = Config.Bind("General", "Logging enabled", defaultValue: false, "Enable logging.");
+
+            clockShowDay = Config.Bind("Info - Clock", "Show day", defaultValue: true, "Enable day number");
+            clockShowTime = Config.Bind("Info - Clock", "Show time", defaultValue: true, "Enable time");
+            clockTimeFormat24h = Config.Bind("Info - Clock", "Time format 24h", defaultValue: true, "Show time in HH:mm format");
+            clockShowBackground = Config.Bind("Info - Clock", "Background enabled", defaultValue: true, "Show clock background");
+            clockBackgroundColor = Config.Bind("Info - Clock", "Background color", defaultValue: Color.clear, "Clock background color. If not set - minimap background color is used.");
+            clockTextPadding = Config.Bind("Info - Clock", "Padding", defaultValue: 5f, "Left and right indentation for text");
+            clockPosition = Config.Bind("Info - Clock", "Position", defaultValue: new Vector2(-140f, -25f), "anchoredPosition of clock object transform");
+            clockSize = Config.Bind("Info - Clock", "Size", defaultValue: new Vector2(200f, 25f), "sizeDelta of clock object transform");
+            clockSwapDayTime = Config.Bind("Info - Clock", "Swap day and time", defaultValue: false, "Swap day and time positions");
+            clockFontSize = Config.Bind("Info - Clock", "Font size", defaultValue: 0f, "If not set - value is taken from minimap small biome label");
+            clockFontColor = Config.Bind("Info - Clock", "Font color", defaultValue: Color.clear, "If not set - value is taken from minimap small biome label");
+
+            clockShowDay.SettingChanged += (sender, args) => InfoBlocks.UpdateDayTimeText();
+            clockShowTime.SettingChanged += (sender, args) => InfoBlocks.UpdateDayTimeText();
+            clockShowBackground.SettingChanged += (sender, args) => InfoBlocks.UpdateDayTimeBackground();
+            clockBackgroundColor.SettingChanged += (sender, args) => InfoBlocks.UpdateDayTimeBackground();
+            clockTimeFormat24h.SettingChanged += (sender, args) => InfoBlocks.UpdateTime();
+            clockTextPadding.SettingChanged += (sender, args) => InfoBlocks.UpdateDayTimeText();
+            clockPosition.SettingChanged += (sender, args) => InfoBlocks.UpdateDayTimeText();
+            clockSize.SettingChanged += (sender, args) => InfoBlocks.UpdateDayTimeText();
+            clockSwapDayTime.SettingChanged += (sender, args) => InfoBlocks.UpdateDayTimeText();
+            clockFontSize.SettingChanged += (sender, args) => InfoBlocks.UpdateDayTimeText();
+            clockFontColor.SettingChanged += (sender, args) => InfoBlocks.UpdateDayTimeText();
 
             showAvailableItemsAmount = Config.Bind("Item - Available resources amount", "Enabled", defaultValue: true, "Show amount of available resources for crafting in requirements list");
             availableItemsAmountColor = Config.Bind("Item - Available resources amount", "Color", defaultValue: new Color(0.68f, 0.85f, 0.90f), "Color of amount of available resources.");
