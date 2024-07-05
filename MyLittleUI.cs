@@ -35,6 +35,8 @@ namespace MyLittleUI
         internal static ConfigEntry<bool> clockSwapDayTime;
         internal static ConfigEntry<float> clockFontSize;
         internal static ConfigEntry<Color> clockFontColor;
+        internal static ConfigEntry<ClockTimeType> clockTimeType;
+        internal static ConfigEntry<string> clockFuzzy;
 
         private static ConfigEntry<bool> showAvailableItemsAmount;
         private static ConfigEntry<Color> availableItemsAmountColor;
@@ -182,6 +184,12 @@ namespace MyLittleUI
             Asc,
             Desc
         }
+        public enum ClockTimeType
+        {
+            GameTime,
+            Fuzzy,
+            RealTime
+        }
 
         private void Awake()
         {
@@ -234,18 +242,22 @@ namespace MyLittleUI
             clockSwapDayTime = Config.Bind("Info - Clock", "Swap day and time", defaultValue: false, "Swap day and time positions");
             clockFontSize = Config.Bind("Info - Clock", "Font size", defaultValue: 0f, "If not set - value is taken from minimap small biome label");
             clockFontColor = Config.Bind("Info - Clock", "Font color", defaultValue: Color.clear, "If not set - value is taken from minimap small biome label");
+            clockTimeType = Config.Bind("Info - Clock", "Time type", defaultValue: ClockTimeType.GameTime, "If not set - value is taken from minimap small biome label");
+            clockFuzzy = Config.Bind("Info - Clock", "Time fuzzy words", defaultValue: "Midnight,Early Morning,Before Dawn,Dawn,Morning,Late Morning,Midday,Early Afternoon,Afternoon,Evening,Night,Late Night", "The length of the day will be divided into equal periods of time according to the number of words specified.");
 
-            clockShowDay.SettingChanged += (sender, args) => InfoBlocks.UpdateDayTimeText();
-            clockShowTime.SettingChanged += (sender, args) => InfoBlocks.UpdateDayTimeText();
             clockShowBackground.SettingChanged += (sender, args) => InfoBlocks.UpdateDayTimeBackground();
             clockBackgroundColor.SettingChanged += (sender, args) => InfoBlocks.UpdateDayTimeBackground();
-            clockTimeFormat24h.SettingChanged += (sender, args) => InfoBlocks.UpdateTime();
+            clockShowDay.SettingChanged += (sender, args) => InfoBlocks.UpdateDayTimeText();
+            clockShowTime.SettingChanged += (sender, args) => InfoBlocks.UpdateDayTimeText();
             clockTextPadding.SettingChanged += (sender, args) => InfoBlocks.UpdateDayTimeText();
             clockPosition.SettingChanged += (sender, args) => InfoBlocks.UpdateDayTimeText();
             clockSize.SettingChanged += (sender, args) => InfoBlocks.UpdateDayTimeText();
             clockSwapDayTime.SettingChanged += (sender, args) => InfoBlocks.UpdateDayTimeText();
             clockFontSize.SettingChanged += (sender, args) => InfoBlocks.UpdateDayTimeText();
             clockFontColor.SettingChanged += (sender, args) => InfoBlocks.UpdateDayTimeText();
+            clockTimeFormat24h.SettingChanged += (sender, args) => InfoBlocks.UpdateClock();
+            clockTimeType.SettingChanged += (sender, args) => InfoBlocks.UpdateClock();
+            clockFuzzy.SettingChanged += (sender, args) => InfoBlocks.FuzzyWordsOnChange();
 
             showAvailableItemsAmount = Config.Bind("Item - Available resources amount", "Enabled", defaultValue: true, "Show amount of available resources for crafting in requirements list");
             availableItemsAmountColor = Config.Bind("Item - Available resources amount", "Color", defaultValue: new Color(0.68f, 0.85f, 0.90f), "Color of amount of available resources.");

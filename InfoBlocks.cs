@@ -26,6 +26,8 @@ namespace MyLittleUI
         private static Image clockBackground;
 
         private static readonly int layerUI = LayerMask.NameToLayer("UI");
+        
+        private static string[] fuzzyTime;
 
         private static void AddInfoBlocks(Transform parentTransform)
         {
@@ -59,6 +61,7 @@ namespace MyLittleUI
             dayText = clockDayObject.GetComponent<TMP_Text>();
             dayText.text = "Day 0";
             dayText.textWrappingMode = TextWrappingModes.NoWrap;
+            dayText.verticalAlignment = VerticalAlignmentOptions.Middle;
 
             clockTimeObject = UnityEngine.Object.Instantiate(Minimap.instance.m_biomeNameSmall.gameObject, clockObject.transform);
             clockTimeObject.name = objectClockTimeName;
@@ -66,6 +69,7 @@ namespace MyLittleUI
             timeText = clockTimeObject.GetComponent<TMP_Text>();
             timeText.text = "Time";
             timeText.textWrappingMode = TextWrappingModes.NoWrap;
+            timeText.verticalAlignment = VerticalAlignmentOptions.Middle;
 
             LogInfo("Info blocks added to hud");
         }
@@ -97,12 +101,12 @@ namespace MyLittleUI
             clockTimeObject.SetActive(clockShowTime.Value);
             clockDayObject.SetActive(clockShowDay.Value);
 
-            timeText.alignment = clockShowDay.Value ? (clockSwapDayTime.Value ? TextAlignmentOptions.MidlineLeft : TextAlignmentOptions.MidlineRight) : TextAlignmentOptions.Midline;
+            timeText.horizontalAlignment = clockShowDay.Value ? (clockSwapDayTime.Value ? HorizontalAlignmentOptions.Left : HorizontalAlignmentOptions.Right) : HorizontalAlignmentOptions.Center;
             timeText.color = clockFontColor.Value == Color.clear ? Minimap.instance.m_biomeNameSmall.GetComponent<TMP_Text>().color : clockFontColor.Value;
             timeText.fontSizeMin = clockFontSize.Value == 0f ? Minimap.instance.m_biomeNameSmall.GetComponent<TMP_Text>().fontSizeMin : clockFontSize.Value;
             timeText.fontSize = clockFontSize.Value == 0f ? timeText.fontSizeMin : clockFontSize.Value;
 
-            dayText.alignment = clockShowTime.Value ? (clockSwapDayTime.Value ? TextAlignmentOptions.MidlineRight : TextAlignmentOptions.MidlineLeft) : TextAlignmentOptions.Midline;
+            dayText.horizontalAlignment = clockShowTime.Value ? (clockSwapDayTime.Value ? HorizontalAlignmentOptions.Right : HorizontalAlignmentOptions.Left) : HorizontalAlignmentOptions.Center;
             dayText.color = clockFontColor.Value == Color.clear ? timeText.color : clockFontColor.Value;
             dayText.fontSizeMin = clockFontSize.Value == 0f ? timeText.fontSizeMin : clockFontSize.Value;
             dayText.fontSize = clockFontSize.Value == 0f ? dayText.fontSizeMin : clockFontSize.Value;
@@ -116,13 +120,13 @@ namespace MyLittleUI
             RectTransform rtClockDay = clockDayObject.GetComponent<RectTransform>();
             rtClockDay.anchorMin = Vector2.zero;
             rtClockDay.anchorMax = Vector2.one;
-            rtClockDay.anchoredPosition = new Vector2((clockSwapDayTime.Value ? -1 : 1) * clockTextPadding.Value, -1f);
+            rtClockDay.anchoredPosition = new Vector2((clockSwapDayTime.Value ? -1 : 1) * (clockShowDay.Value && clockShowTime.Value ? clockTextPadding.Value : 0f), 1f);
             rtClockDay.sizeDelta = Vector2.zero;
 
             RectTransform rtClockTime = clockTimeObject.GetComponent<RectTransform>();
             rtClockTime.anchorMin = Vector2.zero;
             rtClockTime.anchorMax = Vector2.one;
-            rtClockTime.anchoredPosition = new Vector2((clockSwapDayTime.Value ? 1 : -1) * clockTextPadding.Value, 0f);
+            rtClockTime.anchoredPosition = new Vector2((clockSwapDayTime.Value ? 1 : -1) * (clockShowDay.Value && clockShowTime.Value ? clockTextPadding.Value : 0f), 1f);
             rtClockTime.sizeDelta = Vector2.zero;
         }
 
@@ -131,19 +135,47 @@ namespace MyLittleUI
             parentObject?.SetActive(modEnabled.Value);
 
             UpdateDayTimeText();
+
+            UpdateClock();
         }
 
-        internal static void UpdateTime()
+        internal static void UpdateClock()
         {
-            if (!EnvMan.instance || timeText == null)
+            if (!EnvMan.instance)
                 return;
+
+            dayText?.SetText(Localization.instance.Localize("$msg_newday", EnvMan.instance.GetCurrentDay().ToString()));
+            timeText?.SetText(GetTimeString());
+            UpdateDayTimeBackground();
+        }
+
+        internal static void FuzzyWordsOnChange()
+        {
+            fuzzyTime = null;
+            UpdateClock();
+        }
+
+        internal static string GetTimeString()
+        {
+            if (clockTimeType.Value == ClockTimeType.Fuzzy)
+            {
+                if (fuzzyTime == null)
+                    fuzzyTime = clockFuzzy.Value.Split(',');
+
+                if (fuzzyTime.Length > 0)
+                {
+                    float fraction = EnvMan.instance.m_smoothDayFraction + (1 / (fuzzyTime.Length * 2));
+                    return fraction >= 1 ? fuzzyTime[0] : fuzzyTime[Mathf.Clamp((int)(fraction * fuzzyTime.Length), 0, fuzzyTime.Length - 1)];
+                }
+            }
+            else if (clockTimeType.Value == ClockTimeType.RealTime)
+                return DateTime.Now.ToString(clockTimeFormat24h.Value ? "HH:mm" : "hh:mm tt");
 
             float smoothDayFraction = EnvMan.instance.m_smoothDayFraction;
             int hour = Mathf.CeilToInt(smoothDayFraction * 24);
             int minute = 5 * (Mathf.CeilToInt((smoothDayFraction * 24 - hour) * 60) / 5);
 
-            timeText.SetText(DateTime.MinValue.AddMonths(2).AddDays(EnvMan.instance.GetCurrentDay()).AddHours(hour).AddMinutes(minute).ToString(clockTimeFormat24h.Value ? "HH:mm" : "hh:mm tt"));
-            UpdateDayTimeBackground();
+            return DateTime.MinValue.AddMonths(2).AddDays(EnvMan.instance.GetCurrentDay()).AddHours(hour).AddMinutes(minute).ToString(clockTimeFormat24h.Value ? "HH:mm" : "hh:mm tt");
         }
 
         internal static void UpdateDay()
@@ -151,7 +183,6 @@ namespace MyLittleUI
             if (!EnvMan.instance || dayText == null)
                 return;
 
-            dayText.SetText(Localization.instance.Localize("$msg_newday", EnvMan.instance.GetCurrentDay().ToString()));
         }
 
         [HarmonyPatch(typeof(EnvMan), nameof(EnvMan.UpdateTriggers))]
@@ -159,10 +190,10 @@ namespace MyLittleUI
         {
             private static int Fraction(float dayFraction)
             {
-                return (int)(dayFraction * 1000);
+                return (int)(dayFraction * (clockTimeType.Value == ClockTimeType.Fuzzy && fuzzyTime != null && fuzzyTime.Length != 0 ? 40 : 1000));
             }
 
-            public static void Postfix(EnvMan __instance, float oldDayFraction, float newDayFraction, Heightmap.Biome biome)
+            public static void Postfix(float oldDayFraction, float newDayFraction, Heightmap.Biome biome)
             {
                 if (!modEnabled.Value)
                     return;
@@ -170,11 +201,8 @@ namespace MyLittleUI
                 if (Player.m_localPlayer == null || biome == Heightmap.Biome.None)
                     return;
 
-                if (Fraction(oldDayFraction) != Fraction(newDayFraction))
-                    UpdateTime();
-
-                if (newDayFraction < oldDayFraction)
-                    UpdateDay();
+                if (Fraction(oldDayFraction) != Fraction(newDayFraction) || newDayFraction < oldDayFraction)
+                    UpdateClock();
             }
         }
 
