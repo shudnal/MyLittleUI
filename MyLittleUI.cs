@@ -234,15 +234,15 @@ namespace MyLittleUI
             clockShowDay = Config.Bind("Info - Clock", "Show day", defaultValue: true, "Enable day number");
             clockShowTime = Config.Bind("Info - Clock", "Show time", defaultValue: true, "Enable time");
             clockTimeFormat24h = Config.Bind("Info - Clock", "Time format 24h", defaultValue: true, "Show time in HH:mm format");
-            clockShowBackground = Config.Bind("Info - Clock", "Background enabled", defaultValue: true, "Show clock background");
+            clockShowBackground = Config.Bind("Info - Clock", "Background enabled", defaultValue: false, "Show clock background");
             clockBackgroundColor = Config.Bind("Info - Clock", "Background color", defaultValue: Color.clear, "Clock background color. If not set - minimap background color is used.");
-            clockTextPadding = Config.Bind("Info - Clock", "Padding", defaultValue: 5f, "Left and right indentation for text");
+            clockTextPadding = Config.Bind("Info - Clock", "Padding", defaultValue: 5f, "Left and right indentation for text if both time and day used");
             clockPosition = Config.Bind("Info - Clock", "Position", defaultValue: new Vector2(-140f, -25f), "anchoredPosition of clock object transform");
             clockSize = Config.Bind("Info - Clock", "Size", defaultValue: new Vector2(200f, 25f), "sizeDelta of clock object transform");
             clockSwapDayTime = Config.Bind("Info - Clock", "Swap day and time", defaultValue: false, "Swap day and time positions");
             clockFontSize = Config.Bind("Info - Clock", "Font size", defaultValue: 0f, "If not set - value is taken from minimap small biome label");
             clockFontColor = Config.Bind("Info - Clock", "Font color", defaultValue: Color.clear, "If not set - value is taken from minimap small biome label");
-            clockTimeType = Config.Bind("Info - Clock", "Time type", defaultValue: ClockTimeType.GameTime, "If not set - value is taken from minimap small biome label");
+            clockTimeType = Config.Bind("Info - Clock", "Time type", defaultValue: ClockTimeType.GameTime, "Time to show");
             clockFuzzy = Config.Bind("Info - Clock", "Time fuzzy words", defaultValue: "Midnight,Early Morning,Before Dawn,Dawn,Morning,Late Morning,Midday,Early Afternoon,Afternoon,Evening,Night,Late Night", "The length of the day will be divided into equal periods of time according to the number of words specified.");
 
             clockShowBackground.SettingChanged += (sender, args) => InfoBlocks.UpdateDayTimeBackground();

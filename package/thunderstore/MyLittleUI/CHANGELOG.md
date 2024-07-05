@@ -1,5 +1,6 @@
 # 1.0.8
 * fixed item tooltips for gamepad
+* clock
 
 # 1.0.7
 * Ashlands
