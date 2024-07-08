@@ -31,6 +31,12 @@ namespace MyLittleUI
 
         private static void AddInfoBlocks(Transform parentTransform)
         {
+            if (!Minimap.instance?.m_biomeNameSmall)
+            {
+                LogInfo("Minimap is not initialized, skipping clock init");
+                return;
+            }
+
             // Parent object to set visibility
             parentObject = new GameObject(objectRootName, typeof(RectTransform))
             {
@@ -76,25 +82,28 @@ namespace MyLittleUI
 
         internal static void UpdateDayTimeBackground()
         {
-            if (clockObject == null)
+            if (!clockObject)
                 return;
 
             if (minimapBackground == null)
-                minimapBackground = Minimap.instance.m_smallRoot.GetComponent<Image>();
+                minimapBackground = Minimap.instance?.m_smallRoot?.GetComponent<Image>();
 
             if (clockBackground == null)
                 clockBackground = clockObject.AddComponent<Image>();
+            
+            clockBackground.enabled = minimapBackground != null && clockShowBackground.Value;
+
+            if (!clockBackground.enabled)
+                return;
 
             clockBackground.color   = clockBackgroundColor.Value == Color.clear ? minimapBackground.color : clockBackgroundColor.Value;
             clockBackground.sprite  = minimapBackground.sprite;
             clockBackground.type    = minimapBackground.type;
-
-            clockBackground.enabled = clockShowBackground.Value;
         }
 
         internal static void UpdateDayTimeText()
         {
-            if (clockObject == null)
+            if (!clockObject)
                 return;
 
             clockObject.SetActive(clockShowTime.Value || clockShowDay.Value);

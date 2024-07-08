@@ -11,6 +11,11 @@ Bunch of little UI tweaks. Tooltips for production timers, player status, items.
 * Hold Alt to disable item tooltip altering
 * Present quality level as configurable symbols (star by default)
 
+## Clock
+* Default position is above the minimap (you can move it to any position in the screen)
+* Show/hide current day or current time or both
+* Time could be set in a configurable fuzzy way
+
 ## Stats
 * Advanced character stats in character selection screen
 * Combined characater stats in Armor hover tooltip (Top Right section in inventory window)

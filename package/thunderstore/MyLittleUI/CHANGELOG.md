@@ -1,3 +1,6 @@
+# 1.0.9
+* more bulletproof for MinimalUI compatibility
+
 # 1.0.8
 * fixed item tooltips for gamepad
 * clock
