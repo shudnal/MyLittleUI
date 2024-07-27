@@ -17,12 +17,13 @@ namespace MyLittleUI
     {
         const string pluginID = "shudnal.MyLittleUI";
         const string pluginName = "My Little UI";
-        const string pluginVersion = "1.0.9";
+        const string pluginVersion = "1.0.10";
 
         private Harmony _harmony;
 
         public static ConfigEntry<bool> modEnabled;
         private static ConfigEntry<bool> loggingEnabled;
+        private static ConfigEntry<bool> nonlocalizedButtons;
 
         internal static ConfigEntry<bool> clockShowDay;
         internal static ConfigEntry<bool> clockShowTime;
@@ -230,6 +231,7 @@ namespace MyLittleUI
 
             modEnabled = Config.Bind("General", "Enabled", defaultValue: true, "Enable the mod.");
             loggingEnabled = Config.Bind("General", "Logging enabled", defaultValue: false, "Enable logging.");
+            nonlocalizedButtons = Config.Bind("General", "Nonlocalized button keys", defaultValue: false, "Keyboard keys A-Z are not localized in the current keyboard layout.");
 
             clockShowDay = Config.Bind("Info - Clock", "Show day", defaultValue: true, "Enable day number");
             clockShowTime = Config.Bind("Info - Clock", "Show time", defaultValue: true, "Enable time");
@@ -1129,7 +1131,25 @@ namespace MyLittleUI
                 }
             }
         }
-        
+
+        [HarmonyPatch(typeof(ZInput), nameof(ZInput.GetBoundKeyString))]
+        public static class ZInput_GetBoundKeyString_NonlocalizedButtons
+        {
+            public static bool Prefix(ZInput __instance, string name, ref string __result)
+            {
+                if (!modEnabled.Value)
+                    return true;
+
+                if (nonlocalizedButtons.Value && __instance.m_buttons.TryGetValue(name, out var value)
+                    && value.Source == ZInput.InputSource.KeyboardMouse && !value.m_bMouseButtonSet && 15 <= (int)value.m_key && (int)value.m_key <= 40)
+                {
+                    __result = value.m_key.ToString();
+                    return false;
+                }
+
+                return true;
+            }
+        }
     }
 }
 

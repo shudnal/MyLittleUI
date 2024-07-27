@@ -1,3 +1,6 @@
+# 1.0.10
+* new config option to not localize keyboard keys A-Z in the current keyboard layout
+
 # 1.0.9
 * more bulletproof for MinimalUI compatibility
 
