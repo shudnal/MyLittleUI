@@ -2,8 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System.Reflection;
 using UnityEngine;
 using static MyLittleUI.MyLittleUI;
 
@@ -23,22 +22,22 @@ namespace MyLittleUI
 
         public static Heightmap.Biome currentBiome;
         public static bool inAshlandsOrDeepnorth;
-        public static long environmentPeriod;
-        public static long windPeriod;
+        public static long environmentPeriod = -1L;
 
+        public static long windPeriod = -1L;
         public static long nextWindChange;
 
         public static long nextWeatherChange;
         public static WeatherState nextWeatherState;
         
-        // env dur 666 wind dur 1000
-
         public static Sprite iconClear;
         public static Sprite iconRain;
         public static Sprite iconSnow;
         public static Sprite iconThunder;
         public static Sprite iconMist;
         public static Sprite iconRainCinder;
+
+        public static List<GameObject> windList = new List<GameObject>();
 
         public static void UpdateWeather()
         {
@@ -50,28 +49,31 @@ namespace MyLittleUI
             InfoBlocks.UpdateForecastBackground();
         }
 
-        public static void UpdateWind()
+        public static void UpdateWinds()
         {
             if (!EnvMan.instance)
                 return;
 
+            InfoBlocks.windsObject.SetActive(nextWindChange > 0 && !EnvMan.instance.m_debugWind);
+
             UpdateWindTimer();
-            InfoBlocks.UpdateForecastBackground();
+            InfoBlocks.UpdateWindsBackground();
+        }
+
+        public static void UpdateWindTimer()
+        {
+
+
         }
 
         public static long GetWindPeriodDuration()
         {
-            return EnvMan.instance.m_windPeriodDuration / 8;
+            return EnvMan.instance.m_windPeriodDuration / 8L;
         }
 
-        public static double GetCurrentWindPeriod(long sec)
+        public static long GetCurrentWindPeriod(double sec)
         {
-            return sec / GetWindPeriodDuration();
-        }
-
-        public static double TimeToNextWind(long sec)
-        {
-            return (1 - (GetCurrentWindPeriod(sec) - (int)GetCurrentWindPeriod(sec))) * GetWindPeriodDuration();
+            return (int)sec / GetWindPeriodDuration();
         }
         
         public static void UpdateWeatherTimer()
@@ -97,11 +99,6 @@ namespace MyLittleUI
                 WeatherState.RainCinder => iconRainCinder,
                 _ => iconClear,
             };
-        }
-
-        public static void UpdateWindTimer()
-        {
-
         }
 
         private static string GetNextWeatherTimer()
@@ -148,8 +145,8 @@ namespace MyLittleUI
                     return;
                 }
 
-                windPeriod = (long)GetCurrentWindPeriod(timeSec);
-
+                windPeriod = GetCurrentWindPeriod(timeSec);
+                UpdateNextWinds();
             }
         }
 
@@ -202,6 +199,53 @@ namespace MyLittleUI
             }
 
             UpdateWeather();
+        }
+
+        public static void UpdateNextWinds()
+        {
+            nextWindChange = 0;
+
+            if (windsCount.Value != windList.Count)
+            {
+                foreach (GameObject item in windList)
+                    UnityEngine.Object.Destroy(item);
+
+                windList.Clear();
+                for (int i = 0; i < windsCount.Value; i++)
+                {
+                    GameObject wind = UnityEngine.Object.Instantiate(InfoBlocks.windTemplate, InfoBlocks.windsObject.transform);
+                    wind.SetActive(true);
+                    RectTransform rtWind = wind.GetComponent<RectTransform>();
+                    rtWind.anchoredPosition = new Vector2(1f + rtWind.sizeDelta.x * (i + 0.5f) - i, 0f);
+                    windList.Add(wind);
+                }
+            }
+
+            if (windPeriod > 0)
+                for (int i = 1; i <= windList.Count; i++)
+                {
+                    Quaternion quaternion = Quaternion.LookRotation(GetWind(i));
+                    windList[i - 1].transform.rotation = Quaternion.Euler(0f, 0f, 0f - quaternion.eulerAngles.y);
+                    if (i == 1)
+                        nextWindChange = (windPeriod + i) * GetWindPeriodDuration();
+                }
+
+            UpdateWinds();
+        }
+
+        private static Vector3 GetWind(int period)
+        {
+            UnityEngine.Random.State state = UnityEngine.Random.state;
+            float angle = 0f;
+            float intensity = 0.5f;
+            long timeSec = (windPeriod + period) * GetWindPeriodDuration();
+            EnvMan.instance.AddWindOctave(timeSec, 1, ref angle, ref intensity);
+            EnvMan.instance.AddWindOctave(timeSec, 2, ref angle, ref intensity);
+            EnvMan.instance.AddWindOctave(timeSec, 4, ref angle, ref intensity);
+            EnvMan.instance.AddWindOctave(timeSec, 8, ref angle, ref intensity);
+            UnityEngine.Random.state = state;
+            
+            return new Vector3(Mathf.Sin(angle), 0f, Mathf.Cos(angle));
         }
 
         private static WeatherState GetWeatherState(EnvSetup env)
@@ -275,7 +319,24 @@ namespace MyLittleUI
                     return;
 
                 InfoBlocks.UpdateForecastBlock();
+                InfoBlocks.UpdateWindsBlock();
             }
         }
+
+        [HarmonyPatch]
+        public static class Humanoid_TooltipUpdate
+        {
+            private static IEnumerable<MethodBase> TargetMethods()
+            {
+                yield return AccessTools.Method(typeof(EnvMan), nameof(EnvMan.SetDebugWind));
+                yield return AccessTools.Method(typeof(EnvMan), nameof(EnvMan.ResetDebugWind));
+            }
+
+            private static void Postfix()
+            {
+                UpdateNextWinds();
+            }
+        }
+
     }
 }

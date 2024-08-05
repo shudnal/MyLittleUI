@@ -61,6 +61,11 @@ namespace MyLittleUI
         internal static ConfigEntry<bool> windsEnabled;
         internal static ConfigEntry<bool> windsShowBackground;
         internal static ConfigEntry<Color> windsBackgroundColor;
+        internal static ConfigEntry<Color> windsColor;
+        internal static ConfigEntry<Vector2> windsPosition;
+        internal static ConfigEntry<Vector2> windsPositionNomap;
+        internal static ConfigEntry<Vector2> windsSize;
+        internal static ConfigEntry<int> windsCount;
 
         private static ConfigEntry<bool> showAvailableItemsAmount;
         private static ConfigEntry<Color> availableItemsAmountColor;
@@ -318,14 +323,23 @@ namespace MyLittleUI
             forecastListMist = Config.Bind("Info - Forecast - Lists", "Mist", defaultValue: "Mist,Ashlands_Misty", "Comma separated list of m_psySystems or m_envObject names associated with Mist environments");
             forecastListRainCinder = Config.Bind("Info - Forecast - Lists", "RainCinder", defaultValue: "Ashlands_RainCinder", "Comma separated list of m_psySystems or m_envObject names associated with RainCinder environments");
 
-            windsEnabled = Config.Bind("Info - Wind", "Enabled", defaultValue: true, "Enable next winds");
-            windsShowBackground = Config.Bind("Info - Wind", "Winds background enabled", defaultValue: false, "Show winds background");
-            windsBackgroundColor = Config.Bind("Info - Wind", "Winds background color", defaultValue: Color.clear, "Winds background color. If not set - minimap background color is used.");
+            windsEnabled = Config.Bind("Info - Winds", "Enabled", defaultValue: true, "Enable next winds");
+            windsShowBackground = Config.Bind("Info - Winds", "Winds background enabled", defaultValue: false, "Show winds background");
+            windsBackgroundColor = Config.Bind("Info - Winds", "Winds background color", defaultValue: Color.clear, "Winds background color. If not set - minimap background color is used.");
+            windsColor = Config.Bind("Info - Winds", "Winds arrow color", defaultValue: Color.white, "Winds arrow color.");
+            windsPosition = Config.Bind("Info - Winds", "Position", defaultValue: new Vector2(-180f, -255f), "anchoredPosition of winds object transform");
+            windsPositionNomap = Config.Bind("Info - Winds", "Position in nomap", defaultValue: new Vector2(-180f, -55f), "anchoredPosition of winds object transform in nomap mode");
+            windsSize = Config.Bind("Info - Winds", "Size", defaultValue: new Vector2(119f, 25f), "sizeDelta of winds object transform");
+            windsCount = Config.Bind("Info - Winds", "Amount", defaultValue: 5, "Amount of winds to forecast");
 
             windsShowBackground.SettingChanged += (sender, args) => InfoBlocks.UpdateWindsBackground();
             windsBackgroundColor.SettingChanged += (sender, args) => InfoBlocks.UpdateWindsBackground();
             
             windsEnabled.SettingChanged += (sender, args) => InfoBlocks.UpdateWindsBlock();
+            windsColor.SettingChanged += (sender, args) => InfoBlocks.UpdateWindsBlock();
+            windsPosition.SettingChanged += (sender, args) => InfoBlocks.UpdateWindsBlock();
+            windsPositionNomap.SettingChanged += (sender, args) => InfoBlocks.UpdateWindsBlock();
+            windsSize.SettingChanged += (sender, args) => InfoBlocks.UpdateWindsBlock();
 
             showAvailableItemsAmount = Config.Bind("Item - Available resources amount", "Enabled", defaultValue: true, "Show amount of available resources for crafting in requirements list");
             availableItemsAmountColor = Config.Bind("Item - Available resources amount", "Color", defaultValue: new Color(0.68f, 0.85f, 0.90f), "Color of amount of available resources.");

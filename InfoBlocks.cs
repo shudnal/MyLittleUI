@@ -1,6 +1,8 @@
 ﻿using HarmonyLib;
 using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -15,11 +17,10 @@ namespace MyLittleUI
         private const string objectClockDayName = "Day";
         private const string objectClockTimeName = "Time";
         private const string objectForecastName = "Forecast";
-        private const string objectForecastWeatherName = "Weather";
         private const string objectForecastWeatherText = "weather_text";
         private const string objectForecastWeatherIcon = "weather_icon";
         private const string objectWindsName = "Winds";
-        private const string objectWindsTemplateName = "Wind";
+        private const string objectWindsTemplateName = "WindElement";
 
         public static GameObject parentObject;
 
@@ -36,8 +37,8 @@ namespace MyLittleUI
         private static Image windsBackground;
 
         private static GameObject forecastObject;
-        private static GameObject windsObject;
-        private static GameObject windTemplate;
+        public static GameObject windsObject;
+        public static GameObject windTemplate;
 
         public static TMP_Text weatherText;
         public static Image weatherIcon;
@@ -115,15 +116,16 @@ namespace MyLittleUI
             weatherIcon.gameObject.name = objectForecastWeatherIcon;
             
             // Winds
-            // Forecast
             windsObject = new GameObject(objectWindsName, typeof(RectTransform))
             {
                 layer = layerUI
             };
             windsObject.transform.SetParent(parentObject.transform, false);
 
-            windTemplate = UnityEngine.Object.Instantiate(Minimap.instance.m_biomeNameSmall.gameObject, windsObject.transform);
+            windTemplate = UnityEngine.Object.Instantiate(Minimap.instance.m_windMarker.gameObject, parentObject.transform);
             windTemplate.name = objectWindsTemplateName;
+
+            UpdateWindsBackground();
 
             UpdateWindsBlock();
 
@@ -206,8 +208,28 @@ namespace MyLittleUI
 
         internal static void UpdateWindsBlock()
         {
-            //windsObject.SetActive(windsEnabled.Value);
-            windsObject.SetActive(false);
+            if (!windsObject)
+                return;
+
+            windsObject.SetActive(windsEnabled.Value);
+            windTemplate.SetActive(false);
+
+            Image image = windTemplate.GetComponent<Image>();
+            image.color = windsColor.Value;
+
+            RectTransform rtWinds = windsObject.GetComponent<RectTransform>();
+            rtWinds.anchorMin = Vector2.one;
+            rtWinds.anchorMax = Vector2.one;
+            rtWinds.anchoredPosition = Game.m_noMap ? windsPositionNomap.Value : windsPosition.Value;
+            rtWinds.sizeDelta = windsSize.Value;
+
+            float height = windsSize.Value.y - 1f;
+
+            RectTransform rtWindTemplate = windTemplate.GetComponent<RectTransform>();
+            rtWindTemplate.anchorMin = new Vector2(0f, 0.5f);
+            rtWindTemplate.anchorMax = new Vector2(0f, 0.5f);
+            rtWindTemplate.sizeDelta = Vector2.one * height;
+            rtWindTemplate.anchoredPosition = new Vector2(height / 2f, 0f);
         }
 
         internal static void UpdateDayTimeBackground()
@@ -280,7 +302,7 @@ namespace MyLittleUI
             UpdateForecastBlock();
 
             WeatherForecast.UpdateWeather();
-            WeatherForecast.UpdateWind();
+            WeatherForecast.UpdateWinds();
         }
 
         internal static void UpdateClock()
@@ -363,6 +385,20 @@ namespace MyLittleUI
                 UpdateVisibility();
             }
         }
-        
+
+        [HarmonyPatch]
+        public static class Humanoid_TooltipUpdate
+        {
+            private static IEnumerable<MethodBase> TargetMethods()
+            {
+                yield return AccessTools.Method(typeof(ZNet), nameof(ZNet.SetNetTime));
+                yield return AccessTools.Method(typeof(ZNet), nameof(ZNet.RPC_NetTime));
+            }
+
+            private static void Postfix()
+            {
+                UpdateVisibility();
+            }
+        }
     }
 }
