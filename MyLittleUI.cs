@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Text;
 using BepInEx;
@@ -17,13 +19,14 @@ namespace MyLittleUI
     {
         const string pluginID = "shudnal.MyLittleUI";
         const string pluginName = "My Little UI";
-        const string pluginVersion = "1.0.10";
+        const string pluginVersion = "1.0.11";
 
         private Harmony _harmony;
 
         public static ConfigEntry<bool> modEnabled;
         private static ConfigEntry<bool> loggingEnabled;
         private static ConfigEntry<bool> nonlocalizedButtons;
+        internal static ConfigEntry<bool> fixStatusEffectAndForecastPosition;
 
         internal static ConfigEntry<bool> clockShowDay;
         internal static ConfigEntry<bool> clockShowTime;
@@ -38,6 +41,26 @@ namespace MyLittleUI
         internal static ConfigEntry<Color> clockFontColor;
         internal static ConfigEntry<ClockTimeType> clockTimeType;
         internal static ConfigEntry<string> clockFuzzy;
+
+        internal static ConfigEntry<bool> forecastEnabled;
+        internal static ConfigEntry<bool> forecastShowBackground;
+        internal static ConfigEntry<Color> forecastBackgroundColor;
+        internal static ConfigEntry<Vector2> forecastPosition;
+        internal static ConfigEntry<Vector2> forecastPositionNomap;
+        internal static ConfigEntry<Vector2> forecastSize;
+        internal static ConfigEntry<float> forecastFontSize;
+        internal static ConfigEntry<Color> forecastFontColor;
+        internal static ConfigEntry<float> forecastTextPadding;
+
+        internal static ConfigEntry<string> forecastListRain;
+        internal static ConfigEntry<string> forecastListSnow;
+        internal static ConfigEntry<string> forecastListThunder;
+        internal static ConfigEntry<string> forecastListMist;
+        internal static ConfigEntry<string> forecastListRainCinder;
+
+        internal static ConfigEntry<bool> windsEnabled;
+        internal static ConfigEntry<bool> windsShowBackground;
+        internal static ConfigEntry<Color> windsBackgroundColor;
 
         private static ConfigEntry<bool> showAvailableItemsAmount;
         private static ConfigEntry<Color> availableItemsAmountColor;
@@ -136,7 +159,7 @@ namespace MyLittleUI
 
         private static readonly Dictionary<string, string> characterNames = new Dictionary<string, string>();
 
-        private static MyLittleUI instance;
+        public static MyLittleUI instance;
 
         public static Component epicLootPlugin;
 
@@ -210,6 +233,8 @@ namespace MyLittleUI
 
             ItemTooltip.Initialize();
 
+            LoadIcons();
+
             Game.isModded = true;
         }
 
@@ -232,6 +257,11 @@ namespace MyLittleUI
             modEnabled = Config.Bind("General", "Enabled", defaultValue: true, "Enable the mod.");
             loggingEnabled = Config.Bind("General", "Logging enabled", defaultValue: false, "Enable logging.");
             nonlocalizedButtons = Config.Bind("General", "Nonlocalized button keys", defaultValue: false, "Keyboard keys A-Z are not localized in the current keyboard layout.");
+            fixStatusEffectAndForecastPosition = Config.Bind("General", "Status effects and forecast position fix", defaultValue: true, "If status effect position was not changed prior to 1.0.11 version - fix status effect list position for forecast.");
+
+            modEnabled.SettingChanged += (sender, args) => InfoBlocks.UpdateVisibility();
+            modEnabled.SettingChanged += (sender, args) => CustomStatusEffectsList.InitializeStatusEffectTemplate();
+            modEnabled.SettingChanged += (sender, args) => CustomStatusEffectsList.ChangeSailingIndicator();
 
             clockShowDay = Config.Bind("Info - Clock", "Show day", defaultValue: true, "Enable day number");
             clockShowTime = Config.Bind("Info - Clock", "Show time", defaultValue: true, "Enable time");
@@ -260,6 +290,42 @@ namespace MyLittleUI
             clockTimeFormat24h.SettingChanged += (sender, args) => InfoBlocks.UpdateClock();
             clockTimeType.SettingChanged += (sender, args) => InfoBlocks.UpdateClock();
             clockFuzzy.SettingChanged += (sender, args) => InfoBlocks.FuzzyWordsOnChange();
+
+            forecastEnabled = Config.Bind("Info - Forecast", "Enabled", defaultValue: true, "Enable next change of weather");
+            forecastShowBackground = Config.Bind("Info - Forecast", "Weather background enabled", defaultValue: false, "Show forecast background");
+            forecastBackgroundColor = Config.Bind("Info - Forecast", "Weather background color", defaultValue: Color.clear, "Forecast background color. If not set - minimap background color is used.");
+            forecastPosition = Config.Bind("Info - Forecast", "Position", defaultValue: new Vector2(-78f, -255f), "anchoredPosition of forecast object transform");
+            forecastPositionNomap = Config.Bind("Info - Forecast", "Position in nomap", defaultValue: new Vector2(-78f, -55f), "anchoredPosition of forecast object transform in nomap mode");
+            forecastSize = Config.Bind("Info - Forecast", "Size", defaultValue: new Vector2(75f, 25f), "sizeDelta of forecast object transform");
+            forecastFontSize = Config.Bind("Info - Forecast", "Font size", defaultValue: 0f, "If not set - value is taken from minimap small biome label");
+            forecastFontColor = Config.Bind("Info - Forecast", "Font color", defaultValue: Color.clear, "If not set - value is taken from minimap small biome label");
+            forecastTextPadding = Config.Bind("Info - Forecast", "Text padding", defaultValue: 2f, "Margin between icon and text");
+
+            forecastShowBackground.SettingChanged += (sender, args) => InfoBlocks.UpdateForecastBackground();
+            forecastBackgroundColor.SettingChanged += (sender, args) => InfoBlocks.UpdateForecastBackground();
+
+            forecastEnabled.SettingChanged += (sender, args) => InfoBlocks.UpdateForecastBlock();
+            forecastPosition.SettingChanged += (sender, args) => InfoBlocks.UpdateForecastBlock();
+            forecastPositionNomap.SettingChanged += (sender, args) => InfoBlocks.UpdateForecastBlock();
+            forecastSize.SettingChanged += (sender, args) => InfoBlocks.UpdateForecastBlock();
+            forecastFontSize.SettingChanged += (sender, args) => InfoBlocks.UpdateForecastBlock();
+            forecastFontColor.SettingChanged += (sender, args) => InfoBlocks.UpdateForecastBlock();
+            forecastTextPadding.SettingChanged += (sender, args) => InfoBlocks.UpdateForecastBlock();
+
+            forecastListRain = Config.Bind("Info - Forecast - Lists", "Rain", defaultValue: "Rain,LightRain,MistlandsRain,SlimeRain", "Comma separated list of m_psySystems or m_envObject names associated with Rain environments");
+            forecastListSnow = Config.Bind("Info - Forecast - Lists", "Snow", defaultValue: "SnowStorm", "Comma separated list of m_psySystems or m_envObject names associated with Snow environments");
+            forecastListThunder = Config.Bind("Info - Forecast - Lists", "Thunder", defaultValue: "Thunder,MistlandsThunder,AshlandsThunder", "Comma separated list of m_psySystems or m_envObject names associated with Thunder environments");
+            forecastListMist = Config.Bind("Info - Forecast - Lists", "Mist", defaultValue: "Mist,Ashlands_Misty", "Comma separated list of m_psySystems or m_envObject names associated with Mist environments");
+            forecastListRainCinder = Config.Bind("Info - Forecast - Lists", "RainCinder", defaultValue: "Ashlands_RainCinder", "Comma separated list of m_psySystems or m_envObject names associated with RainCinder environments");
+
+            windsEnabled = Config.Bind("Info - Wind", "Enabled", defaultValue: true, "Enable next winds");
+            windsShowBackground = Config.Bind("Info - Wind", "Winds background enabled", defaultValue: false, "Show winds background");
+            windsBackgroundColor = Config.Bind("Info - Wind", "Winds background color", defaultValue: Color.clear, "Winds background color. If not set - minimap background color is used.");
+
+            windsShowBackground.SettingChanged += (sender, args) => InfoBlocks.UpdateWindsBackground();
+            windsBackgroundColor.SettingChanged += (sender, args) => InfoBlocks.UpdateWindsBackground();
+            
+            windsEnabled.SettingChanged += (sender, args) => InfoBlocks.UpdateWindsBlock();
 
             showAvailableItemsAmount = Config.Bind("Item - Available resources amount", "Enabled", defaultValue: true, "Show amount of available resources for crafting in requirements list");
             availableItemsAmountColor = Config.Bind("Item - Available resources amount", "Color", defaultValue: new Color(0.68f, 0.85f, 0.90f), "Color of amount of available resources.");
@@ -351,14 +417,13 @@ namespace MyLittleUI
             chestContentAmountColor.SettingChanged += (sender, args) => ChestHoverText.ResetHoverCache();
 
             statusEffectsPositionEnabled = Config.Bind("Status effects - Map - List", "Enable", defaultValue: true, "Enable repositioning of status effect list.");
-            statusEffectsPositionAnchor = Config.Bind("Status effects - Map - List", "Position", defaultValue: new Vector2(-170f, -240f), "Anchored position of list.");
+            statusEffectsPositionAnchor = Config.Bind("Status effects - Map - List", "Position", defaultValue: new Vector2(-170f, -265f), "Anchored position of list.");
             statusEffectsFillingDirection = Config.Bind("Status effects - Map - List", "Direction", defaultValue: StatusEffectDirection.TopToBottom, "Direction of filling");
             statusEffectsPositionSpacing = Config.Bind("Status effects - Map - List", "Spacing", defaultValue: 8, "Spacing between status effects");
 
             statusEffectsElementEnabled = Config.Bind("Status effects - Map - List element", "Custom element enabled", defaultValue: true, "Enables using of horizontal status effect element");
             statusEffectsElementSize = Config.Bind("Status effects - Map - List element", "Size", defaultValue: 32, "Vertical capsule size");
 
-            modEnabled.SettingChanged += (sender, args) => CustomStatusEffectsList.InitializeStatusEffectTemplate();
             statusEffectsPositionEnabled.SettingChanged += (sender, args) => CustomStatusEffectsList.InitializeStatusEffectTemplate();
             statusEffectsPositionAnchor.SettingChanged += (sender, args) => CustomStatusEffectsList.InitializeStatusEffectTemplate();
             statusEffectsElementEnabled.SettingChanged += (sender, args) => CustomStatusEffectsList.InitializeStatusEffectTemplate();
@@ -370,7 +435,6 @@ namespace MyLittleUI
             sailingIndicatorWindIndicatorPosition = Config.Bind("Status effects - Map - Sailing indicator", "Wind indicator position", defaultValue: new Vector2(-350f, -140f), "Wind indicator (ship and wind direction) position");
             sailingIndicatorWindIndicatorScale = Config.Bind("Status effects - Map - Sailing indicator", "Wind indicator scale", defaultValue: 1.0f, "Wind indicator (ship and wind direction) scale");
 
-            modEnabled.SettingChanged += (sender, args) => CustomStatusEffectsList.ChangeSailingIndicator();
             sailingIndicatorEnabled.SettingChanged += (sender, args) => CustomStatusEffectsList.ChangeSailingIndicator();
             sailingIndicatorPowerIconPosition.SettingChanged += (sender, args) => CustomStatusEffectsList.ChangeSailingIndicator();
             sailingIndicatorPowerIconScale.SettingChanged += (sender, args) => CustomStatusEffectsList.ChangeSailingIndicator();
@@ -401,6 +465,46 @@ namespace MyLittleUI
             sailingIndicatorPowerIconScaleNomap.SettingChanged += (sender, args) => CustomStatusEffectsList.ChangeSailingIndicator();
             sailingIndicatorWindIndicatorPositionNomap.SettingChanged += (sender, args) => CustomStatusEffectsList.ChangeSailingIndicator();
             sailingIndicatorWindIndicatorScaleNomap.SettingChanged += (sender, args) => CustomStatusEffectsList.ChangeSailingIndicator();
+        }
+
+        private void LoadIcons()
+        {
+            LoadIcon("Clear.png", ref WeatherForecast.iconClear);
+            LoadIcon("Rain.png", ref WeatherForecast.iconRain);
+            LoadIcon("Snow.png", ref WeatherForecast.iconSnow);
+            LoadIcon("Thunder.png", ref WeatherForecast.iconThunder);
+            LoadIcon("Mist.png", ref WeatherForecast.iconMist);
+            LoadIcon("RainCinder.png", ref WeatherForecast.iconRainCinder);
+        }
+
+        internal static void LoadIcon(string filename, ref Sprite icon)
+        {
+            Texture2D tex = new Texture2D(2, 2);
+            if (LoadTexture(filename, ref tex))
+                icon = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), Vector2.zero);
+        }
+
+        internal static bool LoadTexture(string filename, ref Texture2D tex)
+        {
+            string fileInConfigFolder = Path.Combine(Paths.PluginPath, filename);
+            if (File.Exists(fileInConfigFolder))
+            {
+                LogInfo($"Loaded image: {fileInConfigFolder}");
+                return tex.LoadImage(File.ReadAllBytes(fileInConfigFolder));
+            }
+
+            Assembly executingAssembly = Assembly.GetExecutingAssembly();
+
+            string name = executingAssembly.GetManifestResourceNames().Single(str => str.EndsWith(filename));
+
+            Stream resourceStream = executingAssembly.GetManifestResourceStream(name);
+
+            byte[] data = new byte[resourceStream.Length];
+            resourceStream.Read(data, 0, data.Length);
+
+            tex.name = Path.GetFileNameWithoutExtension(filename);
+
+            return tex.LoadImage(data, true);
         }
 
         private static string FromSeconds(double seconds)

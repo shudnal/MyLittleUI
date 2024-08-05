@@ -32,6 +32,12 @@ namespace MyLittleUI
             };
         }
 
+        public static void UpdateStatusEffectList()
+        {
+            InitializeStatusEffectTemplate();
+            ChangeSailingIndicator();
+        }
+
         public static void InitializeStatusEffectTemplate()
         {
             if (Hud.instance == null)
@@ -92,7 +98,6 @@ namespace MyLittleUI
                 Hud.instance.m_statusEffects.RemoveAt(Hud.instance.m_statusEffects.Count - 1);
             }
 
-
             Hud.instance.m_statusEffectListRoot.anchoredPosition = modEnabled.Value && GetStatusEffectsPositionEnabled() ? GetStatusEffectsPositionAnchor() : m_statusEffectListRootPositionOriginal;
             Hud.instance.m_statusEffectTemplate = modEnabled.Value && GetStatusEffectsElementEnabled() ? m_statusEffectTemplate : m_statusEffectTemplateOriginal;
         }
@@ -120,8 +125,7 @@ namespace MyLittleUI
         {
             public static void Postfix()
             {
-                InitializeStatusEffectTemplate();
-                ChangeSailingIndicator();
+                UpdateStatusEffectList();
             }
         }
 
@@ -158,8 +162,23 @@ namespace MyLittleUI
             }
         }
 
+        [HarmonyPatch(typeof(Game), nameof(Game.UpdateNoMap))]
+        public static class Game_UpdateNoMap_UpdateForecastPosition
+        {
+            public static void Postfix()
+            {
+                if (!modEnabled.Value)
+                    return;
+
+                UpdateStatusEffectList();
+            }
+        }
+
         private static Vector2 GetStatusEffectsPositionAnchor()
         {
+            if (fixStatusEffectAndForecastPosition.Value && instance.Info.Metadata.Version >= new System.Version("1.0.11") && statusEffectsPositionAnchor.Value == new Vector2(-170f, -240f))
+                statusEffectsPositionAnchor.Value = (Vector2)statusEffectsPositionAnchor.DefaultValue;
+
             return Game.m_noMap ? statusEffectsPositionAnchorNomap.Value : statusEffectsPositionAnchor.Value;
         }
 

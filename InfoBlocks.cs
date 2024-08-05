@@ -1,5 +1,6 @@
 ﻿using HarmonyLib;
 using System;
+using System.Linq;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -13,8 +14,15 @@ namespace MyLittleUI
         private const string objectClockName = "Clock";
         private const string objectClockDayName = "Day";
         private const string objectClockTimeName = "Time";
+        private const string objectForecastName = "Forecast";
+        private const string objectForecastWeatherName = "Weather";
+        private const string objectForecastWeatherText = "weather_text";
+        private const string objectForecastWeatherIcon = "weather_icon";
+        private const string objectWindsName = "Winds";
+        private const string objectWindsTemplateName = "Wind";
 
         public static GameObject parentObject;
+
         public static GameObject clockObject;
         public static GameObject clockDayObject;
         public static GameObject clockTimeObject;
@@ -24,6 +32,15 @@ namespace MyLittleUI
 
         private static Image minimapBackground;
         private static Image clockBackground;
+        private static Image forecastBackground;
+        private static Image windsBackground;
+
+        private static GameObject forecastObject;
+        private static GameObject windsObject;
+        private static GameObject windTemplate;
+
+        public static TMP_Text weatherText;
+        public static Image weatherIcon;
 
         private static readonly int layerUI = LayerMask.NameToLayer("UI");
         
@@ -37,7 +54,7 @@ namespace MyLittleUI
                 return;
             }
 
-            // Parent object to set visibility
+            // Parent object to set global visibility
             parentObject = new GameObject(objectRootName, typeof(RectTransform))
             {
                 layer = layerUI
@@ -77,7 +94,120 @@ namespace MyLittleUI
             timeText.textWrappingMode = TextWrappingModes.NoWrap;
             timeText.verticalAlignment = VerticalAlignmentOptions.Middle;
 
+            // Forecast
+            forecastObject = new GameObject(objectForecastName, typeof(RectTransform))
+            {
+                layer = layerUI
+            };
+            forecastObject.transform.SetParent(parentObject.transform, false);
+
+            // Background
+            UpdateForecastBackground();
+
+            weatherText = UnityEngine.Object.Instantiate(Minimap.instance.m_biomeNameSmall.gameObject, forecastObject.transform).GetComponent<TMP_Text>();
+            weatherText.text = "0:00";
+            weatherText.textWrappingMode = TextWrappingModes.NoWrap;
+            weatherText.verticalAlignment = VerticalAlignmentOptions.Middle;
+            weatherText.horizontalAlignment = HorizontalAlignmentOptions.Left;
+            weatherText.gameObject.name = objectForecastWeatherText;
+
+            weatherIcon = UnityEngine.Object.Instantiate(Minimap.instance.m_windMarker.gameObject, forecastObject.transform).GetComponent<Image>();
+            weatherIcon.gameObject.name = objectForecastWeatherIcon;
+            
+            // Winds
+            // Forecast
+            windsObject = new GameObject(objectWindsName, typeof(RectTransform))
+            {
+                layer = layerUI
+            };
+            windsObject.transform.SetParent(parentObject.transform, false);
+
+            windTemplate = UnityEngine.Object.Instantiate(Minimap.instance.m_biomeNameSmall.gameObject, windsObject.transform);
+            windTemplate.name = objectWindsTemplateName;
+
+            UpdateWindsBlock();
+
             LogInfo("Info blocks added to hud");
+        }
+
+        internal static void UpdateForecastBackground()
+        {
+            if (!forecastObject)
+                return;
+
+            if (minimapBackground == null)
+                minimapBackground = Minimap.instance?.m_smallRoot?.GetComponent<Image>();
+
+            if (forecastBackground == null)
+                forecastBackground = forecastObject.AddComponent<Image>();
+
+            forecastBackground.enabled = minimapBackground != null && forecastShowBackground.Value;
+
+            if (!forecastBackground.enabled)
+                return;
+
+            forecastBackground.color = clockBackgroundColor.Value == Color.clear ? minimapBackground.color : forecastBackgroundColor.Value;
+            forecastBackground.sprite = minimapBackground.sprite;
+            forecastBackground.type = minimapBackground.type;
+        }
+
+        internal static void UpdateForecastBlock()
+        {
+            if (!forecastObject)
+                return;
+
+            forecastObject.SetActive(forecastEnabled.Value);
+
+            weatherText.color = forecastFontColor.Value == Color.clear ? Minimap.instance.m_biomeNameSmall.GetComponent<TMP_Text>().color : forecastFontColor.Value;
+            weatherText.fontSizeMin = forecastFontSize.Value == 0f ? Minimap.instance.m_biomeNameSmall.GetComponent<TMP_Text>().fontSizeMin : forecastFontSize.Value;
+            weatherText.fontSize = forecastFontSize.Value == 0f ? weatherText.fontSizeMin : forecastFontSize.Value;
+
+            RectTransform rtForecast = forecastObject.GetComponent<RectTransform>();
+            rtForecast.anchorMin = Vector2.one;
+            rtForecast.anchorMax = Vector2.one;
+            rtForecast.anchoredPosition = Game.m_noMap ? forecastPositionNomap.Value : forecastPosition.Value;
+            rtForecast.sizeDelta = forecastSize.Value;
+
+            float height = forecastSize.Value.y;
+
+            RectTransform rtWeather = weatherText.GetComponent<RectTransform>();
+            rtWeather.anchorMin = new Vector2(0f, 0.5f);
+            rtWeather.anchorMax = new Vector2(0f, 0.5f);
+            rtWeather.anchoredPosition = new Vector2(height + forecastTextPadding.Value, 1f);
+            rtWeather.sizeDelta = Vector2.zero;
+
+            RectTransform rtWeatherIcon = weatherIcon.GetComponent<RectTransform>();
+            rtWeatherIcon.anchorMin = new Vector2(0f, 0.5f);
+            rtWeatherIcon.anchorMax = new Vector2(0f, 0.5f);
+            rtWeatherIcon.sizeDelta = Vector2.one * height;
+            rtWeatherIcon.anchoredPosition = new Vector2(height / 2f, 0f);
+        }
+
+        internal static void UpdateWindsBackground()
+        {
+            if (!windsObject)
+                return;
+
+            if (minimapBackground == null)
+                minimapBackground = Minimap.instance?.m_smallRoot?.GetComponent<Image>();
+
+            if (windsBackground == null)
+                windsBackground = windsObject.AddComponent<Image>();
+
+            windsBackground.enabled = minimapBackground != null && windsShowBackground.Value;
+
+            if (!windsBackground.enabled)
+                return;
+
+            windsBackground.color = windsBackgroundColor.Value == Color.clear ? minimapBackground.color : windsBackgroundColor.Value;
+            windsBackground.sprite = minimapBackground.sprite;
+            windsBackground.type = minimapBackground.type;
+        }
+
+        internal static void UpdateWindsBlock()
+        {
+            //windsObject.SetActive(windsEnabled.Value);
+            windsObject.SetActive(false);
         }
 
         internal static void UpdateDayTimeBackground()
@@ -146,6 +276,11 @@ namespace MyLittleUI
             UpdateDayTimeText();
 
             UpdateClock();
+
+            UpdateForecastBlock();
+
+            WeatherForecast.UpdateWeather();
+            WeatherForecast.UpdateWind();
         }
 
         internal static void UpdateClock()
@@ -168,8 +303,7 @@ namespace MyLittleUI
         {
             if (clockTimeType.Value == ClockTimeType.Fuzzy)
             {
-                if (fuzzyTime == null)
-                    fuzzyTime = clockFuzzy.Value.Split(',');
+                fuzzyTime ??= clockFuzzy.Value.Split(',').Select(str => str.Trim()).ToArray();
 
                 if (fuzzyTime.Length > 0)
                 {
@@ -230,16 +364,5 @@ namespace MyLittleUI
             }
         }
         
-        private static string TimerString(double seconds)
-        {
-            if (seconds < 60)
-                return DateTime.FromBinary(599266080000000000).AddSeconds(seconds).ToString(@"ss\s");
-
-            TimeSpan span = TimeSpan.FromSeconds(seconds);
-            if (span.TotalHours > 24)
-                return string.Format("{0:d2}:{1:d2}:{2:d2}", (int)span.TotalHours, span.Minutes, span.Seconds);
-            else
-                return span.ToString(span.Hours > 0 ? @"hh\:mm\:ss" : @"mm\:ss");
-        }
     }
 }
