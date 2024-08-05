@@ -21,6 +21,7 @@ namespace MyLittleUI
         private const string objectForecastWeatherIcon = "weather_icon";
         private const string objectWindsName = "Winds";
         private const string objectWindsTemplateName = "WindElement";
+        private const string objectWindsProgressName = "WindProgress";
 
         public static GameObject parentObject;
 
@@ -35,10 +36,15 @@ namespace MyLittleUI
         private static Image clockBackground;
         private static Image forecastBackground;
         private static Image windsBackground;
+        private static Image windsProgressBackground;
 
         private static GameObject forecastObject;
         public static GameObject windsObject;
         public static GameObject windTemplate;
+        
+        private static GameObject windsProgress;
+        public static RectTransform windsProgressRect;
+        public static RectTransform windsObjectRect;
 
         public static TMP_Text weatherText;
         public static Image weatherIcon;
@@ -122,6 +128,8 @@ namespace MyLittleUI
             };
             windsObject.transform.SetParent(parentObject.transform, false);
 
+            windsObjectRect = windsObject.GetComponent<RectTransform>();
+
             windTemplate = UnityEngine.Object.Instantiate(Minimap.instance.m_windMarker.gameObject, parentObject.transform);
             windTemplate.name = objectWindsTemplateName;
 
@@ -148,7 +156,7 @@ namespace MyLittleUI
             if (!forecastBackground.enabled)
                 return;
 
-            forecastBackground.color = clockBackgroundColor.Value == Color.clear ? minimapBackground.color : forecastBackgroundColor.Value;
+            forecastBackground.color = GetBackgroundColor(forecastBackgroundColor.Value);
             forecastBackground.sprite = minimapBackground.sprite;
             forecastBackground.type = minimapBackground.type;
         }
@@ -198,12 +206,46 @@ namespace MyLittleUI
 
             windsBackground.enabled = minimapBackground != null && windsShowBackground.Value;
 
-            if (!windsBackground.enabled)
-                return;
+            if (windsBackground.enabled)
+            {
+                windsBackground.color = GetBackgroundColor(windsBackgroundColor.Value);
+                windsBackground.sprite = minimapBackground.sprite;
+                windsBackground.type = minimapBackground.type;
+            }
 
-            windsBackground.color = windsBackgroundColor.Value == Color.clear ? minimapBackground.color : windsBackgroundColor.Value;
-            windsBackground.sprite = minimapBackground.sprite;
-            windsBackground.type = minimapBackground.type;
+            if (windsProgressBackground == null)
+            {
+                windsProgress = new GameObject(objectWindsProgressName, typeof(RectTransform))
+                {
+                    layer = layerUI
+                };
+                windsProgress.transform.SetParent(windsObject.transform, false);
+
+                windsProgressRect = windsProgress.GetComponent<RectTransform>();
+                windsProgressRect.anchoredPosition = Vector2.zero;
+                windsProgressRect.anchorMin = Vector2.zero;
+                windsProgressRect.anchorMax = Vector2.one;
+                windsProgressRect.sizeDelta = Vector2.zero;
+
+                windsProgressBackground = windsProgress.AddComponent<Image>();
+            }
+
+            windsProgressBackground.enabled = minimapBackground != null && windsShowProgress.Value;
+
+            windsProgressBackground.color = GetBackgroundColor(windsProgressColor.Value);
+            windsProgressBackground.sprite = minimapBackground.sprite;
+            windsProgressBackground.type = minimapBackground.type;
+        }
+
+        private static Color GetBackgroundColor(Color color)
+        {
+            if (color == Color.clear)
+                return minimapBackground.color;
+
+            if (color.a != 0f && color.r == 0 && color.g == 0 && color.b == 0)
+                return new Color(minimapBackground.color.r, minimapBackground.color.g, minimapBackground.color.b, color.a);
+
+            return color;
         }
 
         internal static void UpdateWindsBlock()
@@ -215,13 +257,16 @@ namespace MyLittleUI
             windTemplate.SetActive(false);
 
             Image image = windTemplate.GetComponent<Image>();
-            image.color = windsColor.Value;
+            if (image.color != windsArrowColor.Value)
+            {
+                image.color = windsArrowColor.Value;
+                WeatherForecast.UpdateNextWinds(forceRebuildList: true);
+            }
 
-            RectTransform rtWinds = windsObject.GetComponent<RectTransform>();
-            rtWinds.anchorMin = Vector2.one;
-            rtWinds.anchorMax = Vector2.one;
-            rtWinds.anchoredPosition = Game.m_noMap ? windsPositionNomap.Value : windsPosition.Value;
-            rtWinds.sizeDelta = windsSize.Value;
+            windsObjectRect.anchorMin = Vector2.one;
+            windsObjectRect.anchorMax = Vector2.one;
+            windsObjectRect.anchoredPosition = Game.m_noMap ? windsPositionNomap.Value : windsPosition.Value;
+            windsObjectRect.sizeDelta = windsSize.Value;
 
             float height = windsSize.Value.y - 1f;
 
@@ -248,7 +293,7 @@ namespace MyLittleUI
             if (!clockBackground.enabled)
                 return;
 
-            clockBackground.color   = clockBackgroundColor.Value == Color.clear ? minimapBackground.color : clockBackgroundColor.Value;
+            clockBackground.color   = GetBackgroundColor(clockBackgroundColor.Value);
             clockBackground.sprite  = minimapBackground.sprite;
             clockBackground.type    = minimapBackground.type;
         }

@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using UnityEngine;
+using UnityEngine.UI;
 using static MyLittleUI.MyLittleUI;
 
 namespace MyLittleUI
@@ -37,7 +38,7 @@ namespace MyLittleUI
         public static Sprite iconMist;
         public static Sprite iconRainCinder;
 
-        public static List<GameObject> windList = new List<GameObject>();
+        public static readonly List<GameObject> windList = new List<GameObject>();
 
         public static void UpdateWeather()
         {
@@ -54,16 +55,19 @@ namespace MyLittleUI
             if (!EnvMan.instance)
                 return;
 
-            InfoBlocks.windsObject.SetActive(nextWindChange > 0 && !EnvMan.instance.m_debugWind);
-
             UpdateWindTimer();
             InfoBlocks.UpdateWindsBackground();
         }
 
         public static void UpdateWindTimer()
         {
+            InfoBlocks.windsObject.SetActive(nextWindChange >= EnvMan.instance.m_totalSeconds && !EnvMan.instance.m_debugWind);
 
+            if (EnvMan.instance.m_totalSeconds % 5 <= 0.1f)
+                InfoBlocks.UpdateWindsBackground();
 
+            if (InfoBlocks.windsObject.activeSelf)
+                InfoBlocks.windsProgressRect.offsetMax = new Vector2(InfoBlocks.windsObjectRect.rect.width * (Mathf.Clamp01((float)(nextWindChange - EnvMan.instance.m_totalSeconds) / GetWindPeriodDuration()) - 1f), 0f);
         }
 
         public static long GetWindPeriodDuration()
@@ -71,11 +75,21 @@ namespace MyLittleUI
             return EnvMan.instance.m_windPeriodDuration / 8L;
         }
 
+        public static long GetWeatherPeriodDuration()
+        {
+            return EnvMan.instance.m_environmentDuration;
+        }
+
         public static long GetCurrentWindPeriod(double sec)
         {
             return (int)sec / GetWindPeriodDuration();
         }
-        
+
+        public static long GetCurrentWeatherPeriod(double sec)
+        {
+            return (long)sec / GetWeatherPeriodDuration();
+        }
+
         public static void UpdateWeatherTimer()
         {
             if (nextWeatherChange > 0)
@@ -192,20 +206,21 @@ namespace MyLittleUI
                     if (currentState != nextState)
                     {
                         nextWeatherState = nextState;
-                        nextWeatherChange = (environmentPeriod + i) * EnvMan.instance.m_environmentDuration;
+                        nextWeatherChange = (environmentPeriod + i) * GetWeatherPeriodDuration();
                         break;
                     }
                 }
             }
 
             UpdateWeather();
+            UpdateNextWinds();
         }
 
-        public static void UpdateNextWinds()
+        public static void UpdateNextWinds(bool forceRebuildList = false)
         {
             nextWindChange = 0;
 
-            if (windsCount.Value != windList.Count)
+            if (InfoBlocks.windTemplate && (windsCount.Value != windList.Count || forceRebuildList))
             {
                 foreach (GameObject item in windList)
                     UnityEngine.Object.Destroy(item);
@@ -224,17 +239,28 @@ namespace MyLittleUI
             if (windPeriod > 0)
                 for (int i = 1; i <= windList.Count; i++)
                 {
-                    Quaternion quaternion = Quaternion.LookRotation(GetWind(i));
-                    windList[i - 1].transform.rotation = Quaternion.Euler(0f, 0f, 0f - quaternion.eulerAngles.y);
                     if (i == 1)
                         nextWindChange = (windPeriod + i) * GetWindPeriodDuration();
+
+                    Vector4 wind = GetWind(i);
+                    Quaternion quaternion = Quaternion.LookRotation((Vector3)wind);
+                    
+                    Image arrow = windList[i - 1].GetComponent<Image>();
+                    arrow.transform.rotation = Quaternion.Euler(0f, 0f, 0f - quaternion.eulerAngles.y);
+                    if (windsAlphaIntensity.Value)
+                        arrow.color = new Color(windsArrowColor.Value.r, windsArrowColor.Value.g, windsArrowColor.Value.b, Mathf.Lerp(windsMinimumAlpha.Value, windsArrowColor.Value.a, wind.w));
+                    else
+                        arrow.color = windsArrowColor.Value;
                 }
 
             UpdateWinds();
         }
 
-        private static Vector3 GetWind(int period)
+        private static Vector4 GetWind(int period)
         {
+            if (!EnvMan.instance)
+                return Vector4.zero;
+
             UnityEngine.Random.State state = UnityEngine.Random.state;
             float angle = 0f;
             float intensity = 0.5f;
@@ -244,8 +270,15 @@ namespace MyLittleUI
             EnvMan.instance.AddWindOctave(timeSec, 4, ref angle, ref intensity);
             EnvMan.instance.AddWindOctave(timeSec, 8, ref angle, ref intensity);
             UnityEngine.Random.state = state;
-            
-            return new Vector3(Mathf.Sin(angle), 0f, Mathf.Cos(angle));
+
+            /*Vector3 position = Utils.GetMainCamera().transform.position;
+            bool inAshlands = WorldGenerator.IsAshlands(position.x, position.z);
+            bool inDeepNorth = WorldGenerator.IsDeepnorth(position.x, position.y);*/
+
+            //EnvSetup env = GetEnvironment(GetCurrentWeatherPeriod(timeSec), currentBiome, inAshlands, inDeepNorth);
+            //intensity = env == null ? 0f : Mathf.Lerp(env.m_windMin, env.m_windMax, intensity);
+
+            return new Vector4(Mathf.Sin(angle), 0f, Mathf.Cos(angle), Mathf.Clamp(intensity, 0.05f, 1f));
         }
 
         private static WeatherState GetWeatherState(EnvSetup env)
