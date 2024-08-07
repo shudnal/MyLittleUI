@@ -24,10 +24,10 @@ namespace MyLittleUI
             float offset = i * (Game.m_noMap ? statusEffectsPositionSpacingNomap.Value + statusEffectsElementSizeNomap.Value : statusEffectsPositionSpacing.Value + statusEffectsElementSize.Value);
             return (Game.m_noMap ? statusEffectsFillingDirectionNomap.Value : statusEffectsFillingDirection.Value) switch
             {
-                StatusEffectDirection.LeftToRight => new Vector3(offset, 0, 0),
-                StatusEffectDirection.RightToLeft => new Vector3(-offset, 0, 0),
-                StatusEffectDirection.TopToBottom => new Vector3(0, -offset, 0),
-                StatusEffectDirection.BottomToTop => new Vector3(0, offset, 0),
+                ListDirection.LeftToRight => new Vector3(offset, 0, 0),
+                ListDirection.RightToLeft => new Vector3(-offset, 0, 0),
+                ListDirection.TopToBottom => new Vector3(0, -offset, 0),
+                ListDirection.BottomToTop => new Vector3(0, offset, 0),
                 _ => new Vector3(-offset, 0, 0),
             };
         }

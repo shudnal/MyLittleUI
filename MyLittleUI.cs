@@ -64,12 +64,19 @@ namespace MyLittleUI
         internal static ConfigEntry<Color> windsBackgroundColor;
         internal static ConfigEntry<Color> windsProgressColor;
         internal static ConfigEntry<Color> windsArrowColor;
+        internal static ConfigEntry<float> windsMinimumAlpha;
+        internal static ConfigEntry<bool> windsAlphaIntensity;
+
         internal static ConfigEntry<Vector2> windsPosition;
         internal static ConfigEntry<Vector2> windsPositionNomap;
         internal static ConfigEntry<Vector2> windsSize;
+        internal static ConfigEntry<Vector2> windsSizeNomap;
         internal static ConfigEntry<int> windsCount;
-        internal static ConfigEntry<float> windsMinimumAlpha;
-        internal static ConfigEntry<bool> windsAlphaIntensity;
+        internal static ConfigEntry<int> windsCountNomap;
+        internal static ConfigEntry<float> windsPositionSpacing;
+        internal static ConfigEntry<float> windsPositionSpacingNomap;
+        internal static ConfigEntry<ListDirection> windsFillingDirection;
+        internal static ConfigEntry<ListDirection> windsFillingDirectionNomap;
 
         private static ConfigEntry<bool> showAvailableItemsAmount;
         private static ConfigEntry<Color> availableItemsAmountColor;
@@ -140,7 +147,7 @@ namespace MyLittleUI
 
         public static ConfigEntry<bool> statusEffectsPositionEnabled;
         public static ConfigEntry<Vector2> statusEffectsPositionAnchor;
-        public static ConfigEntry<StatusEffectDirection> statusEffectsFillingDirection;
+        public static ConfigEntry<ListDirection> statusEffectsFillingDirection;
         public static ConfigEntry<int> statusEffectsPositionSpacing;
 
         public static ConfigEntry<bool> statusEffectsElementEnabled;
@@ -148,7 +155,7 @@ namespace MyLittleUI
 
         public static ConfigEntry<bool> statusEffectsPositionEnabledNomap;
         public static ConfigEntry<Vector2> statusEffectsPositionAnchorNomap;
-        public static ConfigEntry<StatusEffectDirection> statusEffectsFillingDirectionNomap;
+        public static ConfigEntry<ListDirection> statusEffectsFillingDirectionNomap;
         public static ConfigEntry<int> statusEffectsPositionSpacingNomap;
 
         public static ConfigEntry<bool> statusEffectsElementEnabledNomap;
@@ -195,7 +202,7 @@ namespace MyLittleUI
             CustomNameThenType
         }
 
-        public enum StatusEffectDirection
+        public enum ListDirection
         {
             RightToLeft,
             LeftToRight,
@@ -333,10 +340,6 @@ namespace MyLittleUI
             windsShowProgress = Config.Bind("Info - Winds", "Progress enabled", defaultValue: true, "Show winds progress");
             windsProgressColor = Config.Bind("Info - Winds", "Progress color", defaultValue: Color.clear, "Winds progress color. If not set - minimap background color is used.");
             windsArrowColor = Config.Bind("Info - Winds", "Winds arrow color", defaultValue: Color.white, "Winds arrow color.");
-            windsPosition = Config.Bind("Info - Winds", "Position", defaultValue: new Vector2(-180f, -255f), "anchoredPosition of winds object transform");
-            windsPositionNomap = Config.Bind("Info - Winds", "Position in nomap", defaultValue: new Vector2(-180f, -55f), "anchoredPosition of winds object transform in nomap mode");
-            windsSize = Config.Bind("Info - Winds", "Size", defaultValue: new Vector2(119f, 25f), "sizeDelta of winds object transform");
-            windsCount = Config.Bind("Info - Winds", "Wind arrows amount", defaultValue: 5, "Amount of winds to forecast");
             windsMinimumAlpha = Config.Bind("Info - Winds", "Minimum wind arrow alpha", defaultValue: 0.5f, "Amount of winds to forecast");
             windsAlphaIntensity = Config.Bind("Info - Winds", "Set wind arrow alpha as intensity", defaultValue: true, "If enabled - wind arrow will be more transparent with less wind intensity");
 
@@ -347,13 +350,33 @@ namespace MyLittleUI
 
             windsEnabled.SettingChanged += (sender, args) => InfoBlocks.UpdateWindsBlock();
             windsArrowColor.SettingChanged += (sender, args) => InfoBlocks.UpdateWindsBlock();
+            windsMinimumAlpha.SettingChanged += (sender, args) => WeatherForecast.UpdateNextWinds(forceRebuildList: true);
+            windsAlphaIntensity.SettingChanged += (sender, args) => WeatherForecast.UpdateNextWinds(forceRebuildList: true);
+
+            windsCount = Config.Bind("Info - Winds - List", "Wind arrows amount", defaultValue: 5, "Amount of winds to forecast");
+            windsFillingDirection = Config.Bind("Info - Winds - List", "Direction", defaultValue: ListDirection.LeftToRight, "Direction of filling");
+            windsPositionSpacing = Config.Bind("Info - Winds - List", "Spacing", defaultValue: 1f, "Spacing between arrows");
+            windsPosition = Config.Bind("Info - Winds - List", "Position", defaultValue: new Vector2(-180f, -255f), "anchoredPosition of winds object transform");
+            windsSize = Config.Bind("Info - Winds - List", "Size", defaultValue: new Vector2(119f, 25f), "sizeDelta of winds object transform");
+            
+            windsCountNomap = Config.Bind("Info - Winds - List", "Nomap Wind arrows amount", defaultValue: 5, "Amount of winds to forecast");
+            windsFillingDirectionNomap = Config.Bind("Info - Winds - List", "Nomap Direction", defaultValue: ListDirection.LeftToRight, "Direction of filling");
+            windsPositionSpacingNomap = Config.Bind("Info - Winds - List", "Nomap Spacing", defaultValue: 1f, "Spacing between arrows");
+            windsPositionNomap = Config.Bind("Info - Winds - List", "Nomap Position", defaultValue: new Vector2(-180f, -55f), "anchoredPosition of winds object transform in nomap mode");
+            windsSizeNomap = Config.Bind("Info - Winds - List", "Nomap Size", defaultValue: new Vector2(119f, 25f), "sizeDelta of winds object transform");
+
             windsPosition.SettingChanged += (sender, args) => InfoBlocks.UpdateWindsBlock();
             windsPositionNomap.SettingChanged += (sender, args) => InfoBlocks.UpdateWindsBlock();
-            windsSize.SettingChanged += (sender, args) => InfoBlocks.UpdateWindsBlock();
-            windsSize.SettingChanged += (sender, args) => WeatherForecast.UpdateNextWinds(forceRebuildList: true);
+            windsSize.SettingChanged += (sender, args) => InfoBlocks.UpdateWindsBlock(forceRebuildList: true);
+            windsSizeNomap.SettingChanged += (sender, args) => InfoBlocks.UpdateWindsBlock(forceRebuildList: true);
+            
             windsCount.SettingChanged += (sender, args) => WeatherForecast.UpdateNextWinds();
-            windsMinimumAlpha.SettingChanged += (sender, args) => WeatherForecast.UpdateNextWinds(forceRebuildList:true);
-            windsAlphaIntensity.SettingChanged += (sender, args) => WeatherForecast.UpdateNextWinds(forceRebuildList: true);
+            windsCountNomap.SettingChanged += (sender, args) => WeatherForecast.UpdateNextWinds();
+
+            windsFillingDirection.SettingChanged += (sender, args) => WeatherForecast.UpdateNextWinds(forceRebuildList: true);
+            windsFillingDirectionNomap.SettingChanged += (sender, args) => WeatherForecast.UpdateNextWinds(forceRebuildList: true);
+            windsPositionSpacing.SettingChanged += (sender, args) => WeatherForecast.UpdateNextWinds(forceRebuildList: true);
+            windsPositionSpacingNomap.SettingChanged += (sender, args) => WeatherForecast.UpdateNextWinds(forceRebuildList: true);
 
             showAvailableItemsAmount = Config.Bind("Item - Available resources amount", "Enabled", defaultValue: true, "Show amount of available resources for crafting in requirements list");
             availableItemsAmountColor = Config.Bind("Item - Available resources amount", "Color", defaultValue: new Color(0.68f, 0.85f, 0.90f), "Color of amount of available resources.");
@@ -446,7 +469,7 @@ namespace MyLittleUI
 
             statusEffectsPositionEnabled = Config.Bind("Status effects - Map - List", "Enable", defaultValue: true, "Enable repositioning of status effect list.");
             statusEffectsPositionAnchor = Config.Bind("Status effects - Map - List", "Position", defaultValue: new Vector2(-170f, -265f), "Anchored position of list.");
-            statusEffectsFillingDirection = Config.Bind("Status effects - Map - List", "Direction", defaultValue: StatusEffectDirection.TopToBottom, "Direction of filling");
+            statusEffectsFillingDirection = Config.Bind("Status effects - Map - List", "Direction", defaultValue: ListDirection.TopToBottom, "Direction of filling");
             statusEffectsPositionSpacing = Config.Bind("Status effects - Map - List", "Spacing", defaultValue: 8, "Spacing between status effects");
 
             statusEffectsElementEnabled = Config.Bind("Status effects - Map - List element", "Custom element enabled", defaultValue: true, "Enables using of horizontal status effect element");
@@ -471,7 +494,7 @@ namespace MyLittleUI
 
             statusEffectsPositionEnabledNomap = Config.Bind("Status effects - Nomap - List", "Enable", defaultValue: true, "Enable repositioning of status effect list.");
             statusEffectsPositionAnchorNomap = Config.Bind("Status effects - Nomap - List", "Position", defaultValue: new Vector2(-170f, -70f), "Anchored position of list.");
-            statusEffectsFillingDirectionNomap = Config.Bind("Status effects - Nomap - List", "Direction", defaultValue: StatusEffectDirection.TopToBottom, "Direction of filling");
+            statusEffectsFillingDirectionNomap = Config.Bind("Status effects - Nomap - List", "Direction", defaultValue: ListDirection.TopToBottom, "Direction of filling");
             statusEffectsPositionSpacingNomap = Config.Bind("Status effects - Nomap - List", "Spacing", defaultValue: 10, "Spacing between status effects");
 
             statusEffectsElementEnabledNomap = Config.Bind("Status effects - Nomap - List element", "Custom element enabled", defaultValue: true, "Enables using of horizontal status effect element");

@@ -10,7 +10,7 @@ using static MyLittleUI.MyLittleUI;
 
 namespace MyLittleUI
 {
-    internal class InfoBlocks
+    internal static class InfoBlocks
     {
         private const string objectRootName = "MyLittleUI_Parent";
         private const string objectClockName = "Clock";
@@ -248,7 +248,7 @@ namespace MyLittleUI
             return color;
         }
 
-        internal static void UpdateWindsBlock()
+        internal static void UpdateWindsBlock(bool forceRebuildList = false)
         {
             if (!windsObject)
                 return;
@@ -256,25 +256,34 @@ namespace MyLittleUI
             windsObject.SetActive(windsEnabled.Value);
             windTemplate.SetActive(false);
 
+            windsObjectRect.anchorMin = Vector2.one;
+            windsObjectRect.anchorMax = Vector2.one;
+            windsObjectRect.anchoredPosition = GetWindsPosition();
+            windsObjectRect.sizeDelta = GetWindsSize();
+
+            RectTransform rtWindTemplate = windTemplate.GetComponent<RectTransform>();
+            rtWindTemplate.anchorMin = Vector2.zero;
+            rtWindTemplate.anchorMax = Vector2.zero;
+
             Image image = windTemplate.GetComponent<Image>();
             if (image.color != windsArrowColor.Value)
             {
                 image.color = windsArrowColor.Value;
-                WeatherForecast.UpdateNextWinds(forceRebuildList: true);
+                forceRebuildList = true;
             }
 
-            windsObjectRect.anchorMin = Vector2.one;
-            windsObjectRect.anchorMax = Vector2.one;
-            windsObjectRect.anchoredPosition = Game.m_noMap ? windsPositionNomap.Value : windsPosition.Value;
-            windsObjectRect.sizeDelta = windsSize.Value;
+            if (forceRebuildList)
+                WeatherForecast.UpdateNextWinds(forceRebuildList);
+        }
 
-            float height = windsSize.Value.y - 1f;
+        internal static Vector2 GetWindsSize()
+        {
+            return (Game.m_noMap ? windsSizeNomap.Value : windsSize.Value);
+        }
 
-            RectTransform rtWindTemplate = windTemplate.GetComponent<RectTransform>();
-            rtWindTemplate.anchorMin = new Vector2(0f, 0.5f);
-            rtWindTemplate.anchorMax = new Vector2(0f, 0.5f);
-            rtWindTemplate.sizeDelta = Vector2.one * height;
-            rtWindTemplate.anchoredPosition = new Vector2(height / 2f, 0f);
+        private static Vector2 GetWindsPosition()
+        {
+            return Game.m_noMap ? windsPositionNomap.Value : windsPosition.Value;
         }
 
         internal static void UpdateDayTimeBackground()
@@ -443,6 +452,37 @@ namespace MyLittleUI
             private static void Postfix()
             {
                 UpdateVisibility();
+            }
+        }
+
+        [HarmonyPatch(typeof(Hud), nameof(Hud.OnDestroy))]
+        public static class Hud_OnDestroy_Clear
+        {
+            public static void Postfix()
+            {
+                if (!modEnabled.Value)
+                    return;
+
+                WeatherForecast.windList.Clear();
+
+                parentObject = null;
+
+                clockObject = null;
+                clockDayObject = null;
+                clockTimeObject = null;
+
+                dayText = null;
+                timeText = null;
+
+                forecastObject = null;
+                windsObject = null;
+                windTemplate = null;
+
+                windsProgress = null;
+                windsProgressRect = null;
+                windsObjectRect = null;
+
+                weatherText = null;
             }
         }
     }
