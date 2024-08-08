@@ -356,7 +356,7 @@ namespace MyLittleUI
             UpdateForecastBlock();
 
             WeatherForecast.UpdateWeather();
-            WeatherForecast.UpdateWinds();
+            WeatherForecast.UpdateNextWinds();
         }
 
         internal static void UpdateClock()
@@ -395,13 +395,6 @@ namespace MyLittleUI
             int minute = 5 * (Mathf.CeilToInt((smoothDayFraction * 24 - hour) * 60) / 5);
 
             return DateTime.MinValue.AddMonths(2).AddDays(EnvMan.instance.GetCurrentDay()).AddHours(hour).AddMinutes(minute).ToString(clockTimeFormat24h.Value ? "HH:mm" : "hh:mm tt");
-        }
-
-        internal static void UpdateDay()
-        {
-            if (!EnvMan.instance || dayText == null)
-                return;
-
         }
 
         [HarmonyPatch(typeof(EnvMan), nameof(EnvMan.UpdateTriggers))]
@@ -464,7 +457,9 @@ namespace MyLittleUI
                     return;
 
                 WeatherForecast.windList.Clear();
-
+                WeatherForecast.winds.Clear();
+                WeatherForecast.windsTransition.Clear();
+                
                 parentObject = null;
 
                 clockObject = null;

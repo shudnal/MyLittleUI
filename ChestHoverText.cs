@@ -25,7 +25,7 @@ namespace MyLittleUI
         }
     }
 
-    internal class ChestHoverText
+    internal static class ChestHoverText
     {
         private static Container textInputForContainer;
         private static readonly Dictionary<string, string> hoverTextCache = new Dictionary<string, string>();
@@ -44,7 +44,7 @@ namespace MyLittleUI
         }
 
         [HarmonyPatch(typeof(Container), nameof(Container.OnContainerChanged))]
-        private class Container_OnContainerChanged_HoverCacheReset
+        private static class Container_OnContainerChanged_HoverCacheReset
         {
             private static void Postfix(Container __instance)
             {
@@ -56,7 +56,7 @@ namespace MyLittleUI
         }
 
         [HarmonyPatch(typeof(Container), nameof(Container.GetHoverText))]
-        private class Container_GetHoverText_Duration
+        private static class Container_GetHoverText_Duration
         {
             private static readonly StringBuilder result = new StringBuilder();
 
@@ -329,8 +329,5 @@ namespace MyLittleUI
                 textInputForContainer = null;
             }
         }
-
-
-
     }
 }

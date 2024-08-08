@@ -10,7 +10,7 @@ using BepInEx;
 
 namespace MyLittleUI
 {
-    internal class ItemIcon
+    internal static class ItemIcon
     {
         private static Vector3 itemIconScaleOriginal = Vector3.zero;
 

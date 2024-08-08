@@ -9,7 +9,7 @@ using static MyLittleUI.MyLittleUI;
 
 namespace MyLittleUI
 {
-    internal class WeatherForecast
+    internal static class WeatherForecast
     {
         public enum WeatherState
         {
@@ -39,6 +39,11 @@ namespace MyLittleUI
         public static Sprite iconRainCinder;
 
         public static readonly List<GameObject> windList = new List<GameObject>();
+        public static readonly List<Vector4> winds = new List<Vector4>();
+        public static readonly List<Vector4> windsTransition = new List<Vector4>();
+
+        public const float windsTransitionDuration = 5f;
+        public static float windsTransitionTimer = -1f;
 
         public static void UpdateWeather()
         {
@@ -50,21 +55,33 @@ namespace MyLittleUI
             InfoBlocks.UpdateForecastBackground();
         }
 
-        public static void UpdateWinds()
-        {
-            if (!EnvMan.instance)
-                return;
-
-            InfoBlocks.UpdateWindsBackground();
-            UpdateWindTimer();
-        }
-
-        public static void UpdateWindTimer()
+        public static void UpdateWindTimer(float time)
         {
             InfoBlocks.windsObject.SetActive(nextWindChange >= EnvMan.instance.m_totalSeconds && !EnvMan.instance.m_debugWind);
 
             if (EnvMan.instance.m_totalSeconds % 5 <= 0.1f)
                 InfoBlocks.UpdateWindsBackground();
+
+            if (windsTransition.Count > 0)
+            {
+                if (windsTransition.Count != winds.Count)
+                {
+                    winds.Clear();
+                    winds.AddRange(windsTransition);
+                    windsTransitionTimer = -1f;
+                    SetWindsDirection(1f);
+                }
+                else if (windsTransitionTimer > windsTransitionDuration)
+                {
+                    windsTransitionTimer = -1f;
+                    SetWindsDirection(1f);
+                }
+                else if (windsTransitionTimer >= 0)
+                {
+                    SetWindsDirection(windsTransitionTimer / windsTransitionDuration);
+                    windsTransitionTimer += time;
+                }
+            }
 
             if (InfoBlocks.windsObject.activeSelf)
             {
@@ -86,6 +103,25 @@ namespace MyLittleUI
                         InfoBlocks.windsProgressRect.offsetMin = new Vector2(0f, -InfoBlocks.windsObjectRect.rect.height * percent);
                         break;
                 }
+            }
+        }
+
+        public static void SetWindsDirection(float transition)
+        {
+            for (int i = 0; i < Math.Min(windList.Count, windsTransition.Count); i++)
+            {
+                Vector4 wind = Vector4.Lerp(winds[i], windsTransition[i], transition);
+                Quaternion quaternion = Quaternion.LookRotation((Vector3)wind);
+
+                Image arrow = windList[i].GetComponent<Image>();
+                arrow.transform.rotation = Quaternion.Euler(0f, 0f, 0f - quaternion.eulerAngles.y);
+                if (windsAlphaIntensity.Value)
+                    arrow.color = new Color(windsArrowColor.Value.r, windsArrowColor.Value.g, windsArrowColor.Value.b, Mathf.Lerp(windsMinimumAlpha.Value, windsArrowColor.Value.a, wind.w));
+                else
+                    arrow.color = windsArrowColor.Value;
+
+                if (transition >= 1f)
+                    winds[i] = wind;
             }
         }
 
@@ -174,7 +210,7 @@ namespace MyLittleUI
 
                 if (windPeriod == GetCurrentWindPeriod(timeSec))
                 {
-                    UpdateWindTimer();
+                    UpdateWindTimer(dt);
                     return;
                 }
 
@@ -237,6 +273,9 @@ namespace MyLittleUI
 
         public static void UpdateNextWinds(bool forceRebuildList = false)
         {
+            if (!EnvMan.instance)
+                return;
+
             nextWindChange = 0;
 
             if (InfoBlocks.windTemplate && (GetWindsCount() != windList.Count || forceRebuildList || windList.Any(wind => !wind)))
@@ -256,23 +295,20 @@ namespace MyLittleUI
             }
 
             if (windPeriod > 0)
+            {
+                windsTransition.Clear();
+                windsTransitionTimer = 0f;
+
                 for (int i = 1; i <= windList.Count; i++)
                 {
                     if (i == 1)
                         nextWindChange = (windPeriod + i) * GetWindPeriodDuration();
 
-                    Vector4 wind = GetWind(i);
-                    Quaternion quaternion = Quaternion.LookRotation((Vector3)wind);
-
-                    Image arrow = windList[i - 1].GetComponent<Image>();
-                    arrow.transform.rotation = Quaternion.Euler(0f, 0f, 0f - quaternion.eulerAngles.y);
-                    if (windsAlphaIntensity.Value)
-                        arrow.color = new Color(windsArrowColor.Value.r, windsArrowColor.Value.g, windsArrowColor.Value.b, Mathf.Lerp(windsMinimumAlpha.Value, windsArrowColor.Value.a, wind.w));
-                    else
-                        arrow.color = windsArrowColor.Value;
+                    windsTransition.Add(GetWind(i));
                 }
+            }
 
-            UpdateWinds();
+            InfoBlocks.UpdateWindsBackground();
         }
 
         private static int GetWindsCount()
@@ -370,7 +406,7 @@ namespace MyLittleUI
             UnityEngine.Random.state = state;
 
             return env;
-        }
+        } 
 
         private static EnvSetup GetAvailableEnvironment(Heightmap.Biome biome, bool isAshlands, bool isDeepNorth)
         {
