@@ -16,6 +16,18 @@ Bunch of little UI tweaks. Tooltips for production timers, player status, items.
 * Show/hide current day or current time or both
 * Time could be set in a configurable fuzzy way
 
+## Weather forecast
+* Default position is below the minimap (moveable)
+* Tracked weathers (Clear, Rain, Snow storm, Thunderstorm, Mist, Cinder Raid)
+* Icon and timer will show the moment of the next change of the weather state (like Clear -> Rain, or Thunderstorm -> Mist)
+* If you have custom environment with ambient or particle systems with custom names it can be configured to be tracked in current tracked weather list
+
+## Wind forecast
+* Default position is below the minimap (moveable)
+* You will see the direction of next several winds (5 by default)
+* Amount of forecasted winds and bar filling direction are configurable (so as other parameters)
+* Winds change every 2 min
+
 ## Stats
 * Advanced character stats in character selection screen
 * Combined characater stats in Armor hover tooltip (Top Right section in inventory window)

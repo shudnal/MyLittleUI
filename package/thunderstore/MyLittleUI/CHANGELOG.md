@@ -1,3 +1,6 @@
+# 1.0.11
+* next change of weather and winds forecast
+
 # 1.0.10
 * new config option to not localize keyboard keys A-Z in the current keyboard layout
 
