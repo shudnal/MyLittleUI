@@ -232,9 +232,12 @@ namespace MyLittleUI
 
             windsProgressBackground.enabled = minimapBackground != null && windsShowProgress.Value;
 
-            windsProgressBackground.color = GetBackgroundColor(windsProgressColor.Value);
-            windsProgressBackground.sprite = minimapBackground.sprite;
-            windsProgressBackground.type = minimapBackground.type;
+            if (windsProgressBackground.enabled)
+            {
+                windsProgressBackground.color = GetBackgroundColor(windsProgressColor.Value);
+                windsProgressBackground.sprite = minimapBackground.sprite;
+                windsProgressBackground.type = minimapBackground.type;
+            }
         }
 
         private static Color GetBackgroundColor(Color color)
@@ -429,21 +432,6 @@ namespace MyLittleUI
                 if (!__instance.m_rootObject.transform.Find(objectRootName))
                     AddInfoBlocks(__instance.m_rootObject.transform);
 
-                UpdateVisibility();
-            }
-        }
-
-        [HarmonyPatch]
-        public static class Humanoid_TooltipUpdate
-        {
-            private static IEnumerable<MethodBase> TargetMethods()
-            {
-                yield return AccessTools.Method(typeof(ZNet), nameof(ZNet.SetNetTime));
-                yield return AccessTools.Method(typeof(ZNet), nameof(ZNet.RPC_NetTime));
-            }
-
-            private static void Postfix()
-            {
                 UpdateVisibility();
             }
         }

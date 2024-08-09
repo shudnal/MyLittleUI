@@ -1,3 +1,8 @@
+# 1.0.12
+* unhideable winds fixed
+* winds in multiplayer fixed
+* Minimal UI compatibility fixed
+
 # 1.0.11
 * next change of weather and winds forecast
 

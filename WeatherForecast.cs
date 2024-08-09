@@ -57,7 +57,12 @@ namespace MyLittleUI
 
         public static void UpdateWindTimer(float time)
         {
-            InfoBlocks.windsObject.SetActive(nextWindChange >= EnvMan.instance.m_totalSeconds && !EnvMan.instance.m_debugWind);
+            if (!windsEnabled.Value)
+                return;
+
+            InfoBlocks.windsObject.SetActive(windsEnabled.Value && nextWindChange >= EnvMan.instance.m_totalSeconds && !EnvMan.instance.m_debugWind);
+            if (!InfoBlocks.windsObject.activeSelf)
+                return;
 
             if (EnvMan.instance.m_totalSeconds % 5 <= 0.1f)
                 InfoBlocks.UpdateWindsBackground();
@@ -83,26 +88,23 @@ namespace MyLittleUI
                 }
             }
 
-            if (InfoBlocks.windsObject.activeSelf)
+            float percent = Mathf.Clamp01((float)(nextWindChange - EnvMan.instance.m_totalSeconds) / GetWindPeriodDuration()) - 1f;
+            InfoBlocks.windsProgressRect.offsetMax = Vector2.zero;
+            InfoBlocks.windsProgressRect.offsetMin = Vector2.zero;
+            switch (GetWindsListDirection())
             {
-                float percent = Mathf.Clamp01((float)(nextWindChange - EnvMan.instance.m_totalSeconds) / GetWindPeriodDuration()) - 1f;
-                InfoBlocks.windsProgressRect.offsetMax = Vector2.zero;
-                InfoBlocks.windsProgressRect.offsetMin = Vector2.zero;
-                switch (GetWindsListDirection())
-                {
-                    case ListDirection.LeftToRight:
-                        InfoBlocks.windsProgressRect.offsetMax = new Vector2(InfoBlocks.windsObjectRect.rect.width * percent, 0f);
-                        break;
-                    case ListDirection.RightToLeft:
-                        InfoBlocks.windsProgressRect.offsetMin = new Vector2(-InfoBlocks.windsObjectRect.rect.width * percent, 0f);
-                        break;
-                    case ListDirection.BottomToTop:
-                        InfoBlocks.windsProgressRect.offsetMax = new Vector2(0f, InfoBlocks.windsObjectRect.rect.height * percent);
-                        break;
-                    case ListDirection.TopToBottom:
-                        InfoBlocks.windsProgressRect.offsetMin = new Vector2(0f, -InfoBlocks.windsObjectRect.rect.height * percent);
-                        break;
-                }
+                case ListDirection.LeftToRight:
+                    InfoBlocks.windsProgressRect.offsetMax = new Vector2(InfoBlocks.windsObjectRect.rect.width * percent, 0f);
+                    break;
+                case ListDirection.RightToLeft:
+                    InfoBlocks.windsProgressRect.offsetMin = new Vector2(-InfoBlocks.windsObjectRect.rect.width * percent, 0f);
+                    break;
+                case ListDirection.BottomToTop:
+                    InfoBlocks.windsProgressRect.offsetMax = new Vector2(0f, InfoBlocks.windsObjectRect.rect.height * percent);
+                    break;
+                case ListDirection.TopToBottom:
+                    InfoBlocks.windsProgressRect.offsetMin = new Vector2(0f, -InfoBlocks.windsObjectRect.rect.height * percent);
+                    break;
             }
         }
 
@@ -273,7 +275,7 @@ namespace MyLittleUI
 
         public static void UpdateNextWinds(bool forceRebuildList = false)
         {
-            if (!EnvMan.instance)
+            if (!windsEnabled.Value || !EnvMan.instance)
                 return;
 
             nextWindChange = 0;
