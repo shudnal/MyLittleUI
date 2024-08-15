@@ -10,6 +10,7 @@ Bunch of little UI tweaks. Tooltips for production timers, player status, items.
 * Highlight stats to be upgraded in crafting description
 * Hold Alt to disable item tooltip altering
 * Present quality level as configurable symbols (star by default)
+* Configurable ammo and bait icons and amount for weapons using ammo
 
 ## Clock
 * Default position is above the minimap (you can move it to any position in the screen)

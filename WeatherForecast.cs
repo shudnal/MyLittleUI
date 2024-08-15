@@ -259,7 +259,7 @@ namespace MyLittleUI
                 bool inDeepNorth = WorldGenerator.IsDeepnorth(position.x, position.y);
 
                 WeatherState currentState = GetWeatherState(EnvMan.instance.m_nextEnv ?? EnvMan.instance.GetCurrentEnvironment());
-                for (int i = 1; i <= 100; i++)
+                for (int i = 1; i <= 15; i++)
                 {
                     WeatherState nextState = GetWeatherState(GetEnvironment(environmentPeriod + i, currentBiome, inAshlands, inDeepNorth));
                     if (currentState != nextState)

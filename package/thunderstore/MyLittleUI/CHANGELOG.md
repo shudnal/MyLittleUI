@@ -1,3 +1,9 @@
+# 1.0.13
+* Ammo and bait icon and amount
+* better hotkey bar compatibility with AzuEPI
+* Ashlands forecast fixed
+* weather forecast will properly hide and show on weather state change
+
 # 1.0.12
 * unhideable winds fixed
 * winds in multiplayer fixed
