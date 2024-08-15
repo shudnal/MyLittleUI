@@ -346,7 +346,7 @@ namespace MyLittleUI
             forecastListSnow = Config.Bind("Info - Forecast - Lists", "Snow", defaultValue: "SnowStorm", "Comma separated list of m_psySystems or m_envObject names associated with Snow environments");
             forecastListThunder = Config.Bind("Info - Forecast - Lists", "Thunder", defaultValue: "Thunder,MistlandsThunder,AshlandsThunder", "Comma separated list of m_psySystems or m_envObject names associated with Thunder environments");
             forecastListMist = Config.Bind("Info - Forecast - Lists", "Mist", defaultValue: "Mist,Ashlands_Misty", "Comma separated list of m_psySystems or m_envObject names associated with Mist environments");
-            forecastListRainCinder = Config.Bind("Info - Forecast - Lists", "RainCinder", defaultValue: "Ashlands_RainCinder", "Comma separated list of m_psySystems or m_envObject names associated with RainCinder environments");
+            forecastListRainCinder = Config.Bind("Info - Forecast - Lists", "Ash Rain", defaultValue: "Ashlands_RainCinder,Ashlands_CinderRain", "Comma separated list of m_psySystems or m_envObject names associated with Ash Cinder Rain environments");
 
             windsEnabled = Config.Bind("Info - Winds", "Enabled", defaultValue: true, "Enable next winds");
             windsShowBackground = Config.Bind("Info - Winds", "Winds background enabled", defaultValue: true, "Show winds background");

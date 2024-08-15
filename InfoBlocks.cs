@@ -36,7 +36,7 @@ namespace MyLittleUI
         private static Image windsBackground;
         private static Image windsProgressBackground;
 
-        private static GameObject forecastObject;
+        public static GameObject forecastObject;
         public static GameObject windsObject;
         public static GameObject windTemplate;
         
