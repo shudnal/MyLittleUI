@@ -19,8 +19,7 @@ namespace MyLittleUI
             if (itemIconScaleOriginal == Vector3.zero)
                 itemIconScaleOriginal = icon.transform.localScale;
 
-            if (itemIconScale.Value != 1f)
-                icon.transform.localScale = itemIconScaleOriginal * Mathf.Clamp(itemIconScale.Value, 0.2f, 2f);
+            icon.transform.localScale = itemIconScaleOriginal * Mathf.Clamp(itemIconScale.Value, 0.2f, 2f);
 
             if (durabilityEnabled.Value && durability.isActiveAndEnabled)
             {

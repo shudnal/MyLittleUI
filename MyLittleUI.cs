@@ -286,7 +286,7 @@ namespace MyLittleUI
 
             modEnabled = Config.Bind("General", "Enabled", defaultValue: true, "Enable the mod.");
             loggingEnabled = Config.Bind("General", "Logging enabled", defaultValue: false, "Enable logging.");
-            nonlocalizedButtons = Config.Bind("General", "Nonlocalized button keys", defaultValue: false, "Keyboard keys A-Z are not localized in the current keyboard layout.");
+            nonlocalizedButtons = Config.Bind("General", "Nonlocalized button keys", defaultValue: true, "Keyboard keys A-Z are not localized in the current keyboard layout.");
             fixStatusEffectAndForecastPosition = Config.Bind("General", "Status effects and forecast position fix", defaultValue: true, "If status effect position was not changed prior to 1.0.11 version - fix status effect list position for forecast.");
 
             modEnabled.SettingChanged += (sender, args) => InfoBlocks.UpdateVisibility();
@@ -429,7 +429,7 @@ namespace MyLittleUI
             itemTooltip = Config.Bind("Item - Tooltip", "Enabled", defaultValue: true, "Updated item tooltip. Hold Alt to see original tooltip");
             itemTooltipColored = Config.Bind("Item - Tooltip", "Colored numbers", defaultValue: true, "Orange and yellow value numbers in tooltip, light blue if disabled");
 
-            itemQuality = Config.Bind("Item - Quality", "Enabled", defaultValue: false, "Show item quality as symbol");
+            itemQuality = Config.Bind("Item - Quality", "Enabled", defaultValue: true, "Show item quality as symbol");
             itemQualitySymbol = Config.Bind("Item - Quality", "Symbol", defaultValue: "★", "Symbol to show.");
             itemQualitySymbolColor = Config.Bind("Item - Quality", "Symbol Color", defaultValue: new Color(1f, 0.65f, 0f, 1f), "Symbol color");
             itemQualitySymbolSize = Config.Bind("Item - Quality", "Symbol Size", defaultValue: 10f, "Symbol size");
