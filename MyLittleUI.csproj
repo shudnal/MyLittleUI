@@ -36,6 +36,7 @@
     <LangVersion>8.0</LangVersion>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="AmmoCountIcon.cs" />
     <Compile Include="ChestHoverText.cs" />
     <Compile Include="InfoBlocks.cs" />
     <Compile Include="InventoryCharacterStats.cs" />

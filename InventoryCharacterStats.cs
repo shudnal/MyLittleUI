@@ -164,18 +164,7 @@ namespace MyLittleUI
                 }
             }
 
-            List<ItemDrop.ItemData> items = new List<ItemDrop.ItemData>
-                {
-                    player.m_chestItem,
-                    player.m_legItem,
-                    player.m_helmetItem,
-                    player.m_shoulderItem,
-                    player.m_leftItem,
-                    player.m_rightItem,
-                    player.m_utilityItem
-                };
-
-            foreach (ItemDrop.ItemData item in items)
+            foreach (ItemDrop.ItemData item in player.GetInventory().GetEquippedItems())
             {
                 if (item == null || item.m_shared.m_damageModifiers.Count == 0)
                     continue;

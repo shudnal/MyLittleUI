@@ -7,6 +7,7 @@ using System.Text;
 using BepInEx;
 using BepInEx.Configuration;
 using HarmonyLib;
+using TMPro;
 using UnityEngine;
 using UnityEngine.Rendering;
 
@@ -77,6 +78,17 @@ namespace MyLittleUI
         internal static ConfigEntry<float> windsPositionSpacingNomap;
         internal static ConfigEntry<ListDirection> windsFillingDirection;
         internal static ConfigEntry<ListDirection> windsFillingDirectionNomap;
+
+        internal static ConfigEntry<bool> ammoCountEnabled;
+        internal static ConfigEntry<Color> ammoCountColor;
+        internal static ConfigEntry<Vector2> ammoCountPosition;
+        internal static ConfigEntry<int> ammoCountFontSize;
+        internal static ConfigEntry<HorizontalAlignmentOptions> ammoCountAlignment;
+        internal static ConfigEntry<bool> ammoIconEnabled;
+        internal static ConfigEntry<Vector2> ammoIconPosition;
+        internal static ConfigEntry<Vector2> ammoIconSize;
+        internal static ConfigEntry<bool> baitIconEnabled;
+        internal static ConfigEntry<bool> baitCountEnabled;
 
         private static ConfigEntry<bool> showAvailableItemsAmount;
         private static ConfigEntry<Color> availableItemsAmountColor;
@@ -178,6 +190,8 @@ namespace MyLittleUI
         public static MyLittleUI instance;
 
         public static Component epicLootPlugin;
+
+        public static readonly int layerUI = LayerMask.NameToLayer("UI");
 
         public enum StationHover
         {
@@ -377,6 +391,29 @@ namespace MyLittleUI
             windsFillingDirectionNomap.SettingChanged += (sender, args) => WeatherForecast.UpdateNextWinds(forceRebuildList: true);
             windsPositionSpacing.SettingChanged += (sender, args) => WeatherForecast.UpdateNextWinds(forceRebuildList: true);
             windsPositionSpacingNomap.SettingChanged += (sender, args) => WeatherForecast.UpdateNextWinds(forceRebuildList: true);
+
+            ammoCountEnabled = Config.Bind("Item - Ammo icon and count", "Ammo count Enabled", defaultValue: true, "Show amount of available ammo and ammo icon for weapon in hotbar");
+            ammoCountColor = Config.Bind("Item - Ammo icon and count", "Ammo count Color", defaultValue: Color.clear, "Show amount of available ammo and ammo icon for weapon in hotbar");
+            ammoCountPosition = Config.Bind("Item - Ammo icon and count", "Ammo count Position", defaultValue: new Vector2(0f, 86f), "Show amount of available ammo and ammo icon for weapon in hotbar");
+            ammoCountFontSize = Config.Bind("Item - Ammo icon and count", "Ammo count FontSize", defaultValue: 14, "Show amount of available ammo and ammo icon for weapon in hotbar");
+            ammoCountAlignment = Config.Bind("Item - Ammo icon and count", "Ammo count Alignment", defaultValue: HorizontalAlignmentOptions.Center, "Show amount of available ammo and ammo icon for weapon in hotbar");
+            ammoIconEnabled = Config.Bind("Item - Ammo icon and count", "Ammo icon Enabled", defaultValue: true, "Show amount of available ammo and ammo icon for weapon in hotbar");
+            ammoIconPosition = Config.Bind("Item - Ammo icon and count", "Ammo icon Position", defaultValue: new Vector2(0f, 40f), "Show amount of available ammo and ammo icon for weapon in hotbar");
+            ammoIconSize = Config.Bind("Item - Ammo icon and count", "Ammo icon Size", defaultValue: new Vector2(-10f, -10f), "Show amount of available ammo and ammo icon for weapon in hotbar");
+
+            baitIconEnabled = Config.Bind("Item - Ammo icon and count", "Bait icon Enabled", defaultValue: true, "Show amount of available ammo and ammo icon for weapon in hotbar");
+            baitCountEnabled = Config.Bind("Item - Ammo icon and count", "Bait ammo Enabled", defaultValue: true, "Show amount of available ammo and ammo icon for weapon in hotbar");
+
+            ammoCountEnabled.SettingChanged += (sender, args) => AmmoCountIcon.UpdateVisibility();
+            ammoCountColor.SettingChanged += (sender, args) => AmmoCountIcon.UpdateVisibility();
+            ammoCountPosition.SettingChanged += (sender, args) => AmmoCountIcon.UpdateVisibility();
+            ammoCountFontSize.SettingChanged += (sender, args) => AmmoCountIcon.UpdateVisibility();
+            ammoCountAlignment.SettingChanged += (sender, args) => AmmoCountIcon.UpdateVisibility();
+            ammoIconEnabled.SettingChanged += (sender, args) => AmmoCountIcon.UpdateVisibility();
+            ammoIconPosition.SettingChanged += (sender, args) => AmmoCountIcon.UpdateVisibility();
+            ammoIconSize.SettingChanged += (sender, args) => AmmoCountIcon.UpdateVisibility();
+            baitIconEnabled.SettingChanged += (sender, args) => AmmoCountIcon.UpdateVisibility();
+            baitCountEnabled.SettingChanged += (sender, args) => AmmoCountIcon.UpdateVisibility();
 
             showAvailableItemsAmount = Config.Bind("Item - Available resources amount", "Enabled", defaultValue: true, "Show amount of available resources for crafting in requirements list");
             availableItemsAmountColor = Config.Bind("Item - Available resources amount", "Color", defaultValue: new Color(0.68f, 0.85f, 0.90f), "Color of amount of available resources.");

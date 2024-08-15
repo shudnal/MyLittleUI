@@ -1,8 +1,6 @@
 ﻿using HarmonyLib;
 using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -49,8 +47,6 @@ namespace MyLittleUI
         public static TMP_Text weatherText;
         public static Image weatherIcon;
 
-        private static readonly int layerUI = LayerMask.NameToLayer("UI");
-        
         private static string[] fuzzyTime;
 
         private static void AddInfoBlocks(Transform parentTransform)
@@ -358,6 +354,8 @@ namespace MyLittleUI
 
             UpdateForecastBlock();
 
+            UpdateWindsBlock();
+
             WeatherForecast.UpdateWeather();
             WeatherForecast.UpdateNextWinds();
         }
@@ -365,6 +363,9 @@ namespace MyLittleUI
         internal static void UpdateClock()
         {
             if (!EnvMan.instance)
+                return;
+
+            if (!clockObject || !clockObject.activeSelf)
                 return;
 
             dayText?.SetText(Localization.instance.Localize("$msg_newday", EnvMan.instance.GetCurrentDay().ToString()));

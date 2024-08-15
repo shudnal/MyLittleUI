@@ -12,12 +12,12 @@ namespace MyLittleUI
         private const string templateName = "SE_Template_MLU";
 
         private static RectTransform m_statusEffectTemplateOriginal;
-        private static Vector2 m_statusEffectListRootPositionOriginal = Vector3.zero;
+        private static Vector2 m_statusEffectListRootPositionOriginal = Vector2.zero;
 
         private static RectTransform m_statusEffectTemplate;
 
-        private static Vector2 m_shipWindIndicatorRootPositionOriginal = Vector3.zero;
-        private static Vector2 m_shipWindIconRootPositionOriginal = Vector3.zero;
+        private static Vector2 m_shipWindIndicatorRootPositionOriginal = Vector2.zero;
+        private static Vector2 m_shipWindIconRootPositionOriginal = Vector2.zero;
        
         private static Vector3 GetStatusEffectPosition(int i)
         {

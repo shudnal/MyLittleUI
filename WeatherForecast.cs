@@ -185,7 +185,7 @@ namespace MyLittleUI
         {
             public static void Postfix(EnvMan __instance)
             {
-                if (!modEnabled.Value)
+                if (!modEnabled.Value || !forecastEnabled.Value)
                     return;
 
                 if (__instance.m_environmentPeriod == environmentPeriod && __instance.m_currentBiome == currentBiome && __instance.m_inAshlandsOrDeepnorth == inAshlandsOrDeepnorth)
@@ -207,7 +207,7 @@ namespace MyLittleUI
         {
             public static void Postfix(EnvMan __instance, long timeSec, float dt)
             {
-                if (!modEnabled.Value)
+                if (!modEnabled.Value || !windsEnabled.Value)
                     return;
 
                 if (windPeriod == GetCurrentWindPeriod(timeSec))

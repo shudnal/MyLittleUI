@@ -168,9 +168,9 @@ namespace MyLittleUI
                 if (!player || player.IsDead())
                     return;
 
-                for (int j = 0; j < ___m_items.Count; j++)
+                for (int i = 0; i < ___m_items.Count; i++)
                 {
-                    ItemDrop.ItemData item = ___m_items[j];
+                    ItemDrop.ItemData item = ___m_items[i];
                     if (item != null && 0 <= item.m_gridPos.x && item.m_gridPos.x < ___m_elements.Count)
                     {
                         HotkeyBar.ElementData element = ___m_elements[item.m_gridPos.x];
