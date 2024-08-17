@@ -1,3 +1,6 @@
+# 1.0.14
+* Minimal UI weight bag status effect compatibility
+
 # 1.0.13
 * Ammo and bait icon and amount
 * better hotkey bar compatibility with AzuEPI

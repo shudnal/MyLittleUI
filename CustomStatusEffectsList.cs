@@ -123,6 +123,7 @@ namespace MyLittleUI
         [HarmonyPatch(typeof(Hud), nameof(Hud.Awake))]
         public static class Hud_Awake_CustomTemplate
         {
+            [HarmonyBefore("Azumatt.MinimalUI")]
             public static void Postfix()
             {
                 UpdateStatusEffectList();
@@ -142,7 +143,8 @@ namespace MyLittleUI
         [HarmonyPatch(typeof(Hud), nameof(Hud.UpdateStatusEffects))]
         public static class Hud_UpdateStatusEffects_Patch
         {
-            public static void Postfix(List<RectTransform> ___m_statusEffects)
+            [HarmonyAfter("Azumatt.MinimalUI")]
+            public static void Postfix(Hud __instance, List<StatusEffect> statusEffects, List<RectTransform> ___m_statusEffects)
             {
                 if (!modEnabled.Value)
                     return;
@@ -155,9 +157,23 @@ namespace MyLittleUI
                     ___m_statusEffects[i].anchoredPosition = GetStatusEffectPosition(i);
                     if (GetStatusEffectsElementEnabled())
                     {
-                        bool textHidden = !___m_statusEffects[i].Find("TimeText").gameObject.activeSelf;
-                        ___m_statusEffects[i].Find("Name").GetComponent<TMP_Text>().verticalAlignment = textHidden ? VerticalAlignmentOptions.Middle : VerticalAlignmentOptions.Top;
+                        TMP_Text time = ___m_statusEffects[i].Find("TimeText").GetComponent<TMP_Text>();
+                        bool timeHidden = !time.gameObject.activeSelf;
+
+                        TMP_Text name = ___m_statusEffects[i].Find("Name").GetComponent<TMP_Text>();
+                        if (string.IsNullOrWhiteSpace(name.text) && i < statusEffects.Count)
+                            name.SetText(Localization.instance.Localize(statusEffects[i].m_name));
+
+                        name.verticalAlignment = timeHidden ? VerticalAlignmentOptions.Middle : VerticalAlignmentOptions.Top;
+                        time.verticalAlignment = !timeHidden && string.IsNullOrWhiteSpace(name.text) ? VerticalAlignmentOptions.Middle : VerticalAlignmentOptions.Bottom;
                     }
+                }
+
+                Transform MUI_Weight = __instance.m_statusEffectListRoot.Find("WeightSE");
+                if (MUI_Weight != null)
+                {
+                    MUI_Weight.GetComponent<RectTransform>().anchoredPosition = GetStatusEffectPosition(___m_statusEffects.Count);
+                    MUI_Weight.Find("TimeText").GetComponent<TMP_Text>().verticalAlignment = VerticalAlignmentOptions.Middle;
                 }
             }
         }
