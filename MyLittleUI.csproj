@@ -63,6 +63,10 @@
     <Reference Include="BepInEx">
       <HintPath>F:\Steam\steamapps\common\Valheim\BepInEx\core\BepInEx.dll</HintPath>
     </Reference>
+    <Reference Include="ServerSync, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>Libs\ServerSync.dll</HintPath>
+    </Reference>
     <Reference Include="Unity.InputSystem, Version=1.7.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\Assemblies\beta\Unity.InputSystem.dll</HintPath>
@@ -120,17 +124,22 @@
     <EmbeddedResource Include="Assets\Snow.png" />
     <EmbeddedResource Include="Assets\Thunder.png" />
   </ItemGroup>
+  <ItemGroup>
+    <Content Include="Libs\ServerSync.dll" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="ILRepack.targets" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="ILRepack.Lib.MSBuild.Task">
+      <Version>2.0.34.2</Version>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
-    <PostBuildEvent>echo Copy to plugins folder
-xcopy "$(TargetDir)\$(TargetFileName)" "F:\Steam\steamapps\common\Valheim\BepInEx\plugins\" /q /y /i
-
-echo Copy to r2 folder
-xcopy "$(TargetDir)\$(TargetFileName)" "C:\Users\Suden\AppData\Roaming\r2modmanPlus-local\Valheim\profiles\beta\BepInEx\plugins\shudnal-$(SolutionName)\" /q /y /i
-
-echo Copy to thunderstore folder
-xcopy "$(TargetDir)\$(TargetFileName)" "$(ProjectDir)\package\thunderstore\$(SolutionName)\" /q /y /i
-
-powershell Compress-Archive -Path '$(ProjectDir)\package\thunderstore\$(SolutionName)\*' -DestinationPath '$(ProjectDir)\package\thunderstore\$(SolutionName).zip' -Force</PostBuildEvent>
+    <PostBuildEvent>
+    </PostBuildEvent>
   </PropertyGroup>
 </Project>

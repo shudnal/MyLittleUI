@@ -9,7 +9,7 @@ using BepInEx.Configuration;
 using HarmonyLib;
 using TMPro;
 using UnityEngine;
-using UnityEngine.Rendering;
+using ServerSync;
 
 namespace MyLittleUI
 {
@@ -20,13 +20,18 @@ namespace MyLittleUI
     {
         const string pluginID = "shudnal.MyLittleUI";
         const string pluginName = "My Little UI";
-        const string pluginVersion = "1.0.14";
+        const string pluginVersion = "1.1.0";
 
-        private Harmony _harmony;
+        private readonly Harmony harmony = new Harmony(pluginID);
+
+        internal static readonly ConfigSync configSync = new ConfigSync(pluginID) { DisplayName = pluginName, CurrentVersion = pluginVersion, MinimumRequiredVersion = pluginVersion };
+        
+        public static MyLittleUI instance;
 
         public static ConfigEntry<bool> modEnabled;
+        private static ConfigEntry<bool> configLocked;
         private static ConfigEntry<bool> loggingEnabled;
-        private static ConfigEntry<bool> nonlocalizedButtons;
+        internal static ConfigEntry<bool> nonlocalizedButtons;
         internal static ConfigEntry<bool> fixStatusEffectAndForecastPosition;
 
         internal static ConfigEntry<bool> clockShowDay;
@@ -124,6 +129,10 @@ namespace MyLittleUI
         public static ConfigEntry<bool> statsCharacterEffects;
         public static ConfigEntry<bool> statsCharacterEffectsMagic;
 
+        private static ConfigEntry<bool> hoverFermenterEnabled;
+        private static ConfigEntry<bool> hoverPlantEnabled;
+        private static ConfigEntry<bool> hoverCookingEnabled;
+        private static ConfigEntry<bool> hoverBeeHiveEnabled;
         private static ConfigEntry<StationHover> hoverFermenter;
         private static ConfigEntry<StationHover> hoverPlant;
         private static ConfigEntry<StationHover> hoverCooking;
@@ -187,8 +196,6 @@ namespace MyLittleUI
 
         private static readonly Dictionary<string, string> characterNames = new Dictionary<string, string>();
 
-        public static MyLittleUI instance;
-
         public static Component epicLootPlugin;
 
         public static readonly int layerUI = LayerMask.NameToLayer("UI");
@@ -247,17 +254,12 @@ namespace MyLittleUI
 
         private void Awake()
         {
-            if (SystemInfo.graphicsDeviceType == GraphicsDeviceType.Null)
-            {
-                Logger.LogWarning("Dedicated server. Loading skipped.");
-                return;
-            }
-
-            _harmony = Harmony.CreateAndPatchAll(Assembly.GetExecutingAssembly(), pluginID);
+            harmony.PatchAll();
 
             instance = this;
 
             ConfigInit();
+            _ = configSync.AddLockingConfigEntry(configLocked);
 
             epicLootPlugin = GetComponent("EpicLoot");
 
@@ -271,7 +273,7 @@ namespace MyLittleUI
         private void OnDestroy()
         {
             Config.Save();
-            _harmony?.UnpatchSelf();
+            harmony?.UnpatchSelf();
         }
 
         public static void LogInfo(object data)
@@ -284,28 +286,29 @@ namespace MyLittleUI
         {
             Config.Bind("General", "NexusID", 2562, "Nexus mod ID for updates");
 
-            modEnabled = Config.Bind("General", "Enabled", defaultValue: true, "Enable the mod.");
-            loggingEnabled = Config.Bind("General", "Logging enabled", defaultValue: false, "Enable logging.");
-            nonlocalizedButtons = Config.Bind("General", "Nonlocalized button keys", defaultValue: true, "Keyboard keys A-Z are not localized in the current keyboard layout.");
-            fixStatusEffectAndForecastPosition = Config.Bind("General", "Status effects and forecast position fix", defaultValue: true, "If status effect position was not changed prior to 1.0.11 version - fix status effect list position for forecast.");
+            modEnabled = config("General", "Enabled", defaultValue: true, "Enable the mod. [Synced with Server]", synchronizedSetting: true);
+            configLocked = config("General", "Lock Configuration", defaultValue: false, "Configuration is locked and can be changed by server admins only. [Synced with Server]", synchronizedSetting: true);
+            loggingEnabled = config("General", "Logging enabled", defaultValue: false, "Enable logging.");
+            nonlocalizedButtons = config("General", "Nonlocalized button keys", defaultValue: true, "Keyboard keys A-Z are not localized in the current keyboard layout.");
+            fixStatusEffectAndForecastPosition = config("General", "Status effects and forecast position fix", defaultValue: true, "If status effect position was not changed prior to 1.0.11 version - fix status effect list position for forecast.");
 
             modEnabled.SettingChanged += (sender, args) => InfoBlocks.UpdateVisibility();
             modEnabled.SettingChanged += (sender, args) => CustomStatusEffectsList.InitializeStatusEffectTemplate();
             modEnabled.SettingChanged += (sender, args) => CustomStatusEffectsList.ChangeSailingIndicator();
 
-            clockShowDay = Config.Bind("Info - Clock", "Show day", defaultValue: true, "Enable day number");
-            clockShowTime = Config.Bind("Info - Clock", "Show time", defaultValue: true, "Enable time");
-            clockTimeFormat24h = Config.Bind("Info - Clock", "Time format 24h", defaultValue: true, "Show time in HH:mm format");
-            clockShowBackground = Config.Bind("Info - Clock", "Background enabled", defaultValue: false, "Show clock background");
-            clockBackgroundColor = Config.Bind("Info - Clock", "Background color", defaultValue: Color.clear, "Clock background color. If not set - minimap background color is used.");
-            clockTextPadding = Config.Bind("Info - Clock", "Padding", defaultValue: 5f, "Left and right indentation for text if both time and day used");
-            clockPosition = Config.Bind("Info - Clock", "Position", defaultValue: new Vector2(-140f, -25f), "anchoredPosition of clock object transform");
-            clockSize = Config.Bind("Info - Clock", "Size", defaultValue: new Vector2(200f, 25f), "sizeDelta of clock object transform");
-            clockSwapDayTime = Config.Bind("Info - Clock", "Swap day and time", defaultValue: false, "Swap day and time positions");
-            clockFontSize = Config.Bind("Info - Clock", "Font size", defaultValue: 0f, "If not set - value is taken from minimap small biome label");
-            clockFontColor = Config.Bind("Info - Clock", "Font color", defaultValue: Color.clear, "If not set - value is taken from minimap small biome label");
-            clockTimeType = Config.Bind("Info - Clock", "Time type", defaultValue: ClockTimeType.GameTime, "Time to show");
-            clockFuzzy = Config.Bind("Info - Clock", "Time fuzzy words", defaultValue: "Midnight,Early Morning,Before Dawn,Dawn,Morning,Late Morning,Midday,Early Afternoon,Afternoon,Evening,Night,Late Night", "The length of the day will be divided into equal periods of time according to the number of words specified.");
+            clockShowDay = config("Info - Clock", "Show day", defaultValue: true, "Enable day number [Synced with Server]", synchronizedSetting: true);
+            clockShowTime = config("Info - Clock", "Show time", defaultValue: true, "Enable time [Synced with Server]", synchronizedSetting: true);
+            clockTimeFormat24h = config("Info - Clock", "Time format 24h", defaultValue: true, "Show time in HH:mm format");
+            clockShowBackground = config("Info - Clock", "Background enabled", defaultValue: false, "Show clock background");
+            clockBackgroundColor = config("Info - Clock", "Background color", defaultValue: Color.clear, "Clock background color. If not set - minimap background color is used.");
+            clockTextPadding = config("Info - Clock", "Padding", defaultValue: 5f, "Left and right indentation for text if both time and day used");
+            clockPosition = config("Info - Clock", "Position", defaultValue: new Vector2(-140f, -25f), "anchoredPosition of clock object transform");
+            clockSize = config("Info - Clock", "Size", defaultValue: new Vector2(200f, 25f), "sizeDelta of clock object transform");
+            clockSwapDayTime = config("Info - Clock", "Swap day and time", defaultValue: false, "Swap day and time positions");
+            clockFontSize = config("Info - Clock", "Font size", defaultValue: 0f, "If not set - value is taken from minimap small biome label");
+            clockFontColor = config("Info - Clock", "Font color", defaultValue: Color.clear, "If not set - value is taken from minimap small biome label");
+            clockTimeType = config("Info - Clock", "Time type", defaultValue: ClockTimeType.GameTime, "Time to show");
+            clockFuzzy = config("Info - Clock", "Time fuzzy words", defaultValue: "Midnight,Early Morning,Before Dawn,Dawn,Morning,Late Morning,Midday,Early Afternoon,Afternoon,Evening,Night,Late Night", "The length of the day will be divided into equal periods of time according to the number of words specified.");
 
             clockShowBackground.SettingChanged += (sender, args) => InfoBlocks.UpdateDayTimeBackground();
             clockBackgroundColor.SettingChanged += (sender, args) => InfoBlocks.UpdateDayTimeBackground();
@@ -321,15 +324,15 @@ namespace MyLittleUI
             clockTimeType.SettingChanged += (sender, args) => InfoBlocks.UpdateClock();
             clockFuzzy.SettingChanged += (sender, args) => InfoBlocks.FuzzyWordsOnChange();
 
-            forecastEnabled = Config.Bind("Info - Forecast", "Enabled", defaultValue: true, "Enable next change of weather");
-            forecastShowBackground = Config.Bind("Info - Forecast", "Weather background enabled", defaultValue: false, "Show forecast background");
-            forecastBackgroundColor = Config.Bind("Info - Forecast", "Weather background color", defaultValue: Color.clear, "Forecast background color. If not set - minimap background color is used.");
-            forecastPosition = Config.Bind("Info - Forecast", "Position", defaultValue: new Vector2(-78f, -255f), "anchoredPosition of forecast object transform");
-            forecastPositionNomap = Config.Bind("Info - Forecast", "Position in nomap", defaultValue: new Vector2(-78f, -55f), "anchoredPosition of forecast object transform in nomap mode");
-            forecastSize = Config.Bind("Info - Forecast", "Size", defaultValue: new Vector2(75f, 25f), "sizeDelta of forecast object transform");
-            forecastFontSize = Config.Bind("Info - Forecast", "Font size", defaultValue: 0f, "If not set - value is taken from minimap small biome label");
-            forecastFontColor = Config.Bind("Info - Forecast", "Font color", defaultValue: Color.clear, "If not set - value is taken from minimap small biome label");
-            forecastTextPadding = Config.Bind("Info - Forecast", "Text padding", defaultValue: 2f, "Margin between icon and text");
+            forecastEnabled = config("Info - Forecast", "Enabled", defaultValue: true, "Enable next change of weather [Synced with Server]", synchronizedSetting: true);
+            forecastShowBackground = config("Info - Forecast", "Weather background enabled", defaultValue: false, "Show forecast background");
+            forecastBackgroundColor = config("Info - Forecast", "Weather background color", defaultValue: Color.clear, "Forecast background color. If not set - minimap background color is used.");
+            forecastPosition = config("Info - Forecast", "Position", defaultValue: new Vector2(-78f, -255f), "anchoredPosition of forecast object transform");
+            forecastPositionNomap = config("Info - Forecast", "Position in nomap", defaultValue: new Vector2(-78f, -55f), "anchoredPosition of forecast object transform in nomap mode");
+            forecastSize = config("Info - Forecast", "Size", defaultValue: new Vector2(75f, 25f), "sizeDelta of forecast object transform");
+            forecastFontSize = config("Info - Forecast", "Font size", defaultValue: 0f, "If not set - value is taken from minimap small biome label");
+            forecastFontColor = config("Info - Forecast", "Font color", defaultValue: Color.clear, "If not set - value is taken from minimap small biome label");
+            forecastTextPadding = config("Info - Forecast", "Text padding", defaultValue: 2f, "Margin between icon and text");
 
             forecastShowBackground.SettingChanged += (sender, args) => InfoBlocks.UpdateForecastBackground();
             forecastBackgroundColor.SettingChanged += (sender, args) => InfoBlocks.UpdateForecastBackground();
@@ -342,20 +345,20 @@ namespace MyLittleUI
             forecastFontColor.SettingChanged += (sender, args) => InfoBlocks.UpdateForecastBlock();
             forecastTextPadding.SettingChanged += (sender, args) => InfoBlocks.UpdateForecastBlock();
 
-            forecastListRain = Config.Bind("Info - Forecast - Lists", "Rain", defaultValue: "Rain,LightRain,MistlandsRain,SlimeRain", "Comma separated list of m_psySystems or m_envObject names associated with Rain environments");
-            forecastListSnow = Config.Bind("Info - Forecast - Lists", "Snow", defaultValue: "SnowStorm", "Comma separated list of m_psySystems or m_envObject names associated with Snow environments");
-            forecastListThunder = Config.Bind("Info - Forecast - Lists", "Thunder", defaultValue: "Thunder,MistlandsThunder,AshlandsThunder", "Comma separated list of m_psySystems or m_envObject names associated with Thunder environments");
-            forecastListMist = Config.Bind("Info - Forecast - Lists", "Mist", defaultValue: "Mist,Ashlands_Misty", "Comma separated list of m_psySystems or m_envObject names associated with Mist environments");
-            forecastListRainCinder = Config.Bind("Info - Forecast - Lists", "Ash Rain", defaultValue: "Ashlands_RainCinder,Ashlands_CinderRain", "Comma separated list of m_psySystems or m_envObject names associated with Ash Cinder Rain environments");
+            forecastListRain = config("Info - Forecast - Lists", "Rain", defaultValue: "Rain,LightRain,MistlandsRain,SlimeRain", "Comma separated list of m_psySystems or m_envObject names associated with Rain environments");
+            forecastListSnow = config("Info - Forecast - Lists", "Snow", defaultValue: "SnowStorm", "Comma separated list of m_psySystems or m_envObject names associated with Snow environments");
+            forecastListThunder = config("Info - Forecast - Lists", "Thunder", defaultValue: "Thunder,MistlandsThunder,AshlandsThunder", "Comma separated list of m_psySystems or m_envObject names associated with Thunder environments");
+            forecastListMist = config("Info - Forecast - Lists", "Mist", defaultValue: "Mist,Ashlands_Misty", "Comma separated list of m_psySystems or m_envObject names associated with Mist environments");
+            forecastListRainCinder = config("Info - Forecast - Lists", "Ash Rain", defaultValue: "Ashlands_RainCinder,Ashlands_CinderRain", "Comma separated list of m_psySystems or m_envObject names associated with Ash Cinder Rain environments");
 
-            windsEnabled = Config.Bind("Info - Winds", "Enabled", defaultValue: true, "Enable next winds");
-            windsShowBackground = Config.Bind("Info - Winds", "Winds background enabled", defaultValue: true, "Show winds background");
-            windsBackgroundColor = Config.Bind("Info - Winds", "Winds background color", defaultValue: Color.clear, "Winds background color. If not set - minimap background color is used.");
-            windsShowProgress = Config.Bind("Info - Winds", "Progress enabled", defaultValue: true, "Show winds progress");
-            windsProgressColor = Config.Bind("Info - Winds", "Progress color", defaultValue: Color.clear, "Winds progress color. If not set - minimap background color is used.");
-            windsArrowColor = Config.Bind("Info - Winds", "Winds arrow color", defaultValue: Color.white, "Winds arrow color.");
-            windsMinimumAlpha = Config.Bind("Info - Winds", "Minimum wind arrow alpha", defaultValue: 0.5f, "Amount of winds to forecast");
-            windsAlphaIntensity = Config.Bind("Info - Winds", "Set wind arrow alpha as intensity", defaultValue: true, "If enabled - wind arrow will be more transparent with less wind intensity");
+            windsEnabled = config("Info - Winds", "Enabled", defaultValue: true, "Enable next winds [Synced with Server]", synchronizedSetting: true);
+            windsShowBackground = config("Info - Winds", "Winds background enabled", defaultValue: true, "Show winds background");
+            windsBackgroundColor = config("Info - Winds", "Winds background color", defaultValue: Color.clear, "Winds background color. If not set - minimap background color is used.");
+            windsShowProgress = config("Info - Winds", "Progress enabled", defaultValue: true, "Show winds progress");
+            windsProgressColor = config("Info - Winds", "Progress color", defaultValue: Color.clear, "Winds progress color. If not set - minimap background color is used.");
+            windsArrowColor = config("Info - Winds", "Winds arrow color", defaultValue: Color.white, "Winds arrow color.");
+            windsMinimumAlpha = config("Info - Winds", "Minimum wind arrow alpha", defaultValue: 0.5f, "Amount of winds to forecast");
+            windsAlphaIntensity = config("Info - Winds", "Set wind arrow alpha as intensity", defaultValue: true, "If enabled - wind arrow will be more transparent with less wind intensity");
 
             windsShowBackground.SettingChanged += (sender, args) => InfoBlocks.UpdateWindsBackground();
             windsBackgroundColor.SettingChanged += (sender, args) => InfoBlocks.UpdateWindsBackground();
@@ -367,23 +370,23 @@ namespace MyLittleUI
             windsMinimumAlpha.SettingChanged += (sender, args) => WeatherForecast.UpdateNextWinds(forceRebuildList: true);
             windsAlphaIntensity.SettingChanged += (sender, args) => WeatherForecast.UpdateNextWinds(forceRebuildList: true);
 
-            windsCount = Config.Bind("Info - Winds - List", "Wind arrows amount", defaultValue: 5, "Amount of winds to forecast");
-            windsFillingDirection = Config.Bind("Info - Winds - List", "Direction", defaultValue: ListDirection.LeftToRight, "Direction of filling");
-            windsPositionSpacing = Config.Bind("Info - Winds - List", "Spacing", defaultValue: 1f, "Spacing between arrows");
-            windsPosition = Config.Bind("Info - Winds - List", "Position", defaultValue: new Vector2(-180f, -255f), "anchoredPosition of winds object transform");
-            windsSize = Config.Bind("Info - Winds - List", "Size", defaultValue: new Vector2(119f, 25f), "sizeDelta of winds object transform");
-            
-            windsCountNomap = Config.Bind("Info - Winds - List", "Nomap Wind arrows amount", defaultValue: 5, "Amount of winds to forecast");
-            windsFillingDirectionNomap = Config.Bind("Info - Winds - List", "Nomap Direction", defaultValue: ListDirection.LeftToRight, "Direction of filling");
-            windsPositionSpacingNomap = Config.Bind("Info - Winds - List", "Nomap Spacing", defaultValue: 1f, "Spacing between arrows");
-            windsPositionNomap = Config.Bind("Info - Winds - List", "Nomap Position", defaultValue: new Vector2(-180f, -55f), "anchoredPosition of winds object transform in nomap mode");
-            windsSizeNomap = Config.Bind("Info - Winds - List", "Nomap Size", defaultValue: new Vector2(119f, 25f), "sizeDelta of winds object transform");
+            windsCount = config("Info - Winds - List", "Wind arrows amount", defaultValue: 5, "Amount of winds to forecast");
+            windsFillingDirection = config("Info - Winds - List", "Direction", defaultValue: ListDirection.LeftToRight, "Direction of filling");
+            windsPositionSpacing = config("Info - Winds - List", "Spacing", defaultValue: 1f, "Spacing between arrows");
+            windsPosition = config("Info - Winds - List", "Position", defaultValue: new Vector2(-180f, -255f), "anchoredPosition of winds object transform");
+            windsSize = config("Info - Winds - List", "Size", defaultValue: new Vector2(119f, 25f), "sizeDelta of winds object transform");
+
+            windsCountNomap = config("Info - Winds - List", "Nomap Wind arrows amount", defaultValue: 5, "Amount of winds to forecast");
+            windsFillingDirectionNomap = config("Info - Winds - List", "Nomap Direction", defaultValue: ListDirection.LeftToRight, "Direction of filling");
+            windsPositionSpacingNomap = config("Info - Winds - List", "Nomap Spacing", defaultValue: 1f, "Spacing between arrows");
+            windsPositionNomap = config("Info - Winds - List", "Nomap Position", defaultValue: new Vector2(-180f, -55f), "anchoredPosition of winds object transform in nomap mode");
+            windsSizeNomap = config("Info - Winds - List", "Nomap Size", defaultValue: new Vector2(119f, 25f), "sizeDelta of winds object transform");
 
             windsPosition.SettingChanged += (sender, args) => InfoBlocks.UpdateWindsBlock();
             windsPositionNomap.SettingChanged += (sender, args) => InfoBlocks.UpdateWindsBlock();
             windsSize.SettingChanged += (sender, args) => InfoBlocks.UpdateWindsBlock(forceRebuildList: true);
             windsSizeNomap.SettingChanged += (sender, args) => InfoBlocks.UpdateWindsBlock(forceRebuildList: true);
-            
+
             windsCount.SettingChanged += (sender, args) => WeatherForecast.UpdateNextWinds();
             windsCountNomap.SettingChanged += (sender, args) => WeatherForecast.UpdateNextWinds();
 
@@ -392,17 +395,17 @@ namespace MyLittleUI
             windsPositionSpacing.SettingChanged += (sender, args) => WeatherForecast.UpdateNextWinds(forceRebuildList: true);
             windsPositionSpacingNomap.SettingChanged += (sender, args) => WeatherForecast.UpdateNextWinds(forceRebuildList: true);
 
-            ammoCountEnabled = Config.Bind("Item - Ammo icon and count", "Ammo count Enabled", defaultValue: true, "Show amount of available ammo and ammo icon for weapon in hotbar");
-            ammoCountColor = Config.Bind("Item - Ammo icon and count", "Ammo count Color", defaultValue: Color.clear, "Show amount of available ammo and ammo icon for weapon in hotbar");
-            ammoCountPosition = Config.Bind("Item - Ammo icon and count", "Ammo count Position", defaultValue: new Vector2(0f, 86f), "Show amount of available ammo and ammo icon for weapon in hotbar");
-            ammoCountFontSize = Config.Bind("Item - Ammo icon and count", "Ammo count FontSize", defaultValue: 14, "Show amount of available ammo and ammo icon for weapon in hotbar");
-            ammoCountAlignment = Config.Bind("Item - Ammo icon and count", "Ammo count Alignment", defaultValue: HorizontalAlignmentOptions.Center, "Show amount of available ammo and ammo icon for weapon in hotbar");
-            ammoIconEnabled = Config.Bind("Item - Ammo icon and count", "Ammo icon Enabled", defaultValue: true, "Show amount of available ammo and ammo icon for weapon in hotbar");
-            ammoIconPosition = Config.Bind("Item - Ammo icon and count", "Ammo icon Position", defaultValue: new Vector2(0f, 40f), "Show amount of available ammo and ammo icon for weapon in hotbar");
-            ammoIconSize = Config.Bind("Item - Ammo icon and count", "Ammo icon Size", defaultValue: new Vector2(-10f, -10f), "Show amount of available ammo and ammo icon for weapon in hotbar");
+            ammoCountEnabled = config("Item - Ammo icon and count", "Ammo count Enabled", defaultValue: true, "Show amount of available ammo and ammo icon for weapon in hotbar  [Synced with Server]", synchronizedSetting: true);
+            ammoCountColor = config("Item - Ammo icon and count", "Ammo count Color", defaultValue: Color.clear, "Color of available ammo for weapon in hotbar");
+            ammoCountPosition = config("Item - Ammo icon and count", "Ammo count Position", defaultValue: new Vector2(0f, 86f), "Position of available ammo for weapon in hotbar");
+            ammoCountFontSize = config("Item - Ammo icon and count", "Ammo count FontSize", defaultValue: 14, "Show amount of available ammo and ammo icon for weapon in hotbar");
+            ammoCountAlignment = config("Item - Ammo icon and count", "Ammo count Alignment", defaultValue: HorizontalAlignmentOptions.Center, "Text horizontal alignment of available ammo for weapon in hotbar");
+            ammoIconEnabled = config("Item - Ammo icon and count", "Ammo icon Enabled", defaultValue: true, "Show icon of available ammo for weapon in hotbar [Synced with Server]", synchronizedSetting: true);
+            ammoIconPosition = config("Item - Ammo icon and count", "Ammo icon Position", defaultValue: new Vector2(0f, 40f), "Position of ammo icon for weapon in hotbar");
+            ammoIconSize = config("Item - Ammo icon and count", "Ammo icon Size", defaultValue: new Vector2(-10f, -10f), "Ammo icon for weapon in hotbar");
 
-            baitIconEnabled = Config.Bind("Item - Ammo icon and count", "Bait icon Enabled", defaultValue: true, "Show amount of available ammo and ammo icon for weapon in hotbar");
-            baitCountEnabled = Config.Bind("Item - Ammo icon and count", "Bait ammo Enabled", defaultValue: true, "Show amount of available ammo and ammo icon for weapon in hotbar");
+            baitIconEnabled = config("Item - Ammo icon and count", "Bait icon Enabled", defaultValue: true, "Show amount of available ammo and ammo icon for weapon in hotbar [Synced with Server]", synchronizedSetting: true);
+            baitCountEnabled = config("Item - Ammo icon and count", "Bait ammo Enabled", defaultValue: true, "Show amount of available ammo and ammo icon for weapon in hotbar [Synced with Server]", synchronizedSetting: true);
 
             ammoCountEnabled.SettingChanged += (sender, args) => AmmoCountIcon.UpdateVisibility();
             ammoCountColor.SettingChanged += (sender, args) => AmmoCountIcon.UpdateVisibility();
@@ -415,29 +418,29 @@ namespace MyLittleUI
             baitIconEnabled.SettingChanged += (sender, args) => AmmoCountIcon.UpdateVisibility();
             baitCountEnabled.SettingChanged += (sender, args) => AmmoCountIcon.UpdateVisibility();
 
-            showAvailableItemsAmount = Config.Bind("Item - Available resources amount", "Enabled", defaultValue: true, "Show amount of available resources for crafting in requirements list");
-            availableItemsAmountColor = Config.Bind("Item - Available resources amount", "Color", defaultValue: new Color(0.68f, 0.85f, 0.90f), "Color of amount of available resources.");
+            showAvailableItemsAmount = config("Item - Available resources amount", "Enabled", defaultValue: true, "Show amount of available resources for crafting in requirements list [Synced with Server]", synchronizedSetting: true);
+            availableItemsAmountColor = config("Item - Available resources amount", "Color", defaultValue: new Color(0.68f, 0.85f, 0.90f), "Color of amount of available resources.");
 
-            durabilityEnabled = Config.Bind("Item - Durability", "0 - Enabled", defaultValue: true, "Enable color of durability.");
-            durabilityFine = Config.Bind("Item - Durability", "1 - Fine", defaultValue: new Color(0.11765f, 0.72941f, 0.03529f, 1f), "Color of durability > 75%.");
-            durabilityWorn = Config.Bind("Item - Durability", "2 - Worn", defaultValue: new Color(0.72941f, 0.72941f, 0.03529f, 1f), "Color of durability > 50%.");
-            durabilityAtRisk = Config.Bind("Item - Durability", "3 - At risk", defaultValue: new Color(0.72941f, 0.34902f, 0.03529f, 1f), "Color of durability > 25%.");
-            durabilityBroken = Config.Bind("Item - Durability", "4 - Broken", defaultValue: new Color(0.72941f, 0.03529f, 0.03529f, 1f), "Color of durability >= 0%.");
+            durabilityEnabled = config("Item - Durability", "0 - Enabled", defaultValue: true, "Enable color of durability. [Synced with Server]", synchronizedSetting: true);
+            durabilityFine = config("Item - Durability", "1 - Fine", defaultValue: new Color(0.11765f, 0.72941f, 0.03529f, 1f), "Color of durability > 75%.");
+            durabilityWorn = config("Item - Durability", "2 - Worn", defaultValue: new Color(0.72941f, 0.72941f, 0.03529f, 1f), "Color of durability > 50%.");
+            durabilityAtRisk = config("Item - Durability", "3 - At risk", defaultValue: new Color(0.72941f, 0.34902f, 0.03529f, 1f), "Color of durability > 25%.");
+            durabilityBroken = config("Item - Durability", "4 - Broken", defaultValue: new Color(0.72941f, 0.03529f, 0.03529f, 1f), "Color of durability >= 0%.");
 
-            itemIconScale = Config.Bind("Item - Icon", "Icon scale", defaultValue: 1.0f, "Relative scale size of item icons.");
+            itemIconScale = config("Item - Icon", "Icon scale", defaultValue: 1.0f, "Relative scale size of item icons.");
 
-            itemTooltip = Config.Bind("Item - Tooltip", "Enabled", defaultValue: true, "Updated item tooltip. Hold Alt to see original tooltip");
-            itemTooltipColored = Config.Bind("Item - Tooltip", "Colored numbers", defaultValue: true, "Orange and yellow value numbers in tooltip, light blue if disabled");
+            itemTooltip = config("Item - Tooltip", "Enabled", defaultValue: true, "Updated item tooltip. Hold Alt to see original tooltip");
+            itemTooltipColored = config("Item - Tooltip", "Colored numbers", defaultValue: true, "Orange and yellow value numbers in tooltip, light blue if disabled");
 
-            itemQuality = Config.Bind("Item - Quality", "Enabled", defaultValue: true, "Show item quality as symbol");
-            itemQualitySymbol = Config.Bind("Item - Quality", "Symbol", defaultValue: "★", "Symbol to show.");
-            itemQualitySymbolColor = Config.Bind("Item - Quality", "Symbol Color", defaultValue: new Color(1f, 0.65f, 0f, 1f), "Symbol color");
-            itemQualitySymbolSize = Config.Bind("Item - Quality", "Symbol Size", defaultValue: 10f, "Symbol size");
-            itemQualityMax = Config.Bind("Item - Quality", "Maximum symbols", defaultValue: 8, "Maximum amount of symbols to show.");
-            itemQualityRows = Config.Bind("Item - Quality", "Maximum rows", defaultValue: 2, "Maximum amount of rows to show.");
-            itemQualityColumns = Config.Bind("Item - Quality", "Maximum columns", defaultValue: 4, "Maximum amount of columns to show.");
-            itemQualityLineSpacing = Config.Bind("Item - Quality", "Space between lines", defaultValue: -35.0f, "Line spacing.");
-            itemQualityCharacterSpacing = Config.Bind("Item - Quality", "Space between characters", defaultValue: 8f, "Character spacing.");
+            itemQuality = config("Item - Quality", "Enabled", defaultValue: true, "Show item quality as symbol");
+            itemQualitySymbol = config("Item - Quality", "Symbol", defaultValue: "★", "Symbol to show.");
+            itemQualitySymbolColor = config("Item - Quality", "Symbol Color", defaultValue: new Color(1f, 0.65f, 0f, 1f), "Symbol color");
+            itemQualitySymbolSize = config("Item - Quality", "Symbol Size", defaultValue: 10f, "Symbol size");
+            itemQualityMax = config("Item - Quality", "Maximum symbols", defaultValue: 8, "Maximum amount of symbols to show.");
+            itemQualityRows = config("Item - Quality", "Maximum rows", defaultValue: 2, "Maximum amount of rows to show.");
+            itemQualityColumns = config("Item - Quality", "Maximum columns", defaultValue: 4, "Maximum amount of columns to show.");
+            itemQualityLineSpacing = config("Item - Quality", "Space between lines", defaultValue: -35.0f, "Line spacing.");
+            itemQualityCharacterSpacing = config("Item - Quality", "Space between characters", defaultValue: 8f, "Character spacing.");
 
             itemQualitySymbol.SettingChanged += (sender, args) => itemQualitySymbol.Value = itemQualitySymbol.Value[0].ToString();
 
@@ -448,53 +451,57 @@ namespace MyLittleUI
 
             ItemIcon.FillItemQualityCache();
 
-            inventoryOpenCloseAnimationSpeed = Config.Bind("Inventory", "Animation speed", defaultValue: 1f, "Inventory show/close animation speed");
+            inventoryOpenCloseAnimationSpeed = config("Inventory", "Animation speed", defaultValue: 1f, "Inventory show/close animation speed");
 
             inventoryOpenCloseAnimationSpeed.SettingChanged += (sender, args) => SetInventoryAnimationSpeed();
 
-            statsMainMenu = Config.Bind("Stats - Main menu", "Show stats in main menu", defaultValue: true, "Show character statistics in main menu");
-            statsMainMenuAdvanced = Config.Bind("Stats - Main menu", "Show advanced stats in main menu", defaultValue: true, "Show advanced character statistics in main menu");
-            statsMainMenuAll = Config.Bind("Stats - Main menu", "Show all stats in main menu", defaultValue: false, "Show all character statistics in main menu");
+            statsMainMenu = config("Stats - Main menu", "Show stats in main menu", defaultValue: true, "Show character statistics in main menu");
+            statsMainMenuAdvanced = config("Stats - Main menu", "Show advanced stats in main menu", defaultValue: true, "Show advanced character statistics in main menu");
+            statsMainMenuAll = config("Stats - Main menu", "Show all stats in main menu", defaultValue: false, "Show all character statistics in main menu");
 
-            statsCharacterArmor = Config.Bind("Stats - Character", "Show character stats on armor hover", defaultValue: true, "Show character stats in armor tooltip");
-            statsCharacterEffects = Config.Bind("Stats - Character", "Show character active effects on weight hover", defaultValue: true, "Show character active effects in weight tooltip");
-            statsCharacterEffectsMagic = Config.Bind("Stats - Character", "Show character active magic effects (EpicLoot) on weight hover", defaultValue: true, "Show character active magic effects in weight tooltip");
+            statsCharacterArmor = config("Stats - Character", "Show character stats on armor hover", defaultValue: true, "Show character stats in armor tooltip");
+            statsCharacterEffects = config("Stats - Character", "Show character active effects on weight hover", defaultValue: true, "Show character active effects in weight tooltip");
+            statsCharacterEffectsMagic = config("Stats - Character", "Show character active magic effects (EpicLoot) on weight hover", defaultValue: true, "Show character active magic effects in weight tooltip");
 
             statsCharacterArmor.SettingChanged += (sender, args) => InventoryCharacterStats.UpdateTooltipState();
             statsCharacterEffects.SettingChanged += (sender, args) => InventoryCharacterStats.UpdateTooltipState();
 
-            hoverCharacter = Config.Bind("Hover - Character", "Character Hover", defaultValue: StationHover.Vanilla, "Format of baby development's total needed time/percent.");
-            hoverCharacterGrowth = Config.Bind("Hover - Character", "Show baby growth", true, "Show total growth percentage/remaining for babies.");
-            hoverCharacterProcreation = Config.Bind("Hover - Character", "Show offspring", true, "Show percentage/remaining for new offspring.");
-            hoverCharacterEggGrow = Config.Bind("Hover - Character", "Show egg hatching", true, "Show percentage/remaining for egg hatching.");
+            hoverCharacter = config("Hover - Character", "Character Hover", defaultValue: StationHover.Vanilla, "Format of baby development's total needed time/percent.");
+            hoverCharacterGrowth = config("Hover - Character", "Show baby growth", true, "Show total growth percentage/remaining for babies. [Synced with Server]", synchronizedSetting: true);
+            hoverCharacterProcreation = config("Hover - Character", "Show offspring", true, "Show percentage/remaining for new offspring. [Synced with Server]", synchronizedSetting: true);
+            hoverCharacterEggGrow = config("Hover - Character", "Show egg hatching", true, "Show percentage/remaining for egg hatching. [Synced with Server]", synchronizedSetting: true);
 
-            hoverFermenter = Config.Bind("Hover - Stations", "Fermenter Hover", defaultValue: StationHover.Vanilla, "Hover text for fermenter.");
-            hoverPlant = Config.Bind("Hover - Stations", "Plants Hover", defaultValue: StationHover.Vanilla, "Hover text for plants.");
-            hoverCooking = Config.Bind("Hover - Stations", "Cooking stations Hover", defaultValue: StationHover.Vanilla, "Hover text for cooking stations.");
-            hoverBeeHive = Config.Bind("Hover - Stations", "Bee Hive Hover", defaultValue: StationHover.Vanilla, "Hover text for bee hive.");
-            hoverBeeHiveTotal = Config.Bind("Hover - Stations", "Bee Hive Show total", defaultValue: true, "Show total needed time/percent for bee hive.");
+            hoverFermenterEnabled = config("Hover - Stations", "Fermenter Hover Enabled", defaultValue: true, "Enable Hover text for fermenter. [Synced with Server]", synchronizedSetting: true);
+            hoverPlantEnabled = config("Hover - Stations", "Plants Hover Enabled", defaultValue: true, "Enable Hover text for plants. [Synced with Server]", synchronizedSetting: true);
+            hoverCookingEnabled = config("Hover - Stations", "Cooking stations Hover Enabled", defaultValue: true, "Enable Hover text for cooking stations. [Synced with Server]", synchronizedSetting: true);
+            hoverBeeHiveEnabled = config("Hover - Stations", "Bee Hive Hover Enabled", defaultValue: true, "Enable Hover text for bee hive. [Synced with Server]", synchronizedSetting: true);
+            hoverFermenter = config("Hover - Stations", "Fermenter Hover", defaultValue: StationHover.Vanilla, "Hover text for fermenter.");
+            hoverPlant = config("Hover - Stations", "Plants Hover", defaultValue: StationHover.Vanilla, "Hover text for plants.");
+            hoverCooking = config("Hover - Stations", "Cooking stations Hover", defaultValue: StationHover.Vanilla, "Hover text for cooking stations.");
+            hoverBeeHive = config("Hover - Stations", "Bee Hive Hover", defaultValue: StationHover.Vanilla, "Hover text for bee hive.");
+            hoverBeeHiveTotal = config("Hover - Stations", "Bee Hive Show total", defaultValue: true, "Show total needed time/percent for bee hive.");
 
-            hoverTame = Config.Bind("Hover - Tameable", "Tameable Hover", defaultValue: StationHover.Vanilla, "Format of total needed time/percent to tame or to stay fed.");
-            hoverTameTimeToTame = Config.Bind("Hover - Tameable", "Show time to tame", defaultValue: true, "Show total needed time/percent to tame.");
-            hoverTameTimeToFed = Config.Bind("Hover - Tameable", "Show time to stay fed", defaultValue: true, "Show total needed time/percent to stay fed.");
+            hoverTame = config("Hover - Tameable", "Tameable Hover", defaultValue: StationHover.Vanilla, "Format of total needed time/percent to tame or to stay fed.");
+            hoverTameTimeToTame = config("Hover - Tameable", "Show time to tame", defaultValue: true, "Show total needed time/percent to tame. [Synced with Server]", synchronizedSetting: true);
+            hoverTameTimeToFed = config("Hover - Tameable", "Show time to stay fed", defaultValue: true, "Show total needed time/percent to stay fed. [Synced with Server]", synchronizedSetting: true);
 
-            hoverSmelterEstimatedTime = Config.Bind("Hover - Smelters", "Show estimated time", defaultValue: true, "Show estimated end time for a smelter station (charcoal kiln, forge, etc. including non vanilla).");
-            hoverSmelterShowFuelAndItem = Config.Bind("Hover - Smelters", "Always show fuel and item", defaultValue: true, "Show current smelting item and fuel loaded on both fuel and ore switches.");
-            hoverSmelterShowQueuedItems = Config.Bind("Hover - Smelters", "Show queued items", defaultValue: true, "Show queued items currently being smelted. Doesn't show the list if there is only one item to smelt.");
+            hoverSmelterEstimatedTime = config("Hover - Smelters", "Show estimated time", defaultValue: true, "Show estimated end time for a smelter station (charcoal kiln, forge, etc. including non vanilla). [Synced with Server]", synchronizedSetting: true);
+            hoverSmelterShowFuelAndItem = config("Hover - Smelters", "Always show fuel and item", defaultValue: true, "Show current smelting item and fuel loaded on both fuel and ore switches.");
+            hoverSmelterShowQueuedItems = config("Hover - Smelters", "Show queued items", defaultValue: true, "Show queued items currently being smelted. Doesn't show the list if there is only one item to smelt. [Synced with Server]", synchronizedSetting: true);
 
-            chestCustomName = Config.Bind("Hover - Chests", "Enable custom names", defaultValue: true, "Enable custom names for chests.");
-            chestHoverItems = Config.Bind("Hover - Chests", "Hover items format", defaultValue: ChestItemsHover.Vanilla, "Chest items details format to be shown in hover.");
-            chestHoverName = Config.Bind("Hover - Chests", "Hover name format", defaultValue: ChestNameHover.TypeThenCustomName, "Chest name format to be shown in hover.");
-            chestShowRename = Config.Bind("Hover - Chests", "Show rename hint in hover", defaultValue: true, "Show rename hotkey hint. You can hide it to make it less noisy.");
-            chestShowHoldToStack = Config.Bind("Hover - Chests", "Show hold to stack hint in hover", defaultValue: true, "Show hold to stack hint. You can hide it to make it less noisy.");
+            chestCustomName = config("Hover - Chests", "Enable custom names", defaultValue: true, "Enable custom names for chests. [Synced with Server]", synchronizedSetting: true);
+            chestHoverItems = config("Hover - Chests", "Hover items format", defaultValue: ChestItemsHover.Vanilla, "Chest items details format to be shown in hover.");
+            chestHoverName = config("Hover - Chests", "Hover name format", defaultValue: ChestNameHover.TypeThenCustomName, "Chest name format to be shown in hover.");
+            chestShowRename = config("Hover - Chests", "Show rename hint in hover", defaultValue: true, "Show rename hotkey hint. You can hide it to make it less noisy.");
+            chestShowHoldToStack = config("Hover - Chests", "Show hold to stack hint in hover", defaultValue: true, "Show hold to stack hint. You can hide it to make it less noisy.");
 
-            chestContentEnabled = Config.Bind("Hover - Chests - Content", "Enable chest content", defaultValue: true, "Enable custom names for chests.");
-            chestContentLinesToShow = Config.Bind("Hover - Chests - Content", "Lines to show", defaultValue: 11, "Amount of lines to be shown.");
-            chestContentSortType = Config.Bind("Hover - Chests - Content", "Sorting type", defaultValue: ContentSortType.Position, "Sorting type. Position means item position in chest grid.");
-            chestContentSortDir = Config.Bind("Hover - Chests - Content", "Sorting direction", defaultValue: ContentSortDir.Asc, "Sorting direction.");
-            chestContentEntryFormat = Config.Bind("Hover - Chests - Content", "Entry format", defaultValue: "{1} {0}", "0 for item name, 1 for total amount");
-            chestContentAmountColor = Config.Bind("Hover - Chests - Content", "Entry amount color", defaultValue: new Color(1f, 1f, 0f, 0.6f), "Color for amount");
-            chestContentItemColor = Config.Bind("Hover - Chests - Content", "Entry item name color", defaultValue: new Color(0.75f, 0.75f, 0.75f, 0.6f), "Color for item name");
+            chestContentEnabled = config("Hover - Chests - Content", "Enable chest content", defaultValue: true, "Enable custom names for chests. [Synced with Server]", synchronizedSetting: true);
+            chestContentLinesToShow = config("Hover - Chests - Content", "Lines to show", defaultValue: 11, "Amount of lines to be shown.");
+            chestContentSortType = config("Hover - Chests - Content", "Sorting type", defaultValue: ContentSortType.Position, "Sorting type. Position means item position in chest grid.");
+            chestContentSortDir = config("Hover - Chests - Content", "Sorting direction", defaultValue: ContentSortDir.Asc, "Sorting direction.");
+            chestContentEntryFormat = config("Hover - Chests - Content", "Entry format", defaultValue: "{1} {0}", "0 for item name, 1 for total amount");
+            chestContentAmountColor = config("Hover - Chests - Content", "Entry amount color", defaultValue: new Color(1f, 1f, 0f, 0.6f), "Color for amount");
+            chestContentItemColor = config("Hover - Chests - Content", "Entry item name color", defaultValue: new Color(0.75f, 0.75f, 0.75f, 0.6f), "Color for item name");
 
             chestContentEnabled.SettingChanged += (sender, args) => ChestHoverText.ResetHoverCache();
             chestContentLinesToShow.SettingChanged += (sender, args) => ChestHoverText.ResetHoverCache();
@@ -504,24 +511,24 @@ namespace MyLittleUI
             chestContentItemColor.SettingChanged += (sender, args) => ChestHoverText.ResetHoverCache();
             chestContentAmountColor.SettingChanged += (sender, args) => ChestHoverText.ResetHoverCache();
 
-            statusEffectsPositionEnabled = Config.Bind("Status effects - Map - List", "Enable", defaultValue: true, "Enable repositioning of status effect list.");
-            statusEffectsPositionAnchor = Config.Bind("Status effects - Map - List", "Position", defaultValue: new Vector2(-170f, -265f), "Anchored position of list.");
-            statusEffectsFillingDirection = Config.Bind("Status effects - Map - List", "Direction", defaultValue: ListDirection.TopToBottom, "Direction of filling");
-            statusEffectsPositionSpacing = Config.Bind("Status effects - Map - List", "Spacing", defaultValue: 8, "Spacing between status effects");
+            statusEffectsPositionEnabled = config("Status effects - Map - List", "Enable", defaultValue: true, "Enable repositioning of status effect list. [Synced with Server]", synchronizedSetting: true);
+            statusEffectsPositionAnchor = config("Status effects - Map - List", "Position", defaultValue: new Vector2(-170f, -265f), "Anchored position of list.");
+            statusEffectsFillingDirection = config("Status effects - Map - List", "Direction", defaultValue: ListDirection.TopToBottom, "Direction of filling");
+            statusEffectsPositionSpacing = config("Status effects - Map - List", "Spacing", defaultValue: 8, "Spacing between status effects");
 
-            statusEffectsElementEnabled = Config.Bind("Status effects - Map - List element", "Custom element enabled", defaultValue: true, "Enables using of horizontal status effect element");
-            statusEffectsElementSize = Config.Bind("Status effects - Map - List element", "Size", defaultValue: 32, "Vertical capsule size");
+            statusEffectsElementEnabled = config("Status effects - Map - List element", "Custom element enabled", defaultValue: true, "Enables using of horizontal status effect element [Synced with Server]", synchronizedSetting: true);
+            statusEffectsElementSize = config("Status effects - Map - List element", "Size", defaultValue: 32, "Vertical capsule size");
 
             statusEffectsPositionEnabled.SettingChanged += (sender, args) => CustomStatusEffectsList.InitializeStatusEffectTemplate();
             statusEffectsPositionAnchor.SettingChanged += (sender, args) => CustomStatusEffectsList.InitializeStatusEffectTemplate();
             statusEffectsElementEnabled.SettingChanged += (sender, args) => CustomStatusEffectsList.InitializeStatusEffectTemplate();
             statusEffectsElementSize.SettingChanged += (sender, args) => CustomStatusEffectsList.InitializeStatusEffectTemplate();
 
-            sailingIndicatorEnabled = Config.Bind("Status effects - Map - Sailing indicator", "Enabled", defaultValue: true, "Enable changing of sailing indicator");
-            sailingIndicatorPowerIconPosition = Config.Bind("Status effects - Map - Sailing indicator", "Sail power indicator position", defaultValue: new Vector2(-350f, -290f), "Sail size and rudder indicator position");
-            sailingIndicatorPowerIconScale = Config.Bind("Status effects - Map - Sailing indicator", "Sail power indicator scale", defaultValue: 1.0f, "Sail size and rudder indicator scale");
-            sailingIndicatorWindIndicatorPosition = Config.Bind("Status effects - Map - Sailing indicator", "Wind indicator position", defaultValue: new Vector2(-350f, -140f), "Wind indicator (ship and wind direction) position");
-            sailingIndicatorWindIndicatorScale = Config.Bind("Status effects - Map - Sailing indicator", "Wind indicator scale", defaultValue: 1.0f, "Wind indicator (ship and wind direction) scale");
+            sailingIndicatorEnabled = config("Status effects - Map - Sailing indicator", "Enabled", defaultValue: true, "Enable changing of sailing indicator [Synced with Server]", synchronizedSetting: true);
+            sailingIndicatorPowerIconPosition = config("Status effects - Map - Sailing indicator", "Sail power indicator position", defaultValue: new Vector2(-350f, -290f), "Sail size and rudder indicator position");
+            sailingIndicatorPowerIconScale = config("Status effects - Map - Sailing indicator", "Sail power indicator scale", defaultValue: 1.0f, "Sail size and rudder indicator scale");
+            sailingIndicatorWindIndicatorPosition = config("Status effects - Map - Sailing indicator", "Wind indicator position", defaultValue: new Vector2(-350f, -140f), "Wind indicator (ship and wind direction) position");
+            sailingIndicatorWindIndicatorScale = config("Status effects - Map - Sailing indicator", "Wind indicator scale", defaultValue: 1.0f, "Wind indicator (ship and wind direction) scale");
 
             sailingIndicatorEnabled.SettingChanged += (sender, args) => CustomStatusEffectsList.ChangeSailingIndicator();
             sailingIndicatorPowerIconPosition.SettingChanged += (sender, args) => CustomStatusEffectsList.ChangeSailingIndicator();
@@ -529,24 +536,24 @@ namespace MyLittleUI
             sailingIndicatorWindIndicatorPosition.SettingChanged += (sender, args) => CustomStatusEffectsList.ChangeSailingIndicator();
             sailingIndicatorWindIndicatorScale.SettingChanged += (sender, args) => CustomStatusEffectsList.ChangeSailingIndicator();
 
-            statusEffectsPositionEnabledNomap = Config.Bind("Status effects - Nomap - List", "Enable", defaultValue: true, "Enable repositioning of status effect list.");
-            statusEffectsPositionAnchorNomap = Config.Bind("Status effects - Nomap - List", "Position", defaultValue: new Vector2(-170f, -70f), "Anchored position of list.");
-            statusEffectsFillingDirectionNomap = Config.Bind("Status effects - Nomap - List", "Direction", defaultValue: ListDirection.TopToBottom, "Direction of filling");
-            statusEffectsPositionSpacingNomap = Config.Bind("Status effects - Nomap - List", "Spacing", defaultValue: 10, "Spacing between status effects");
+            statusEffectsPositionEnabledNomap = config("Status effects - Nomap - List", "Enable", defaultValue: true, "Enable repositioning of status effect list. [Synced with Server]", synchronizedSetting: true);
+            statusEffectsPositionAnchorNomap = config("Status effects - Nomap - List", "Position", defaultValue: new Vector2(-170f, -70f), "Anchored position of list.");
+            statusEffectsFillingDirectionNomap = config("Status effects - Nomap - List", "Direction", defaultValue: ListDirection.TopToBottom, "Direction of filling");
+            statusEffectsPositionSpacingNomap = config("Status effects - Nomap - List", "Spacing", defaultValue: 10, "Spacing between status effects");
 
-            statusEffectsElementEnabledNomap = Config.Bind("Status effects - Nomap - List element", "Custom element enabled", defaultValue: true, "Enables using of horizontal status effect element");
-            statusEffectsElementSizeNomap = Config.Bind("Status effects - Nomap - List element", "Size", defaultValue: 36, "Vertical capsule size");
+            statusEffectsElementEnabledNomap = config("Status effects - Nomap - List element", "Custom element enabled", defaultValue: true, "Enables using of horizontal status effect element [Synced with Server]", synchronizedSetting: true);
+            statusEffectsElementSizeNomap = config("Status effects - Nomap - List element", "Size", defaultValue: 36, "Vertical capsule size");
 
             statusEffectsPositionEnabledNomap.SettingChanged += (sender, args) => CustomStatusEffectsList.InitializeStatusEffectTemplate();
             statusEffectsPositionAnchorNomap.SettingChanged += (sender, args) => CustomStatusEffectsList.InitializeStatusEffectTemplate();
             statusEffectsElementEnabledNomap.SettingChanged += (sender, args) => CustomStatusEffectsList.InitializeStatusEffectTemplate();
             statusEffectsElementSizeNomap.SettingChanged += (sender, args) => CustomStatusEffectsList.InitializeStatusEffectTemplate();
 
-            sailingIndicatorEnabledNomap = Config.Bind("Status effects - Nomap - Sailing indicator", "Enabled", defaultValue: true, "Enable changing of sailing indicator");
-            sailingIndicatorPowerIconPositionNomap = Config.Bind("Status effects - Nomap - Sailing indicator", "Sail power indicator position", defaultValue: new Vector2(-350f, -320f), "Sail size and rudder indicator position");
-            sailingIndicatorPowerIconScaleNomap = Config.Bind("Status effects - Nomap - Sailing indicator", "Sail power indicator scale", defaultValue: 1.1f, "Sail size and rudder indicator scale");
-            sailingIndicatorWindIndicatorPositionNomap = Config.Bind("Status effects - Nomap - Sailing indicator", "Wind indicator position", defaultValue: new Vector2(-350f, -170f), "Wind indicator (ship and wind direction) position");
-            sailingIndicatorWindIndicatorScaleNomap = Config.Bind("Status effects - Nomap - Sailing indicator", "Wind indicator scale", defaultValue: 1.1f, "Wind indicator (ship and wind direction) scale");
+            sailingIndicatorEnabledNomap = config("Status effects - Nomap - Sailing indicator", "Enabled", defaultValue: true, "Enable changing of sailing indicator [Synced with Server]", synchronizedSetting: true);
+            sailingIndicatorPowerIconPositionNomap = config("Status effects - Nomap - Sailing indicator", "Sail power indicator position", defaultValue: new Vector2(-350f, -320f), "Sail size and rudder indicator position");
+            sailingIndicatorPowerIconScaleNomap = config("Status effects - Nomap - Sailing indicator", "Sail power indicator scale", defaultValue: 1.1f, "Sail size and rudder indicator scale");
+            sailingIndicatorWindIndicatorPositionNomap = config("Status effects - Nomap - Sailing indicator", "Wind indicator position", defaultValue: new Vector2(-350f, -170f), "Wind indicator (ship and wind direction) position");
+            sailingIndicatorWindIndicatorScaleNomap = config("Status effects - Nomap - Sailing indicator", "Wind indicator scale", defaultValue: 1.1f, "Wind indicator (ship and wind direction) scale");
 
             sailingIndicatorEnabledNomap.SettingChanged += (sender, args) => CustomStatusEffectsList.ChangeSailingIndicator();
             sailingIndicatorPowerIconPositionNomap.SettingChanged += (sender, args) => CustomStatusEffectsList.ChangeSailingIndicator();
@@ -554,6 +561,18 @@ namespace MyLittleUI
             sailingIndicatorWindIndicatorPositionNomap.SettingChanged += (sender, args) => CustomStatusEffectsList.ChangeSailingIndicator();
             sailingIndicatorWindIndicatorScaleNomap.SettingChanged += (sender, args) => CustomStatusEffectsList.ChangeSailingIndicator();
         }
+
+        ConfigEntry<T> config<T>(string group, string name, T defaultValue, ConfigDescription description, bool synchronizedSetting = false)
+        {
+            ConfigEntry<T> configEntry = Config.Bind(group, name, defaultValue, description);
+
+            SyncedConfigEntry<T> syncedConfigEntry = configSync.AddConfigEntry(configEntry);
+            syncedConfigEntry.SynchronizedConfig = synchronizedSetting;
+
+            return configEntry;
+        }
+
+        ConfigEntry<T> config<T>(string group, string name, T defaultValue, string description, bool synchronizedSetting = false) => config(group, name, defaultValue, new ConfigDescription(description), synchronizedSetting);
 
         private void LoadIcons()
         {
@@ -609,7 +628,7 @@ namespace MyLittleUI
                 if (!modEnabled.Value)
                     return;
 
-                if (hoverFermenter.Value == StationHover.Vanilla)
+                if (!hoverFermenterEnabled.Value || hoverFermenter.Value == StationHover.Vanilla)
                     return;
 
                 if (__result.IsNullOrWhiteSpace())
@@ -641,7 +660,7 @@ namespace MyLittleUI
                 if (!modEnabled.Value)
                     return;
 
-                if (hoverPlant.Value == StationHover.Vanilla)
+                if (!hoverPlantEnabled.Value || hoverPlant.Value == StationHover.Vanilla)
                     return;
 
                 if (__result.IsNullOrWhiteSpace())
@@ -665,7 +684,7 @@ namespace MyLittleUI
                 if (!modEnabled.Value)
                     return;
 
-                if (hoverBeeHive.Value == StationHover.Vanilla)
+                if (!hoverBeeHiveEnabled.Value || hoverBeeHive.Value == StationHover.Vanilla)
                     return;
 
                 if (__result.IsNullOrWhiteSpace())
@@ -765,7 +784,7 @@ namespace MyLittleUI
                 if (!modEnabled.Value)
                     return;
 
-                if (hoverCooking.Value == StationHover.Vanilla)
+                if (!hoverCookingEnabled.Value || hoverCooking.Value == StationHover.Vanilla)
                     return;
 
                 if ((bool)___m_addFoodSwitch)
@@ -804,7 +823,7 @@ namespace MyLittleUI
                 if (!modEnabled.Value)
                     return;
 
-                if (hoverCooking.Value == StationHover.Vanilla)
+                if (!hoverCookingEnabled.Value || hoverCooking.Value == StationHover.Vanilla)
                     return;
 
                 if (__result.IsNullOrWhiteSpace())

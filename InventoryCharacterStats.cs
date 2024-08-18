@@ -20,8 +20,22 @@ namespace MyLittleUI
         private static readonly StringBuilder sb = new StringBuilder();
         private static readonly Dictionary<Skills.SkillType, float> skills = new Dictionary<Skills.SkillType, float>();
         private static readonly Dictionary<HitData.DamageType, HitData.DamageModifier> mods = new Dictionary<HitData.DamageType, HitData.DamageModifier>();
+        private static SE_Stats stats;
 
-        public static void UpdateTooltipState()
+        private static void ClearStats(this SE_Stats statsEffect)
+        {
+            foreach (FieldInfo field in AccessTools.GetDeclaredFields(typeof(SE_Stats)))
+                field.SetValue(statsEffect, null);
+
+            statsEffect.m_mods = new List<HitData.DamageModPair>();
+            statsEffect.m_healthOverTimeInterval = 5f;
+            statsEffect.m_healthRegenMultiplier = 1f;
+            statsEffect.m_staminaRegenMultiplier = 1f;
+            statsEffect.m_eitrRegenMultiplier = 1f;
+            statsEffect.m_damageModifier = 1f;
+    }
+
+    public static void UpdateTooltipState()
         {
             if (characterStatsTooltip != null)
                 characterStatsTooltip.enabled = statsCharacterArmor.Value;
@@ -103,16 +117,17 @@ namespace MyLittleUI
             skills.Clear();
             mods.Clear();
 
-            SE_Stats stats = (SE_Stats)ScriptableObject.CreateInstance("SE_Stats");
+            if (stats == null)
+                stats = ScriptableObject.CreateInstance("SE_Stats") as SE_Stats;
+            else
+                stats.ClearStats();
 
             foreach (StatusEffect statusEffect in player.GetSEMan().GetStatusEffects().ToList())
             {
-                if (statusEffect is SE_Stats)
+                if (statusEffect is SE_Stats se)
                 {
-                    SE_Stats se = (statusEffect as SE_Stats);
-
-                    stats.m_jumpStaminaUseModifier *= se.m_jumpStaminaUseModifier;
-                    stats.m_runStaminaDrainModifier *= se.m_runStaminaDrainModifier;
+                    stats.m_jumpStaminaUseModifier += se.m_jumpStaminaUseModifier;
+                    stats.m_runStaminaDrainModifier += se.m_runStaminaDrainModifier;
                     stats.m_healthOverTime += se.m_healthOverTime;
                     stats.m_staminaOverTime += se.m_staminaOverTime;
                     stats.m_eitrOverTime += se.m_eitrOverTime;
@@ -123,9 +138,9 @@ namespace MyLittleUI
                         AddRegenStat(ref stats.m_eitrRegenMultiplier, se.m_eitrRegenMultiplier);
 
                     stats.m_addMaxCarryWeight += se.m_addMaxCarryWeight;
-                    stats.m_noiseModifier *= se.m_noiseModifier;
-                    stats.m_stealthModifier *= se.m_stealthModifier;
-                    stats.m_speedModifier *= se.m_speedModifier;
+                    stats.m_noiseModifier += se.m_noiseModifier;
+                    stats.m_stealthModifier += se.m_stealthModifier;
+                    stats.m_speedModifier += se.m_speedModifier;
                     stats.m_maxMaxFallSpeed += se.m_maxMaxFallSpeed;
                     stats.m_fallDamageModifier += se.m_fallDamageModifier;
 
@@ -204,11 +219,15 @@ namespace MyLittleUI
                     var methodAddMagicEffectsPage = AccessTools.Method(patchUpdateTextsList, "AddMagicEffectsPage");
                     if (methodAddMagicEffectsPage != null)
                     {
+                        List<TextsDialog.TextInfo> texts = textsDialog.m_texts.ToList();
                         textsDialog.m_texts.Clear();
                         textsDialog.m_texts.Add(new TextsDialog.TextInfo("", ""));
                         textsDialog.m_texts.Add(new TextsDialog.TextInfo("", ""));
                         methodAddMagicEffectsPage.Invoke(methodAddMagicEffectsPage, new[] { (object)textsDialog, (object)player });
                         TextsDialog.TextInfo text = textsDialog.m_texts[2];
+                        
+                        textsDialog.m_texts.Clear();
+                        textsDialog.m_texts.AddRange(texts);
 
                         sb.Append("\n");
                         sb.Append(text.m_topic);
@@ -285,7 +304,7 @@ namespace MyLittleUI
                 if (statsCharacterArmor.Value && characterStatsTooltip == null || statsCharacterEffects.Value && characterEffectsTooltip == null)
                     InitCharacterTooltips(__instance, player);
 
-                if (ZNet.instance.GetTimeSeconds() - totalSecondTooltipWasUpdated > 5)
+                if (ZNet.instance.GetTimeSeconds() - totalSecondTooltipWasUpdated > 3)
                 {
                     totalSecondTooltipWasUpdated = ZNet.instance.GetTimeSeconds();
 

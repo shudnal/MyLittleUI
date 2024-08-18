@@ -1,3 +1,7 @@
+# 1.1.0
+* Server synchronization for config values responsible for section enabled
+* Refinements for combined stats tooltip not showing some status effects
+
 # 1.0.14
 * Minimal UI weight bag status effect compatibility
 
