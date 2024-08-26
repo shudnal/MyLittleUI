@@ -1314,11 +1314,8 @@ namespace MyLittleUI
                 if (UnityInput.Current.GetKey(KeyCode.LeftAlt) || UnityInput.Current.GetKey(KeyCode.RightAlt))
                     return;
 
-                TMPro.TMP_Text component3 = elementRoot.transform.Find("res_amount").GetComponent<TMPro.TMP_Text>();
-                if (component3 == null)
-                    return;
-
-                component3.SetText(component3.text + $" <color=#{ColorUtility.ToHtmlStringRGBA(availableItemsAmountColor.Value)}>({player.GetInventory().CountItems(req.m_resItem.m_itemData.m_shared.m_name)})</color>");
+                TMP_Text text = elementRoot.transform.Find("res_amount")?.GetComponent<TMP_Text>();
+                text?.SetText(text.text + $" <color=#{ColorUtility.ToHtmlStringRGBA(availableItemsAmountColor.Value)}>({player.GetInventory().CountItems(req.m_resItem.m_itemData.m_shared.m_name)})</color>");
             }
         }
 
