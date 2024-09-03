@@ -1,6 +1,6 @@
 # My Little UI
 ![logo](https://staticdelivery.nexusmods.com/mods/3667/images/headers/2562_1711322538.jpg)
-Bunch of little UI tweaks. Tooltips for production timers, player status, items. Custom chest names, buff list, and so on.
+Bunch of little UI tweaks. Tooltips for production timers, player status, items. Custom chest names, buff list, multicraft, weather forecast and so on.
 
 ## Server sync
 * Server sync is disabled by default. Enable **Lock Configuration** config value to make it sync.
