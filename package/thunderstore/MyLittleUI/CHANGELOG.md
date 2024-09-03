@@ -1,3 +1,6 @@
+# 1.1.1
+* Multicraft (gamepad and mouse scroll supported)
+
 # 1.1.0
 * Server synchronization for config values responsible for section enabled
 * Refinements for combined stats tooltip not showing some status effects

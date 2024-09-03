@@ -20,7 +20,7 @@ namespace MyLittleUI
     {
         const string pluginID = "shudnal.MyLittleUI";
         const string pluginName = "My Little UI";
-        const string pluginVersion = "1.1.0";
+        const string pluginVersion = "1.1.1";
 
         private readonly Harmony harmony = new Harmony(pluginID);
 
@@ -95,8 +95,9 @@ namespace MyLittleUI
         internal static ConfigEntry<bool> baitIconEnabled;
         internal static ConfigEntry<bool> baitCountEnabled;
 
-        private static ConfigEntry<bool> showAvailableItemsAmount;
-        private static ConfigEntry<Color> availableItemsAmountColor;
+        internal static ConfigEntry<bool> showAvailableItemsAmount;
+        internal static ConfigEntry<Color> availableItemsAmountColor;
+        internal static ConfigEntry<bool> showMulticraftButtons;
 
         public static ConfigEntry<bool> durabilityEnabled;
         public static ConfigEntry<Color> durabilityFine;
@@ -418,8 +419,11 @@ namespace MyLittleUI
             baitIconEnabled.SettingChanged += (sender, args) => AmmoCountIcon.UpdateVisibility();
             baitCountEnabled.SettingChanged += (sender, args) => AmmoCountIcon.UpdateVisibility();
 
-            showAvailableItemsAmount = config("Item - Available resources amount", "Enabled", defaultValue: true, "Show amount of available resources for crafting in requirements list [Synced with Server]", synchronizedSetting: true);
+            showAvailableItemsAmount = config("Item - Available resources amount", "Enabled", defaultValue: true, "Show amount of available resources for crafting in requirements list (player inventory only) [Synced with Server]", synchronizedSetting: true);
             availableItemsAmountColor = config("Item - Available resources amount", "Color", defaultValue: new Color(0.68f, 0.85f, 0.90f), "Color of amount of available resources.");
+            showMulticraftButtons = config("Item - Available resources amount", "Multicraft", defaultValue: true, "Show multicraft buttons [Synced with Server]", synchronizedSetting: true);
+            
+            showMulticraftButtons.SettingChanged += (sender, args) => MultiCraft.UpdateMulticraftPanel();
 
             durabilityEnabled = config("Item - Durability", "0 - Enabled", defaultValue: true, "Enable color of durability. [Synced with Server]", synchronizedSetting: true);
             durabilityFine = config("Item - Durability", "1 - Fine", defaultValue: new Color(0.11765f, 0.72941f, 0.03529f, 1f), "Color of durability > 75%.");
@@ -1315,7 +1319,8 @@ namespace MyLittleUI
                     return;
 
                 TMP_Text text = elementRoot.transform.Find("res_amount")?.GetComponent<TMP_Text>();
-                text?.SetText(text.text + $" <color=#{ColorUtility.ToHtmlStringRGBA(availableItemsAmountColor.Value)}>({player.GetInventory().CountItems(req.m_resItem.m_itemData.m_shared.m_name)})</color>");
+                if (int.TryParse(text.text, out _))
+                    text?.SetText(text.text + $" <color=#{ColorUtility.ToHtmlStringRGBA(availableItemsAmountColor.Value)}>({player.GetInventory().CountItems(req.m_resItem.m_itemData.m_shared.m_name)})</color>");
             }
         }
 

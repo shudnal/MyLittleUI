@@ -10,6 +10,7 @@ Bunch of little UI tweaks. Tooltips for production timers, player status, items.
 
 ## Items
 * Amount of required resources from your inventory when crafting
+* Multicraft (gamepad and mouse scroll supported)
 * Colored durability bars on items
 * Configurable icon scale
 * Reordered item tooltips (EpicLoot supported)
