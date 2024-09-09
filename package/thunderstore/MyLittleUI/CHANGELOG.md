@@ -1,3 +1,6 @@
+# 1.1.2
+* multicraft fix for rare one ingredient recipe case
+
 # 1.1.1
 * Multicraft (gamepad and mouse scroll supported)
 

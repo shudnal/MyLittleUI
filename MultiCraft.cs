@@ -283,6 +283,8 @@ namespace MyLittleUI
                 }
 
                 string numbers = Regex.Replace(Regex.Replace(sb.ToString(), "<.*?>", String.Empty), @"[^\d]", String.Empty);
+                if (__instance.m_selectedRecipe.Key.m_requireOnlyOneIngredient)
+                    numbers += Mathf.Sin(Time.time * 5f) > 0f;
 
                 if (!cachedAmount.TryGetValue(__instance.m_selectedRecipe.Key, out Tuple<string, int> tuple) || tuple.Item1 != numbers)
                     cachedAmount[__instance.m_selectedRecipe.Key] = Tuple.Create(numbers, GetMaximumAmount(__instance.m_selectedRecipe.Key, player));
@@ -304,10 +306,6 @@ namespace MyLittleUI
 
                     lastScrollTriggerFrame = Time.frameCount;
                 }
-                /*else if (ZInput.GetJoyRightStickY())
-                {
-
-                }*/
 
                 amount = Mathf.Clamp(amount, isCrafting ? 0 : 1, maxAmount);
                 textAmount?.SetText(amount.ToString());
