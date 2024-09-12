@@ -1,3 +1,7 @@
+# 1.1.3
+* server sync lock enabled by default
+* container hover update on container resize
+
 # 1.1.2
 * multicraft fix for rare one ingredient recipe case
 
