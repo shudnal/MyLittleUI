@@ -288,7 +288,7 @@ namespace MyLittleUI
             Config.Bind("General", "NexusID", 2562, "Nexus mod ID for updates");
 
             modEnabled = config("General", "Enabled", defaultValue: true, "Enable the mod. [Synced with Server]", synchronizedSetting: true);
-            configLocked = config("General", "Lock Configuration", defaultValue: false, "Configuration is locked and can be changed by server admins only. [Synced with Server]", synchronizedSetting: true);
+            configLocked = config("General", "Lock Configuration", defaultValue: true, "Configuration is locked and can be changed by server admins only. [Synced with Server]", synchronizedSetting: true);
             loggingEnabled = config("General", "Logging enabled", defaultValue: false, "Enable logging.");
             nonlocalizedButtons = config("General", "Nonlocalized button keys", defaultValue: true, "Keyboard keys A-Z are not localized in the current keyboard layout.");
             fixStatusEffectAndForecastPosition = config("General", "Status effects and forecast position fix", defaultValue: true, "If status effect position was not changed prior to 1.0.11 version - fix status effect list position for forecast.");

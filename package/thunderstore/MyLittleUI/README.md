@@ -3,7 +3,6 @@
 Bunch of little UI tweaks. Tooltips for production timers, player status, items. Custom chest names, buff list, multicraft, weather forecast and so on.
 
 ## Server sync
-* Server sync is disabled by default. Enable **Lock Configuration** config value to make it sync.
 * Config values marked with [Synced with Server] tail in tooltip will be synchronized from the server to all clients.
 * Most of that synced values are responsible for enabling/disabling whole section while the format of information is left to be chosen by client.
 * Please use modpack shared configs or share your config manually if you want the rest of the config similar.
