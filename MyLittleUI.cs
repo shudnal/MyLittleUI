@@ -15,12 +15,13 @@ namespace MyLittleUI
 {
     [BepInPlugin(pluginID, pluginName, pluginVersion)]
     [BepInDependency("randyknapp.mods.epicloot", BepInDependency.DependencyFlags.SoftDependency)]
+    [BepInDependency("Azumatt.AzuExtendedPlayerInventory", BepInDependency.DependencyFlags.SoftDependency)]
     [BepInIncompatibility("randyknapp.mods.auga")]
     public class MyLittleUI : BaseUnityPlugin
     {
         const string pluginID = "shudnal.MyLittleUI";
         const string pluginName = "My Little UI";
-        const string pluginVersion = "1.1.3";
+        const string pluginVersion = "1.1.4";
 
         private readonly Harmony harmony = new Harmony(pluginID);
 
@@ -119,6 +120,8 @@ namespace MyLittleUI
         public static ConfigEntry<int> itemQualityColumns;
         public static ConfigEntry<float> itemQualityLineSpacing;
         public static ConfigEntry<float> itemQualityCharacterSpacing;
+        public static ConfigEntry<bool> itemQualityIgnoreCustomEquipmentSlots;
+        public static ConfigEntry<bool> itemQualityIgnoreCustomSlots;
 
         private static ConfigEntry<float> inventoryOpenCloseAnimationSpeed;
 
@@ -445,6 +448,8 @@ namespace MyLittleUI
             itemQualityColumns = config("Item - Quality", "Maximum columns", defaultValue: 4, "Maximum amount of columns to show.");
             itemQualityLineSpacing = config("Item - Quality", "Space between lines", defaultValue: -35.0f, "Line spacing.");
             itemQualityCharacterSpacing = config("Item - Quality", "Space between characters", defaultValue: 8f, "Character spacing.");
+            itemQualityIgnoreCustomEquipmentSlots = config("Item - Quality", "Ignore equipment slots", defaultValue: false, "Ignore custom equipment slots added by AzuEPI or EaQS. Quick slot items will remain.");
+            itemQualityIgnoreCustomSlots = config("Item - Quality", "Ignore any custom slot", defaultValue: false, "Ignore every custom slot outside of shown inventory rows.");
 
             itemQualitySymbol.SettingChanged += (sender, args) => itemQualitySymbol.Value = itemQualitySymbol.Value[0].ToString();
 

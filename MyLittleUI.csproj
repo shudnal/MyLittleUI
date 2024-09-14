@@ -62,6 +62,10 @@
     <Reference Include="assembly_valheim_publicized">
       <HintPath>F:\Steam\steamapps\common\Valheim\valheim_Data\Managed\publicized_assemblies\assembly_valheim_publicized.dll</HintPath>
     </Reference>
+    <Reference Include="AzuExtendedPlayerInventoryAPI, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>Libs\AzuExtendedPlayerInventoryAPI.dll</HintPath>
+    </Reference>
     <Reference Include="BepInEx">
       <HintPath>F:\Steam\steamapps\common\Valheim\BepInEx\core\BepInEx.dll</HintPath>
     </Reference>
@@ -135,7 +139,12 @@
     <EmbeddedResource Include="Assets\Thunder.png" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="Libs\ServerSync.dll" />
+    <Content Include="Libs\AzuExtendedPlayerInventoryAPI.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Libs\ServerSync.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
   <ItemGroup>
     <None Include="ILRepack.targets" />

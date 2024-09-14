@@ -136,13 +136,34 @@ namespace MyLittleUI
         [HarmonyPatch(typeof(InventoryGrid), nameof(InventoryGrid.UpdateGui))]
         private class InventoryGrid_UpdateGui_DurabilityAndScale
         {
-            private static void Postfix(Inventory ___m_inventory, List<InventoryGrid.Element> ___m_elements)
+            private static readonly HashSet<ItemDrop.ItemData> filterItemQuality = new HashSet<ItemDrop.ItemData>();
+
+            private static void FillItemsToFilter()
+            {
+                AzuExtendedPlayerInventory.API.GetSlots().GetItemFuncs.DoIf(func => func != null, func => filterItemQuality.Add(func.Invoke(Player.m_localPlayer)));
+                
+                if (itemQualityIgnoreCustomSlots.Value)
+                    AzuExtendedPlayerInventory.API.GetQuickSlotsItems().Do(item => filterItemQuality.Add(item));
+            }
+
+            private static bool IgnoreItemQuality(InventoryGrid grid, ItemDrop.ItemData item)
+            {
+                return filterItemQuality.Contains(item) ||
+                      itemQualityIgnoreCustomEquipmentSlots.Value && grid.name == "EquipmentSlotGrid" ||
+                      itemQualityIgnoreCustomSlots.Value && (grid.name == "QuickSlotGrid" || grid.name == "EquipmentSlotGrid") ||
+                       (itemQualityIgnoreCustomSlots.Value && (item.m_gridPos.y >= grid.m_height || item.m_gridPos.x >= grid.m_width));
+            }
+
+            private static void Postfix(InventoryGrid __instance, Inventory ___m_inventory, List<InventoryGrid.Element> ___m_elements)
             {
                 if (!modEnabled.Value)
                     return;
 
-                int width = ___m_inventory.GetWidth();
+                filterItemQuality.Clear();
+                if ((itemQualityIgnoreCustomEquipmentSlots.Value || itemQualityIgnoreCustomSlots.Value) && AzuExtendedPlayerInventory.API.IsLoaded())
+                    FillItemsToFilter();
 
+                int width = ___m_inventory.GetWidth();
                 foreach (ItemDrop.ItemData item in ___m_inventory.GetAllItems())
                 {
                     int index = item.m_gridPos.y * width + item.m_gridPos.x;
@@ -150,7 +171,9 @@ namespace MyLittleUI
                     {
                         InventoryGrid.Element element = ___m_elements[index];
                         UpdateItemIcon(element.m_durability, element.m_icon);
-                        UpdateItemQuality(element.m_quality, item.m_quality);
+
+                        if (!IgnoreItemQuality(__instance, item))
+                            UpdateItemQuality(element.m_quality, item.m_quality);
                     }
                 }
             }

@@ -1,3 +1,6 @@
+# 1.1.4
+* option to hide item quality symbols for custom equipment and quick slots if it overlaps with captions
+
 # 1.1.3
 * server sync lock enabled by default
 * container hover update on container resize
