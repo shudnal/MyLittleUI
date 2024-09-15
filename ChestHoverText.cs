@@ -194,7 +194,7 @@ namespace MyLittleUI
                 if (___m_checkGuardStone && !PrivateArea.CheckAccess(__instance.transform.position, 0f, flash: false))
                     return;
 
-                string containerID = $"{__instance.m_nview.GetZDO()}-{__instance.m_width}x{__instance.m_height}";
+                string containerID = __instance.m_nview.GetZDO().ToString();
 
                 if (hoverTextCache.TryGetValue(containerID, out string hoverText))
                 {

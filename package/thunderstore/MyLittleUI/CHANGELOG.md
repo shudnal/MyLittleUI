@@ -1,3 +1,6 @@
+# 1.1.5
+* fix for chest items hover
+
 # 1.1.4
 * option to hide item quality symbols for custom equipment and quick slots if it overlaps with captions
 
