@@ -344,9 +344,14 @@ namespace MyLittleUI
             rtClockTime.sizeDelta = Vector2.zero;
         }
 
+        internal static void UpdateInfoBlocksVisibility()
+        {
+            parentObject?.SetActive(modEnabled.Value && Minimap.instance && Minimap.instance.m_mode != Minimap.MapMode.Large);
+        }
+
         internal static void UpdateVisibility()
         {
-            parentObject?.SetActive(modEnabled.Value);
+            UpdateInfoBlocksVisibility();
 
             UpdateDayTimeText();
 
@@ -467,6 +472,18 @@ namespace MyLittleUI
                 windsObjectRect = null;
 
                 weatherText = null;
+            }
+        }
+
+        [HarmonyPatch(typeof(Minimap), nameof(Minimap.SetMapMode))]
+        public static class Minimap_SetMapMode_UpdateInfoBlocksVisibility
+        {
+            public static void Postfix()
+            {
+                if (!modEnabled.Value)
+                    return;
+
+                UpdateInfoBlocksVisibility();
             }
         }
     }

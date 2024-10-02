@@ -1,3 +1,6 @@
+# 1.1.6
+* minimap info blocks will be properly hidden when map is open
+
 # 1.1.5
 * fix for chest items hover
 
