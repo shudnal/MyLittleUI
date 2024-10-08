@@ -1,6 +1,6 @@
 {
   "name": "MyLittleUI",
-  "version_number": "1.1.6",
+  "version_number": "1.1.7",
   "website_url": "https://github.com/shudnal/MyLittleUI",
   "description": "Bunch of little UI tweaks. Tooltips for production timers, player status, items. Custom chest names, buff list, multicraft, weather forecast and so on.",
   "dependencies": ["denikson-BepInExPack_Valheim-5.4.2202"]

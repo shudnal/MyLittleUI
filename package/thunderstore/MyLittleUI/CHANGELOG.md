@@ -1,3 +1,8 @@
+# 1.1.7
+* option to hide quality on lvl 1 items
+* option to hide quality on items at equipment slots (AzuEPI & EaQS)
+* option to recolor equipped item hover
+
 # 1.1.6
 * minimap info blocks will be properly hidden when map is open
 

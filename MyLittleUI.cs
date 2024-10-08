@@ -21,7 +21,7 @@ namespace MyLittleUI
     {
         const string pluginID = "shudnal.MyLittleUI";
         const string pluginName = "My Little UI";
-        const string pluginVersion = "1.1.6";
+        const string pluginVersion = "1.1.7";
 
         private readonly Harmony harmony = new Harmony(pluginID);
 
@@ -107,6 +107,7 @@ namespace MyLittleUI
         public static ConfigEntry<Color> durabilityBroken;
 
         public static ConfigEntry<float> itemIconScale;
+        public static ConfigEntry<Color> itemEquippedColor;
 
         public static ConfigEntry<bool> itemTooltip;
         public static ConfigEntry<bool> itemTooltipColored;
@@ -122,6 +123,9 @@ namespace MyLittleUI
         public static ConfigEntry<float> itemQualityCharacterSpacing;
         public static ConfigEntry<bool> itemQualityIgnoreCustomEquipmentSlots;
         public static ConfigEntry<bool> itemQualityIgnoreCustomSlots;
+        
+        public static ConfigEntry<bool> itemQualityHideLvl1;
+        public static ConfigEntry<bool> itemQualityHideCustomEquipmentSlots;
 
         private static ConfigEntry<float> inventoryOpenCloseAnimationSpeed;
 
@@ -435,6 +439,7 @@ namespace MyLittleUI
             durabilityBroken = config("Item - Durability", "4 - Broken", defaultValue: new Color(0.72941f, 0.03529f, 0.03529f, 1f), "Color of durability >= 0%.");
 
             itemIconScale = config("Item - Icon", "Icon scale", defaultValue: 1.0f, "Relative scale size of item icons.");
+            itemEquippedColor = config("Item - Icon", "Equipped color", defaultValue: Color.clear, "Override for color of equipped items.");
 
             itemTooltip = config("Item - Tooltip", "Enabled", defaultValue: true, "Updated item tooltip. Hold Alt to see original tooltip");
             itemTooltipColored = config("Item - Tooltip", "Colored numbers", defaultValue: true, "Orange and yellow value numbers in tooltip, light blue if disabled");
@@ -450,7 +455,7 @@ namespace MyLittleUI
             itemQualityCharacterSpacing = config("Item - Quality", "Space between characters", defaultValue: 8f, "Character spacing.");
             itemQualityIgnoreCustomEquipmentSlots = config("Item - Quality", "Ignore equipment slots", defaultValue: false, "Ignore custom equipment slots added by AzuEPI or EaQS. Quick slot items will remain.");
             itemQualityIgnoreCustomSlots = config("Item - Quality", "Ignore any custom slot", defaultValue: false, "Ignore every custom slot outside of shown inventory rows.");
-
+            
             itemQualitySymbol.SettingChanged += (sender, args) => itemQualitySymbol.Value = itemQualitySymbol.Value[0].ToString();
 
             itemQualitySymbol.SettingChanged += (sender, args) => ItemIcon.FillItemQualityCache();
@@ -459,6 +464,11 @@ namespace MyLittleUI
             itemQualityColumns.SettingChanged += (sender, args) => ItemIcon.FillItemQualityCache();
 
             ItemIcon.FillItemQualityCache();
+
+            itemQualityHideLvl1 = config("Item - Quality - Display", "Hide quality on lvl 1 items", defaultValue: false, "Hide lvl 1 quality if item lvl is 1.");
+            itemQualityHideCustomEquipmentSlots = config("Item - Quality - Display", "Hide quality on equipment slots", defaultValue: false, "Hide quality if item is in equipment slots.");
+           
+            itemQualityHideLvl1.SettingChanged += (sender, args) => AmmoCountIcon.UpdateVisibility();
 
             inventoryOpenCloseAnimationSpeed = config("Inventory", "Animation speed", defaultValue: 1f, "Inventory show/close animation speed");
 

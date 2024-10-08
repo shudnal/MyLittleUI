@@ -125,7 +125,7 @@ namespace MyLittleUI
             rtBait.anchorMin = new Vector2(0.5f, 0f);
             rtBait.anchorMax = new Vector2(1f, 0.5f);
 
-            foreach (HotkeyBar bar in isDirty.Keys.ToList())
+            foreach (HotkeyBar bar in isDirty.Keys)
                 isDirty[bar] = true;
         }
         

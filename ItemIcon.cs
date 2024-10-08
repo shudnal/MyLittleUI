@@ -7,28 +7,46 @@ using UnityEngine.UI;
 using UnityEngine;
 using static MyLittleUI.MyLittleUI;
 using BepInEx;
+using System.Linq;
 
 namespace MyLittleUI
 {
     internal static class ItemIcon
     {
         private static Vector3 itemIconScaleOriginal = Vector3.zero;
+        private static Color itemEquippedColorOriginal = Color.clear;
 
-        private static void UpdateItemIcon(GuiBar durability, Image icon)
+        private static void UpdateItemIcon(GuiBar durability, Image icon, Image equiped)
         {
             if (itemIconScaleOriginal == Vector3.zero)
                 itemIconScaleOriginal = icon.transform.localScale;
 
             icon.transform.localScale = itemIconScaleOriginal * Mathf.Clamp(itemIconScale.Value, 0.2f, 2f);
 
-            if (durabilityEnabled.Value && durability.isActiveAndEnabled)
+            if (equiped != null)
             {
+                if (itemEquippedColorOriginal == Color.clear)
+                    itemEquippedColorOriginal = equiped.color;
+
+                if (itemEquippedColor.Value != Color.clear)
+                    equiped.color = itemEquippedColor.Value;
+                else if (itemEquippedColorOriginal != Color.clear)
+                    equiped.color = itemEquippedColorOriginal;
+            }
+
+            if (durabilityEnabled.Value && durability != null)
+            {
+                if (!durability.m_barImage && durability.m_bar)
+                    durability.m_barImage = durability.m_bar.GetComponent<Image>();
+                
                 float percentage = durability.GetSmoothValue();
 
                 if (percentage >= 1f)
                 {
                     if (durability.GetColor() == Color.red)
                         durability.SetColor(durabilityBroken.Value);
+                    else if (durability.GetColor() != Color.clear)
+                        durability.gameObject.SetActive(false);
                 }
                 else
                 {
@@ -137,13 +155,24 @@ namespace MyLittleUI
         private class InventoryGrid_UpdateGui_DurabilityAndScale
         {
             private static readonly HashSet<ItemDrop.ItemData> filterItemQuality = new HashSet<ItemDrop.ItemData>();
+            private static readonly HashSet<ItemDrop.ItemData> hideItemQuality = new HashSet<ItemDrop.ItemData>();
+
+            private static IEnumerable<ItemDrop.ItemData> GetEqupmentSlotsItems()
+            {
+                return AzuExtendedPlayerInventory.API.GetSlots().GetItemFuncs.Where(func => func != null).Select(func => func.Invoke(Player.m_localPlayer));
+            }
+
+            private static IEnumerable<ItemDrop.ItemData> GetQuickSlotsItems()
+            {
+                return AzuExtendedPlayerInventory.API.GetQuickSlotsItems();
+            }
 
             private static void FillItemsToFilter()
             {
-                AzuExtendedPlayerInventory.API.GetSlots().GetItemFuncs.DoIf(func => func != null, func => filterItemQuality.Add(func.Invoke(Player.m_localPlayer)));
-                
+                GetEqupmentSlotsItems().Do(item => filterItemQuality.Add(item));
+
                 if (itemQualityIgnoreCustomSlots.Value)
-                    AzuExtendedPlayerInventory.API.GetQuickSlotsItems().Do(item => filterItemQuality.Add(item));
+                    GetQuickSlotsItems().Do(item => filterItemQuality.Add(item));
             }
 
             private static bool IgnoreItemQuality(InventoryGrid grid, ItemDrop.ItemData item)
@@ -152,6 +181,11 @@ namespace MyLittleUI
                       itemQualityIgnoreCustomEquipmentSlots.Value && grid.name == "EquipmentSlotGrid" ||
                       itemQualityIgnoreCustomSlots.Value && (grid.name == "QuickSlotGrid" || grid.name == "EquipmentSlotGrid") ||
                        (itemQualityIgnoreCustomSlots.Value && (item.m_gridPos.y >= grid.m_height || item.m_gridPos.x >= grid.m_width));
+            }
+
+            private static bool HideEquipmentSlotsQuality(InventoryGrid grid, ItemDrop.ItemData item)
+            {
+                return grid.name == "EquipmentSlotGrid" || hideItemQuality.Contains(item);
             }
 
             private static void Postfix(InventoryGrid __instance, Inventory ___m_inventory, List<InventoryGrid.Element> ___m_elements)
@@ -163,6 +197,10 @@ namespace MyLittleUI
                 if ((itemQualityIgnoreCustomEquipmentSlots.Value || itemQualityIgnoreCustomSlots.Value) && AzuExtendedPlayerInventory.API.IsLoaded())
                     FillItemsToFilter();
 
+                hideItemQuality.Clear();
+                if (itemQualityHideCustomEquipmentSlots.Value && AzuExtendedPlayerInventory.API.IsLoaded())
+                    GetEqupmentSlotsItems().Do(item => hideItemQuality.Add(item));
+
                 int width = ___m_inventory.GetWidth();
                 foreach (ItemDrop.ItemData item in ___m_inventory.GetAllItems())
                 {
@@ -170,9 +208,11 @@ namespace MyLittleUI
                     if (0 <= index && index < ___m_elements.Count)
                     {
                         InventoryGrid.Element element = ___m_elements[index];
-                        UpdateItemIcon(element.m_durability, element.m_icon);
+                        UpdateItemIcon(element.m_durability, element.m_icon, element.m_equiped);
 
-                        if (!IgnoreItemQuality(__instance, item))
+                        if (HideEquipmentSlotsQuality(__instance, item) || (itemQualityHideLvl1.Value && item.m_quality < 2))
+                            element.m_quality.SetText("");
+                        else if (!IgnoreItemQuality(__instance, item))
                             UpdateItemQuality(element.m_quality, item.m_quality);
                     }
                 }
@@ -193,7 +233,7 @@ namespace MyLittleUI
                     return;
 
                 foreach(HotkeyBar.ElementData element in __instance.m_elements)
-                    UpdateItemIcon(element.m_durability, element.m_icon);
+                    UpdateItemIcon(element.m_durability, element.m_icon, itemEquippedColor.Value != Color.clear ? element.m_equiped.GetComponent<Image>() : null);
             }
         }
     }
