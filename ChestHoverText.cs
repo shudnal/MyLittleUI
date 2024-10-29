@@ -95,7 +95,7 @@ namespace MyLittleUI
                 result.Append("\n");
 
                 List<ChestItem> itemsInChest = new List<ChestItem>();
-                foreach (ItemDrop.ItemData itemData in container.GetInventory().GetAllItemsSorted())
+                foreach (ItemDrop.ItemData itemData in container.GetInventory().GetAllItemsInGridOrder())
                 {
                     ChestItem item = itemsInChest.Find(item => item.m_name == itemData.m_shared.m_name);
                     if (item == null)

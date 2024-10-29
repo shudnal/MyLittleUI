@@ -89,7 +89,7 @@ namespace MyLittleUI
 
             private bool IsBaitAmmo()
             {
-                return m_item.m_shared.m_ammoType == "fishingbait";
+                return m_item.m_shared.m_ammoType == "$item_fishingbait";
             }
         }
 

@@ -201,7 +201,7 @@ namespace MyLittleUI
             if (!InventoryGui.instance)
                 return;
 
-            showPanel = IsMulticraftEnabled() && InventoryGui.instance.m_selectedRecipe.Key != null && InventoryGui.instance.m_selectedRecipe.Value == null;
+            showPanel = IsMulticraftEnabled() && InventoryGui.instance.m_selectedRecipe.Recipe != null && InventoryGui.instance.m_selectedRecipe.ItemData == null && InventoryGui.instance.m_selectedRecipe.CanCraft;
 
             panel?.gameObject.SetActive(showPanel && InventoryGui.instance.m_craftButton.isActiveAndEnabled);
 
@@ -283,13 +283,13 @@ namespace MyLittleUI
                 }
 
                 string numbers = Regex.Replace(Regex.Replace(sb.ToString(), "<.*?>", String.Empty), @"[^\d]", String.Empty);
-                if (__instance.m_selectedRecipe.Key.m_requireOnlyOneIngredient)
+                if (__instance.m_selectedRecipe.Recipe.m_requireOnlyOneIngredient)
                     numbers += Mathf.Sin(Time.time * 5f) > 0f;
 
-                if (!cachedAmount.TryGetValue(__instance.m_selectedRecipe.Key, out Tuple<string, int> tuple) || tuple.Item1 != numbers)
-                    cachedAmount[__instance.m_selectedRecipe.Key] = Tuple.Create(numbers, GetMaximumAmount(__instance.m_selectedRecipe.Key, player));
+                if (!cachedAmount.TryGetValue(__instance.m_selectedRecipe.Recipe, out Tuple<string, int> tuple) || tuple.Item1 != numbers)
+                    cachedAmount[__instance.m_selectedRecipe.Recipe] = Tuple.Create(numbers, GetMaximumAmount(__instance.m_selectedRecipe.Recipe, player));
 
-                int maxAmount = cachedAmount[__instance.m_selectedRecipe.Key].Item2;
+                int maxAmount = cachedAmount[__instance.m_selectedRecipe.Recipe].Item2;
 
                 if (AmountScrollHandler.hovered && ZInput.GetMouseScrollWheel() != 0 && Time.frameCount - lastScrollTriggerFrame > 2)
                 {

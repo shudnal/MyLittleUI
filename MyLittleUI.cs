@@ -10,6 +10,7 @@ using HarmonyLib;
 using TMPro;
 using UnityEngine;
 using ServerSync;
+using UnityEngine.InputSystem;
 
 namespace MyLittleUI
 {
@@ -21,7 +22,7 @@ namespace MyLittleUI
     {
         const string pluginID = "shudnal.MyLittleUI";
         const string pluginName = "My Little UI";
-        const string pluginVersion = "1.1.7";
+        const string pluginVersion = "1.1.8";
 
         private readonly Harmony harmony = new Harmony(pluginID);
 
@@ -297,12 +298,11 @@ namespace MyLittleUI
             modEnabled = config("General", "Enabled", defaultValue: true, "Enable the mod. [Synced with Server]", synchronizedSetting: true);
             configLocked = config("General", "Lock Configuration", defaultValue: true, "Configuration is locked and can be changed by server admins only. [Synced with Server]", synchronizedSetting: true);
             loggingEnabled = config("General", "Logging enabled", defaultValue: false, "Enable logging.");
-            nonlocalizedButtons = config("General", "Nonlocalized button keys", defaultValue: true, "Keyboard keys A-Z are not localized in the current keyboard layout.");
+            nonlocalizedButtons = config("General", "Nonlocalized button keys", defaultValue: true, "Keyboard keys A-Z will not be localized in the current keyboard layout. If changed while in game then time should pass for some cached localization strings to be cleared.");
             fixStatusEffectAndForecastPosition = config("General", "Status effects and forecast position fix", defaultValue: true, "If status effect position was not changed prior to 1.0.11 version - fix status effect list position for forecast.");
 
-            modEnabled.SettingChanged += (sender, args) => InfoBlocks.UpdateVisibility();
-            modEnabled.SettingChanged += (sender, args) => CustomStatusEffectsList.InitializeStatusEffectTemplate();
-            modEnabled.SettingChanged += (sender, args) => CustomStatusEffectsList.ChangeSailingIndicator();
+            modEnabled.SettingChanged += (s, e) => { InfoBlocks.UpdateVisibility(); CustomStatusEffectsList.InitializeStatusEffectTemplate(); CustomStatusEffectsList.ChangeSailingIndicator(); ZInput_GetBoundKeyString_NonlocalizedButtons.OnChange(); };
+            nonlocalizedButtons.SettingChanged += (s, e) => ZInput_GetBoundKeyString_NonlocalizedButtons.OnChange();
 
             clockShowDay = config("Info - Clock", "Show day", defaultValue: true, "Enable day number [Synced with Server]", synchronizedSetting: true);
             clockShowTime = config("Info - Clock", "Show time", defaultValue: true, "Enable time [Synced with Server]", synchronizedSetting: true);
@@ -1363,19 +1363,28 @@ namespace MyLittleUI
         [HarmonyPatch(typeof(ZInput), nameof(ZInput.GetBoundKeyString))]
         public static class ZInput_GetBoundKeyString_NonlocalizedButtons
         {
-            public static bool Prefix(ZInput __instance, string name, ref string __result)
+            public static bool mapUpdated = false;
+            public static readonly List<string> keyCodeValues = Enum.GetValues(typeof(Key)).OfType<Key>().Where(key => 15 <= (int)key && (int)key <= 40).Select(key => key.ToString()).ToList();
+
+            public static void OnChange()
+            {
+                mapUpdated = false;
+            }
+
+            public static void Prefix(ZInput __instance)
             {
                 if (!modEnabled.Value)
-                    return true;
+                    return;
 
-                if (nonlocalizedButtons.Value && __instance.m_buttons.TryGetValue(name, out var value)
-                    && value.Source == ZInput.InputSource.KeyboardMouse && !value.m_bMouseButtonSet && 15 <= (int)value.m_key && (int)value.m_key <= 40)
-                {
-                    __result = value.m_key.ToString();
-                    return false;
-                }
+                if (mapUpdated)
+                    return;
 
-                return true;
+                mapUpdated = true;
+
+                if (modEnabled.Value && nonlocalizedButtons.Value)
+                    keyCodeValues.Do(key => ZInput.s_keyLocalizationMap[key] = key);
+                else
+                    keyCodeValues.Do(key => ZInput.s_keyLocalizationMap.Remove(key));
             }
         }
     }

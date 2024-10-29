@@ -1,3 +1,6 @@
+# 1.1.8
+* bog witch patch
+
 # 1.1.7
 * option to hide quality on lvl 1 items
 * option to hide quality on items at equipment slots (AzuEPI & EaQS)

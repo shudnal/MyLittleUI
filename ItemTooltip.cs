@@ -106,6 +106,7 @@ namespace MyLittleUI
             }
 
             craftingTokens.Clear();
+            craftingTokens.Add("$item_armor");
             craftingTokens.Add("$item_weight");
             craftingTokens.Add("$item_quality");
             craftingTokens.Add("$item_durability");
@@ -288,6 +289,8 @@ namespace MyLittleUI
                 return statString.Insert(index, GetStringUpgradeFrom(String.Format("<color=orange>{0}</color> <color=yellow>({1})</color>", item.GetBaseBlockPower(m_quality - 1), item.GetBlockPowerTooltip(m_quality - 1).ToString("0"))));
             else if (token == "$item_blockforce" && item.GetDeflectionForce(m_quality) != item.GetDeflectionForce(m_quality - 1))
                 return statString.Insert(index, GetStringUpgradeFrom(String.Format("<color=orange>{0}</color>", item.GetDeflectionForce(m_quality - 1))));
+            else if (token == "$item_armor" && item.GetArmor(m_quality, Game.m_worldLevel) != item.GetArmor(m_quality - 1, Game.m_worldLevel))
+                return statString.Insert(index, GetStringUpgradeFrom(String.Format("<color=orange>{0}</color>", item.GetArmor(m_quality - 1, Game.m_worldLevel))));
 
             return statString;
 
@@ -326,7 +329,7 @@ namespace MyLittleUI
             }
         }
 
-        [HarmonyPatch(typeof(ItemDrop.ItemData), nameof(ItemDrop.ItemData.GetTooltip), typeof(ItemDrop.ItemData), typeof(int), typeof(bool), typeof(float))]
+        [HarmonyPatch(typeof(ItemDrop.ItemData), nameof(ItemDrop.ItemData.GetTooltip), typeof(ItemDrop.ItemData), typeof(int), typeof(bool), typeof(float), typeof(int))]
         private class ItemDropItemData_GetTooltip_ItemTooltip
         {
             [HarmonyPriority(Priority.First)]
