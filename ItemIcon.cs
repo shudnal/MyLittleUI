@@ -223,7 +223,7 @@ namespace MyLittleUI
         private class HotkeyBar_UpdateIcons_DurabilityAndScale
         {
             [HarmonyPriority(Priority.Last)]
-            [HarmonyAfter("Azumatt.AzuExtendedPlayerInventory")]
+            [HarmonyAfter("Azumatt.AzuExtendedPlayerInventory", "shudnal.ExtraSlots")]
             private static void Postfix(HotkeyBar __instance, Player player)
             {
                 if (!modEnabled.Value)

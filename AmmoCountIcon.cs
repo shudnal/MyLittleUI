@@ -125,7 +125,7 @@ namespace MyLittleUI
             rtBait.anchorMin = new Vector2(0.5f, 0f);
             rtBait.anchorMax = new Vector2(1f, 0.5f);
 
-            foreach (HotkeyBar bar in isDirty.Keys)
+            foreach (HotkeyBar bar in isDirty.Keys.ToList())
                 isDirty[bar] = true;
         }
         
@@ -142,6 +142,8 @@ namespace MyLittleUI
             {
                 if (__instance.m_elementPrefab == null)
                     return;
+
+                isDirty[__instance] = false;
 
                 elementPrefab = __instance.m_elementPrefab;
 
@@ -202,7 +204,7 @@ namespace MyLittleUI
         public static class HotkeyBar_Update_UpdateAmmoIconCountDirtyState
         {
             [HarmonyPriority(Priority.Last)]
-            [HarmonyBefore("Azumatt.AzuExtendedPlayerInventory")]
+            [HarmonyBefore("Azumatt.AzuExtendedPlayerInventory", "shudnal.ExtraSlots")]
             public static void Prefix(HotkeyBar __instance)
             {
                 if (!modEnabled.Value)
@@ -221,7 +223,7 @@ namespace MyLittleUI
         public static class HotkeyBar_UpdateIcons_UpdateAmmoCountAndIcon
         {
             [HarmonyPriority(Priority.Last)]
-            [HarmonyAfter("Azumatt.AzuExtendedPlayerInventory")]
+            [HarmonyAfter("Azumatt.AzuExtendedPlayerInventory", "shudnal.ExtraSlots")]
             public static void Postfix(HotkeyBar __instance, Player player)
             {
                 if (!modEnabled.Value)
