@@ -1,3 +1,6 @@
+# 1.1.9
+* multicraft fixed
+
 # 1.1.8
 * bog witch patch
 

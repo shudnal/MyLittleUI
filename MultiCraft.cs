@@ -2,7 +2,6 @@
 using HarmonyLib;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using TMPro;
@@ -20,7 +19,6 @@ namespace MyLittleUI
         public const string textAmountName = "Amount";
 
         private static readonly Recipe tempRecipe = ScriptableObject.CreateInstance<Recipe>();
-        private static readonly List<Piece.Requirement> tempReqs = new List<Piece.Requirement>();
         private static readonly StringBuilder sb = new StringBuilder(10);
         private static readonly Dictionary<Recipe, Tuple<string, int>> cachedAmount = new Dictionary<Recipe, Tuple<string, int>>();
 
@@ -59,32 +57,15 @@ namespace MyLittleUI
             int result = 0;
             if (!recipe.m_requireOnlyOneIngredient)
             {
-                while (player.HaveRequirements(IncreaseRequirements(recipe, result + 1), discover: false, 1))
+                while (player.HaveRequirements(recipe, discover: false, qualityLevel: 1, amount: result + 1))
                     result++;
 
                 return result;
             }
 
-            for (int i = 0; i < recipe.m_resources.Length; i++)
-            {
-                if (!(player.IsKnownMaterial(recipe.m_resources[i].m_resItem.m_itemData.m_shared.m_name) && recipe.m_resources[i].GetAmount(1) > 0))
-                    continue;
-
-                int j = 0;
-                while (player.HaveRequirements(IncreaseRequirements(recipe, j + 1, i), discover: false, 1))
-                    j++;
-
-                result += j;
-            }
-
-            return result;
-        }
-
-        private static Recipe IncreaseRequirements(Recipe recipe, int amount, int requireOnlyOneIngredient = -1)
-        {
-            if (amount == 1 && requireOnlyOneIngredient == -1)
-                return recipe;
-
+            // Vanilla logic only counts max amount on single resource usage
+            // To get proper max amount calculate maximum amount of every resource available
+            // Iterate through every resource one by one and get max amount
             tempRecipe.m_item = recipe.m_item;
             tempRecipe.m_amount = recipe.m_amount;
             tempRecipe.m_enabled = recipe.m_enabled;
@@ -92,21 +73,26 @@ namespace MyLittleUI
             tempRecipe.m_craftingStation = recipe.m_craftingStation;
             tempRecipe.m_repairStation = recipe.m_repairStation;
             tempRecipe.m_minStationLevel = recipe.m_minStationLevel;
+            tempRecipe.m_listSortWeight = recipe.m_listSortWeight;
             tempRecipe.m_requireOnlyOneIngredient = false;
+            tempRecipe.m_resources = new Piece.Requirement[1];
 
-            tempReqs.Clear();
             for (int i = 0; i < recipe.m_resources.Length; i++)
             {
-                if (requireOnlyOneIngredient == -1 || requireOnlyOneIngredient == i) 
-                {
-                    tempReqs.Add(JsonUtility.FromJson<Piece.Requirement>(JsonUtility.ToJson(recipe.m_resources[i])));
-                    tempReqs.Last().m_amount *= amount;
-                }
+                Piece.Requirement requirement = recipe.m_resources[i];
+                if (!player.IsKnownMaterial(requirement.m_resItem.m_itemData.m_shared.m_name) || requirement.m_amount < 1)
+                    continue;
+
+                tempRecipe.m_resources[0] = JsonUtility.FromJson<Piece.Requirement>(JsonUtility.ToJson(requirement));
+
+                int j = 0;
+                while (player.HaveRequirements(tempRecipe, discover: false, qualityLevel: 1, amount: j + 1))
+                    j++;
+
+                result += j;
             }
 
-            tempRecipe.m_resources = tempReqs.ToArray();
-
-            return tempRecipe;
+            return result;
         }
 
         private static void CreateMulticraftPanel()
