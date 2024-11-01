@@ -162,22 +162,15 @@ namespace MyLittleUI
                 return AzuExtendedPlayerInventory.API.GetSlots().GetItemFuncs.Where(func => func != null).Select(func => func.Invoke(Player.m_localPlayer));
             }
 
-            private static IEnumerable<ItemDrop.ItemData> GetQuickSlotsItems()
-            {
-                return AzuExtendedPlayerInventory.API.GetQuickSlotsItems();
-            }
-
             private static void FillItemsToFilter()
             {
                 GetEqupmentSlotsItems().Do(item => filterItemQuality.Add(item));
-
-                if (itemQualityIgnoreCustomSlots.Value)
-                    GetQuickSlotsItems().Do(item => filterItemQuality.Add(item));
             }
 
             private static bool IgnoreItemQuality(InventoryGrid grid, ItemDrop.ItemData item)
             {
                 return filterItemQuality.Contains(item) ||
+                      (itemQualityIgnoreCustomEquipmentSlots.Value || itemQualityIgnoreCustomSlots.Value) && ExtraSlots.API.IsItemInSlot(item) ||
                       itemQualityIgnoreCustomEquipmentSlots.Value && grid.name == "EquipmentSlotGrid" ||
                       itemQualityIgnoreCustomSlots.Value && (grid.name == "QuickSlotGrid" || grid.name == "EquipmentSlotGrid") ||
                        (itemQualityIgnoreCustomSlots.Value && (item.m_gridPos.y >= grid.m_height || item.m_gridPos.x >= grid.m_width));
@@ -185,7 +178,7 @@ namespace MyLittleUI
 
             private static bool HideEquipmentSlotsQuality(InventoryGrid grid, ItemDrop.ItemData item)
             {
-                return grid.name == "EquipmentSlotGrid" || hideItemQuality.Contains(item);
+                return grid.name == "EquipmentSlotGrid" || hideItemQuality.Contains(item) || ExtraSlots.API.IsItemInEquipmentSlot(item);
             }
 
             private static void Postfix(InventoryGrid __instance, Inventory ___m_inventory, List<InventoryGrid.Element> ___m_elements)
@@ -194,11 +187,11 @@ namespace MyLittleUI
                     return;
 
                 filterItemQuality.Clear();
-                if ((itemQualityIgnoreCustomEquipmentSlots.Value || itemQualityIgnoreCustomSlots.Value) && AzuExtendedPlayerInventory.API.IsLoaded())
+                if ((itemQualityIgnoreCustomEquipmentSlots.Value || itemQualityIgnoreCustomSlots.Value) && (AzuExtendedPlayerInventory.API.IsLoaded()))
                     FillItemsToFilter();
 
                 hideItemQuality.Clear();
-                if (itemQualityHideCustomEquipmentSlots.Value && AzuExtendedPlayerInventory.API.IsLoaded())
+                if (itemQualityHideCustomEquipmentSlots.Value && (AzuExtendedPlayerInventory.API.IsLoaded()))
                     GetEqupmentSlotsItems().Do(item => hideItemQuality.Add(item));
 
                 int width = ___m_inventory.GetWidth();

@@ -17,6 +17,7 @@ namespace MyLittleUI
     [BepInPlugin(pluginID, pluginName, pluginVersion)]
     [BepInDependency("randyknapp.mods.epicloot", BepInDependency.DependencyFlags.SoftDependency)]
     [BepInDependency("Azumatt.AzuExtendedPlayerInventory", BepInDependency.DependencyFlags.SoftDependency)]
+    [BepInDependency("shudnal.ExtraSlots", BepInDependency.DependencyFlags.SoftDependency)]
     [BepInIncompatibility("randyknapp.mods.auga")]
     public class MyLittleUI : BaseUnityPlugin
     {
