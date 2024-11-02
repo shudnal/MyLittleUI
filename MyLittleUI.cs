@@ -406,11 +406,11 @@ namespace MyLittleUI
 
             ammoCountEnabled = config("Item - Ammo icon and count", "Ammo count Enabled", defaultValue: true, "Show amount of available ammo and ammo icon for weapon in hotbar  [Synced with Server]", synchronizedSetting: true);
             ammoCountColor = config("Item - Ammo icon and count", "Ammo count Color", defaultValue: Color.clear, "Color of available ammo for weapon in hotbar");
-            ammoCountPosition = config("Item - Ammo icon and count", "Ammo count Position", defaultValue: new Vector2(0f, 86f), "Position of available ammo for weapon in hotbar");
+            ammoCountPosition = config("Item - Ammo icon and count", "Ammo count Position", defaultValue: new Vector2(0f, -14f), "Position of available ammo for weapon in hotbar");
             ammoCountFontSize = config("Item - Ammo icon and count", "Ammo count FontSize", defaultValue: 14, "Show amount of available ammo and ammo icon for weapon in hotbar");
             ammoCountAlignment = config("Item - Ammo icon and count", "Ammo count Alignment", defaultValue: HorizontalAlignmentOptions.Center, "Text horizontal alignment of available ammo for weapon in hotbar");
             ammoIconEnabled = config("Item - Ammo icon and count", "Ammo icon Enabled", defaultValue: true, "Show icon of available ammo for weapon in hotbar [Synced with Server]", synchronizedSetting: true);
-            ammoIconPosition = config("Item - Ammo icon and count", "Ammo icon Position", defaultValue: new Vector2(0f, 40f), "Position of ammo icon for weapon in hotbar");
+            ammoIconPosition = config("Item - Ammo icon and count", "Ammo icon Position", defaultValue: new Vector2(0f, -40f), "Position of ammo icon for weapon in hotbar");
             ammoIconSize = config("Item - Ammo icon and count", "Ammo icon Size", defaultValue: new Vector2(-10f, -10f), "Ammo icon for weapon in hotbar");
 
             baitIconEnabled = config("Item - Ammo icon and count", "Bait icon Enabled", defaultValue: true, "Show amount of available ammo and ammo icon for weapon in hotbar [Synced with Server]", synchronizedSetting: true);
