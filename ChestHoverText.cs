@@ -191,6 +191,9 @@ namespace MyLittleUI
                 if (chestHoverName.Value == ChestNameHover.Vanilla && chestHoverItems.Value == ChestItemsHover.Vanilla)
                     return;
 
+                if (__instance.m_nview == null || !__instance.m_nview.IsValid())
+                    return;
+
                 if (___m_checkGuardStone && !PrivateArea.CheckAccess(__instance.transform.position, 0f, flash: false))
                     return;
 
