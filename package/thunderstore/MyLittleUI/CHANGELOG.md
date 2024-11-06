@@ -1,3 +1,9 @@
+# 1.1.10
+* craft list filter (name, description, resources)
+* better support for multicraft with nocost enabled
+* ammo count position under item icon by default
+* destroyed container rare NRE fix
+
 # 1.1.9
 * multicraft fixed
 

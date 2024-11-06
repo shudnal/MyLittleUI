@@ -38,6 +38,7 @@
   <ItemGroup>
     <Compile Include="AmmoCountIcon.cs" />
     <Compile Include="ChestHoverText.cs" />
+    <Compile Include="CraftFilter.cs" />
     <Compile Include="InfoBlocks.cs" />
     <Compile Include="InventoryCharacterStats.cs" />
     <Compile Include="ItemIcon.cs" />
@@ -72,6 +73,10 @@
     <Reference Include="ExtraSlotsAPI, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\Assemblies\API\ExtraSlotsAPI.dll</HintPath>
+    </Reference>
+    <Reference Include="gui_framework, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\Assemblies\stable\gui_framework.dll</HintPath>
     </Reference>
     <Reference Include="ServerSync, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>

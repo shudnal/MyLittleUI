@@ -23,7 +23,7 @@ namespace MyLittleUI
     {
         const string pluginID = "shudnal.MyLittleUI";
         const string pluginName = "My Little UI";
-        const string pluginVersion = "1.1.9";
+        const string pluginVersion = "1.1.10";
 
         private readonly Harmony harmony = new Harmony(pluginID);
 
@@ -101,6 +101,8 @@ namespace MyLittleUI
         internal static ConfigEntry<bool> showAvailableItemsAmount;
         internal static ConfigEntry<Color> availableItemsAmountColor;
         internal static ConfigEntry<bool> showMulticraftButtons;
+
+        public static ConfigEntry<bool> craftingFilterEnabled;
 
         public static ConfigEntry<bool> durabilityEnabled;
         public static ConfigEntry<Color> durabilityFine;
@@ -432,6 +434,10 @@ namespace MyLittleUI
             showMulticraftButtons = config("Item - Available resources amount", "Multicraft", defaultValue: true, "Show multicraft buttons [Synced with Server]", synchronizedSetting: true);
             
             showMulticraftButtons.SettingChanged += (sender, args) => MultiCraft.UpdateMulticraftPanel();
+
+            craftingFilterEnabled = config("Item - Crafting - Filter", "Enabled", defaultValue: true, "Enable filtering of craft list. [Synced with Server]", synchronizedSetting: true);
+
+            craftingFilterEnabled.SettingChanged += (s, e) => CraftFilter.UpdateVisibility();
 
             durabilityEnabled = config("Item - Durability", "0 - Enabled", defaultValue: true, "Enable color of durability. [Synced with Server]", synchronizedSetting: true);
             durabilityFine = config("Item - Durability", "1 - Fine", defaultValue: new Color(0.11765f, 0.72941f, 0.03529f, 1f), "Color of durability > 75%.");
@@ -1387,6 +1393,15 @@ namespace MyLittleUI
                 else
                     keyCodeValues.Do(key => ZInput.s_keyLocalizationMap.Remove(key));
             }
+        }
+
+        public void UpdateCraftingPanel()
+        {
+            if (!InventoryGui.instance)
+                return;
+
+            InventoryGui.instance.UpdateCraftingPanel(focusView: true);
+            InventoryGui.instance.m_moveItemEffects.Create(Player.m_localPlayer.transform.position, Quaternion.identity);
         }
     }
 }
