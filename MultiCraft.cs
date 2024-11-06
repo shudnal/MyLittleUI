@@ -187,7 +187,9 @@ namespace MyLittleUI
             if (!InventoryGui.instance)
                 return;
 
-            showPanel = IsMulticraftEnabled() && InventoryGui.instance.m_selectedRecipe.Recipe != null && InventoryGui.instance.m_selectedRecipe.ItemData == null && InventoryGui.instance.m_selectedRecipe.CanCraft;
+            showPanel = IsMulticraftEnabled() && InventoryGui.instance.m_selectedRecipe.Recipe != null 
+                                              && InventoryGui.instance.m_selectedRecipe.ItemData == null 
+                                              && (InventoryGui.instance.m_selectedRecipe.CanCraft || Player.m_localPlayer.NoCostCheat());
 
             panel?.gameObject.SetActive(showPanel && InventoryGui.instance.m_craftButton.isActiveAndEnabled);
 
@@ -350,6 +352,15 @@ namespace MyLittleUI
 
         [HarmonyPatch(typeof(Player), nameof(Player.OnInventoryChanged))]
         public static class Player_OnInventoryChanged_MulticraftUpdateMaxAmount
+        {
+            public static void Postfix()
+            {
+                cachedAmount.Clear();
+            }
+        }
+
+        [HarmonyPatch(typeof(Player), nameof(Player.ToggleNoPlacementCost))]
+        public static class Player_ToggleNoPlacementCost_MulticraftUpdateMaxAmount
         {
             public static void Postfix()
             {
