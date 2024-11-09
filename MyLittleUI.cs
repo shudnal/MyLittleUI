@@ -1394,15 +1394,6 @@ namespace MyLittleUI
                     keyCodeValues.Do(key => ZInput.s_keyLocalizationMap.Remove(key));
             }
         }
-
-        public void UpdateCraftingPanel()
-        {
-            if (!InventoryGui.instance)
-                return;
-
-            InventoryGui.instance.UpdateCraftingPanel(focusView: true);
-            InventoryGui.instance.m_moveItemEffects.Create(Player.m_localPlayer.transform.position, Quaternion.identity);
-        }
     }
 }
 
