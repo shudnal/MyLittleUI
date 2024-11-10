@@ -61,14 +61,14 @@ namespace MyLittleUI
             weight.sizeDelta = Vector2.one * 64f;
             weight.anchoredPosition = new Vector2(-898f, -276.1f);
 
-            RectTransform weightIcon = UnityEngine.Object.Instantiate(InventoryGui.instance.m_weight.transform.parent.Find("weight_icon").transform as RectTransform, weight);
+            RectTransform weightIcon = UnityEngine.Object.Instantiate(InventoryGui.instance.m_weight?.transform.parent.Find("weight_icon")?.transform as RectTransform, weight);
             weightIcon.name = "Icon";
             weightIcon.anchorMin = Vector2.one * 0.5f;
             weightIcon.anchorMax = Vector2.one * 0.5f;
             weightIcon.sizeDelta = Vector2.one * 32f;
             weightIcon.anchoredPosition = new Vector2(0f, 12f);
 
-            RectTransform weightTextRT = UnityEngine.Object.Instantiate(InventoryGui.instance.m_weight.transform as RectTransform, weight);
+            RectTransform weightTextRT = UnityEngine.Object.Instantiate(InventoryGui.instance.m_weight?.transform as RectTransform, weight);
             weightTextRT.name = "Text";
             weightTextRT.anchorMin = Vector2.one * 0.5f;
             weightTextRT.anchorMax = Vector2.one * 0.5f;
@@ -77,7 +77,7 @@ namespace MyLittleUI
 
             weightText = weightTextRT.GetComponent<TMP_Text>();
 
-            RectTransform weightBarRT = UnityEngine.Object.Instantiate(InventoryGui.instance.m_playerGrid.m_elementPrefab.transform.Find("durability") as RectTransform, weight);
+            RectTransform weightBarRT = UnityEngine.Object.Instantiate(InventoryGui.instance.m_playerGrid.m_elementPrefab?.transform.Find("durability"), weight)?.GetComponent<RectTransform>();
             weightBarRT.name = "Bar";
             weightBarRT.anchorMin = Vector2.one * 0.5f;
             weightBarRT.anchorMax = Vector2.one * 0.5f;
@@ -144,18 +144,17 @@ namespace MyLittleUI
             if (slotsBackground)
                 slotsBackground.color = slotsBackgroundColor.Value;
 
-            if (weight)
+            weight?.gameObject.SetActive(modEnabled.Value && showWeight.Value);
+            if (weight.gameObject.activeInHierarchy)
             {
-                weight.gameObject.SetActive(modEnabled.Value && showWeight.Value);
                 weight.anchoredPosition = weightPosition.Value;
                 weightText.color = weightFontColor.Value;
             }
 
-            if (slots)
+            slots?.gameObject.SetActive(modEnabled.Value && showSlots.Value);
+            if (slots.gameObject.activeInHierarchy)
             {
-                slots.gameObject.SetActive(modEnabled.Value && showSlots.Value);
                 slots.anchoredPosition = slotsPosition.Value;
-
                 slotsText.color = slotsFontColor.Value;
             }
         }
@@ -167,28 +166,29 @@ namespace MyLittleUI
 
             UpdateConfigurableValues();
 
-            if (weight)
+            if (weight.gameObject.activeInHierarchy)
             {
                 if (totalWeight > maxWeight && Mathf.Sin(Time.time * 10f) > 0f)
                     weightText?.SetText($"<color=red>{totalWeight}</color>/{maxWeight}");
                 else
                     weightText?.SetText($"{totalWeight}/{maxWeight}");
 
-                weightBar.SetMaxValue(maxWeight);
-                weightBar.SetValue(totalWeight);
-                weightBar.SetColor(gradient.Evaluate(Mathf.Clamp01(weightBar.m_value / weightBar.m_maxValue)));
+                weightBar?.SetMaxValue(maxWeight);
+                weightBar?.SetValue(totalWeight);
+                weightBar?.SetColor(gradient.Evaluate(Mathf.Clamp01(weightBar.m_value / weightBar.m_maxValue)));
             }
 
-            if (slots)
+            if (slots.gameObject.activeInHierarchy)
             {
                 if (emptySlots <= 0 && Mathf.Sin(Time.time * 10f) > 0f)
                     slotsText?.SetText($"<color=red>{emptySlots}</color>/{maxSlots}");
                 else
                     slotsText?.SetText($"{emptySlots}/{maxSlots}");
 
-                slotsBar.SetMaxValue(maxSlots);
-                slotsBar.SetValue(maxSlots - emptySlots);
-                slotsBar.SetColor(gradient.Evaluate(Mathf.Clamp01(slotsBar.m_value / slotsBar.m_maxValue)));
+                slotsBar?.SetMaxValue(maxSlots);
+                slotsBar?.SetValue(maxSlots - emptySlots);
+                if (slotsBar?.m_maxValue != 0f)
+                    slotsBar?.SetColor(gradient.Evaluate(Mathf.Clamp01(slotsBar.m_value / slotsBar.m_maxValue)));
             }
         }
 

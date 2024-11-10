@@ -16,6 +16,8 @@ namespace MyLittleUI
     {
         private const float fieldHeight = 32f;
 
+        private static Vector2 listAnchorMin = new Vector2(-1f, -1f);
+
         private static readonly Dictionary<Recipe, string> recipeCache = new Dictionary<Recipe, string>();
 
         private static GuiInputField playerFilter;
@@ -25,17 +27,21 @@ namespace MyLittleUI
         private static readonly StringBuilder sb = new StringBuilder();
         private static readonly StringBuilder sbItem = new StringBuilder();
 
-        private static GuiInputField InitFilterField(RectTransform parent)
+        private static void InitFilterField()
         {
+            RectTransform recipeList = InventoryGui.instance.m_recipeListScroll.transform.parent as RectTransform;
+
             // Add filter field on the bottom of crafting list
-            GameObject filterField = UnityEngine.Object.Instantiate(TextInput.instance.m_inputField.gameObject, parent);
-            filterField.name = "FilterField";
+            GameObject filterField = UnityEngine.Object.Instantiate(TextInput.instance.m_inputField.gameObject, recipeList.parent);
+            filterField.name = "MLUI_FilterField";
+            filterField.transform.SetSiblingIndex(recipeList.GetSiblingIndex() + 1);
 
             RectTransform playerFilterRT = filterField.GetComponent<RectTransform>();
-            playerFilterRT.anchorMin = new Vector2(0.5f, 0.00f);
-            playerFilterRT.anchorMax = new Vector2(0.5f, 0.00f);
-            playerFilterRT.sizeDelta = new Vector2(parent.rect.width - 3, fieldHeight);
-            playerFilterRT.anchoredPosition = new Vector2(0, (fieldHeight / 2) + 1);
+            playerFilterRT.anchorMin = Vector2.zero;
+            playerFilterRT.anchorMax = Vector2.zero;
+            playerFilterRT.sizeDelta = new Vector2(recipeList.rect.width, fieldHeight);
+            playerFilterRT.anchoredPosition = new Vector2(recipeList.anchoredPosition.x, 4);
+            playerFilterRT.pivot = Vector2.zero;
 
             GuiInputField filter = filterField.GetComponent<GuiInputField>();
             filter.VirtualKeyboardTitle = "$menu_filter";
@@ -52,8 +58,8 @@ namespace MyLittleUI
             RectTransform clearButtonRT = clearButton.GetComponent<RectTransform>();
             clearButtonRT.anchorMin = new Vector2(1f, 0.5f);
             clearButtonRT.anchorMax = new Vector2(1f, 0.5f);
-            clearButtonRT.sizeDelta = Vector2.one * 27f;
-            clearButtonRT.anchoredPosition = new Vector2(-15f, 0f);
+            clearButtonRT.sizeDelta = Vector2.one * 28f;
+            clearButtonRT.anchoredPosition = new Vector2(-16f, 0f);
 
             TextMeshProUGUI text = clearButton.transform.Find("Text").GetComponent<TextMeshProUGUI>();
             text.SetText("✖");
@@ -61,22 +67,34 @@ namespace MyLittleUI
 
             clearButton.transform.Find("gamepad_hint").localPosition = new Vector3(-0.75f, 23.8f, 0f);
 
-            return filter;
+            playerFilter = filter;
+            playerFilter.onValueChanged.AddListener(delegate
+            {
+                UpdateFilterString();
+                UpdateCraftingPanel();
+            });
         }
 
         public static void UpdateVisibility()
         {
-            playerFilter.gameObject.SetActive(modEnabled.Value && craftingFilterEnabled.Value);
+            playerFilter?.gameObject?.SetActive(modEnabled.Value && craftingFilterEnabled.Value);
+
+            RectTransform recipeList = InventoryGui.instance.m_recipeListScroll.transform.parent as RectTransform;
+            if (listAnchorMin.x == -1f)
+                listAnchorMin = recipeList.anchorMin;
+
+            recipeList.anchorMin = playerFilter.isActiveAndEnabled ? listAnchorMin + new Vector2(0f, 0.05f) : listAnchorMin;
         }
 
         public static void UpdateFilterString() 
         {
-            filterString = playerFilter.text.ToLower().Split(new char[] { ' ' }, StringSplitOptions.None);
+            filterString = playerFilter?.text.ToLower().Split(new char[] { ' ' }, StringSplitOptions.None);
         }
 
         public static void ClearText()
         {
-            playerFilter.text = "";
+            if (playerFilter)
+                playerFilter.text = "";
         }
 
         private static string GetItemFullString(ItemDrop itemDrop)
@@ -134,13 +152,7 @@ namespace MyLittleUI
             [HarmonyPriority(Priority.First)]
             static void Postfix()
             {
-                playerFilter = InitFilterField(InventoryGui.instance.m_recipeListRoot.parent as RectTransform);
-                playerFilter.onValueChanged.AddListener(delegate
-                {
-                    UpdateFilterString();
-                    UpdateCraftingPanel();
-                });
-
+                InitFilterField();
                 UpdateVisibility();
             }
         }

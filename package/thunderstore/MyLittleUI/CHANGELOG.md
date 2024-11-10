@@ -1,3 +1,8 @@
+# 1.1.12
+* crafting filter panel no longer overlap list
+* inventory state panels error spam fixed
+* inventory state panels made more responsive to config changes
+
 # 1.1.11
 * more responsive crafting filter field
 * new button to clear filter text in crafting menu
