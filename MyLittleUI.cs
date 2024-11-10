@@ -18,12 +18,13 @@ namespace MyLittleUI
     [BepInDependency("randyknapp.mods.epicloot", BepInDependency.DependencyFlags.SoftDependency)]
     [BepInDependency("Azumatt.AzuExtendedPlayerInventory", BepInDependency.DependencyFlags.SoftDependency)]
     [BepInDependency("shudnal.ExtraSlots", BepInDependency.DependencyFlags.SoftDependency)]
+    [BepInDependency("randyknapp.mods.equipmentandquickslots", BepInDependency.DependencyFlags.SoftDependency)]
     [BepInIncompatibility("randyknapp.mods.auga")]
     public class MyLittleUI : BaseUnityPlugin
     {
         const string pluginID = "shudnal.MyLittleUI";
         const string pluginName = "My Little UI";
-        const string pluginVersion = "1.1.12";
+        const string pluginVersion = "1.1.13";
 
         private readonly Harmony harmony = new Harmony(pluginID);
 

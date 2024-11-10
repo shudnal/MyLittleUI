@@ -1,4 +1,7 @@
-﻿using HarmonyLib;
+﻿using BepInEx;
+using BepInEx.Bootstrap;
+using BepInEx.Configuration;
+using HarmonyLib;
 using System;
 using System.Linq;
 using TMPro;
@@ -123,9 +126,7 @@ namespace MyLittleUI
 
         public static void UpdateGradient()
         {
-            if (gradient == null)
-                gradient = new Gradient();
-
+            gradient ??= new Gradient();
             gradient.SetKeys(new GradientColorKey[4]
                                 {
                                         new GradientColorKey(weightSlotsFine.Value, 0.0f),
@@ -216,8 +217,13 @@ namespace MyLittleUI
                 emptySlots += quickslots - ExtraSlots.API.GetQuickSlotsItems().Count;
                 slotsAmount += quickslots;
             }
+            else if (Chainloader.PluginInfos.TryGetValue("randyknapp.mods.equipmentandquickslots", out PluginInfo eaqs) && eaqs.Instance.Config.TryGetEntry("Toggles", "Enable Quick Slots", out ConfigEntry<bool> entry) && entry.Value)
+            {
+                slotsAmount += 3;
+                emptySlots = Player.m_localPlayer.GetInventory().GetEmptySlots();
+            }
         }
-
+        
         [HarmonyPatch(typeof(Hud), nameof(Hud.OnDestroy))]
         public static class Hud_OnDestroy_Clear
         {
@@ -250,6 +256,21 @@ namespace MyLittleUI
                     return;
 
                 if (__instance != Player.m_localPlayer || __instance.m_isLoading)
+                    return;
+
+                UpdateStats();
+            }
+        }
+
+        [HarmonyPatch(typeof(Player), nameof(Player.OnSpawned))]
+        public static class Player_OnSpawned_UpdateStats
+        {
+            public static void Postfix(Player __instance)
+            {
+                if (!modEnabled.Value)
+                    return;
+
+                if (__instance != Player.m_localPlayer)
                     return;
 
                 UpdateStats();

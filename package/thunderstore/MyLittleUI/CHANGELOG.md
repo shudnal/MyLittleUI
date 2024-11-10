@@ -1,3 +1,8 @@
+# 1.1.13
+* inventory panel spam fixed
+* minimap info blocks incorrect loading fixed
+* EaQS quickslots counted as possible empty slots
+
 # 1.1.12
 * crafting filter panel no longer overlap list
 * inventory state panels error spam fixed

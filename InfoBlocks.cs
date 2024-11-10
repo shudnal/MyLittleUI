@@ -478,6 +478,18 @@ namespace MyLittleUI
             }
         }
 
+        [HarmonyPatch(typeof(Player), nameof(Player.OnSpawned))]
+        public static class Player_OnSpawned_UpdateInfoBlocksVisibility
+        {
+            public static void Postfix()
+            {
+                if (!modEnabled.Value)
+                    return;
+
+                UpdateVisibility();
+            }
+        }
+
         [HarmonyPatch(typeof(Minimap), nameof(Minimap.SetMapMode))]
         public static class Minimap_SetMapMode_UpdateInfoBlocksVisibility
         {
