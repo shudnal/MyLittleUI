@@ -436,7 +436,10 @@ namespace MyLittleUI
                     return;
 
                 if (!__instance.m_rootObject.transform.Find(objectRootName))
+                {
                     AddInfoBlocks(__instance.m_rootObject.transform);
+                    InventoryPanel.AddBlock(parentObject);
+                }
 
                 UpdateVisibility();
             }

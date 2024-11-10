@@ -49,6 +49,7 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="AmountScrollHandler.cs" />
     <Compile Include="WeatherForecast.cs" />
+    <Compile Include="InventoryPanel.cs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="0Harmony">

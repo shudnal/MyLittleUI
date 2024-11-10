@@ -15,6 +15,7 @@ namespace MyLittleUI
     {
         private static Vector3 itemIconScaleOriginal = Vector3.zero;
         private static Color itemEquippedColorOriginal = Color.clear;
+        private static Gradient gradient;
 
         private static void UpdateItemIcon(GuiBar durability, Image icon, Image equiped)
         {
@@ -38,10 +39,10 @@ namespace MyLittleUI
             {
                 if (!durability.m_barImage && durability.m_bar)
                     durability.m_barImage = durability.m_bar.GetComponent<Image>();
-                
-                float percentage = durability.GetSmoothValue();
 
-                if (percentage >= 1f)
+                UpdateGradient(force: false);
+
+                if (durability.GetSmoothValue() >= 1f)
                 {
                     if (durability.GetColor() == Color.red)
                         durability.SetColor(durabilityBroken.Value);
@@ -50,15 +51,24 @@ namespace MyLittleUI
                 }
                 else
                 {
-                    if (percentage >= 0.75f)
-                        durability.SetColor(durabilityFine.Value);
-                    else if (percentage >= 0.50f)
-                        durability.SetColor(durabilityWorn.Value);
-                    else if (percentage >= 0.25f)
-                        durability.SetColor(durabilityAtRisk.Value);
-                    else
-                        durability.SetColor(durabilityBroken.Value);
+                    durability.SetColor(gradient.Evaluate(durability.GetSmoothValue()));
                 }
+            }
+        }
+
+        public static void UpdateGradient(bool force = true)
+        {
+            if (gradient == null || force)
+            {
+                gradient = new Gradient();
+                gradient.SetKeys(new GradientColorKey[4]
+                                    {
+                                        new GradientColorKey(durabilityBroken.Value, 0.0f),
+                                        new GradientColorKey(durabilityAtRisk.Value, 0.33f),
+                                        new GradientColorKey(durabilityWorn.Value, 0.66f),
+                                        new GradientColorKey(durabilityFine.Value, 1.0f)
+                                    },
+                                 Array.Empty<GradientAlphaKey>());
             }
         }
 

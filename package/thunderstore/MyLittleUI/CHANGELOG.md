@@ -1,3 +1,9 @@
+# 1.1.11
+* more responsive crafting filter field
+* new button to clear filter text in crafting menu
+* new blocks showing current empty slots amount and current weight
+* item durability colors now change gradually between percentage thresholds
+
 # 1.1.10
 * craft list filter (name, description, resources)
 * better support for multicraft with nocost enabled

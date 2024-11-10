@@ -23,7 +23,7 @@ namespace MyLittleUI
     {
         const string pluginID = "shudnal.MyLittleUI";
         const string pluginName = "My Little UI";
-        const string pluginVersion = "1.1.10";
+        const string pluginVersion = "1.1.11";
 
         private readonly Harmony harmony = new Harmony(pluginID);
 
@@ -32,75 +32,75 @@ namespace MyLittleUI
         public static MyLittleUI instance;
 
         public static ConfigEntry<bool> modEnabled;
-        private static ConfigEntry<bool> configLocked;
-        private static ConfigEntry<bool> loggingEnabled;
-        internal static ConfigEntry<bool> nonlocalizedButtons;
-        internal static ConfigEntry<bool> fixStatusEffectAndForecastPosition;
+        public static ConfigEntry<bool> configLocked;
+        public static ConfigEntry<bool> loggingEnabled;
+        public static ConfigEntry<bool> nonlocalizedButtons;
+        public static ConfigEntry<bool> fixStatusEffectAndForecastPosition;
 
-        internal static ConfigEntry<bool> clockShowDay;
-        internal static ConfigEntry<bool> clockShowTime;
-        internal static ConfigEntry<bool> clockTimeFormat24h;
-        internal static ConfigEntry<bool> clockShowBackground;
-        internal static ConfigEntry<Color> clockBackgroundColor;
-        internal static ConfigEntry<float> clockTextPadding;
-        internal static ConfigEntry<Vector2> clockPosition;
-        internal static ConfigEntry<Vector2> clockSize;
-        internal static ConfigEntry<bool> clockSwapDayTime;
-        internal static ConfigEntry<float> clockFontSize;
-        internal static ConfigEntry<Color> clockFontColor;
-        internal static ConfigEntry<ClockTimeType> clockTimeType;
-        internal static ConfigEntry<string> clockFuzzy;
+        public static ConfigEntry<bool> clockShowDay;
+        public static ConfigEntry<bool> clockShowTime;
+        public static ConfigEntry<bool> clockTimeFormat24h;
+        public static ConfigEntry<bool> clockShowBackground;
+        public static ConfigEntry<Color> clockBackgroundColor;
+        public static ConfigEntry<float> clockTextPadding;
+        public static ConfigEntry<Vector2> clockPosition;
+        public static ConfigEntry<Vector2> clockSize;
+        public static ConfigEntry<bool> clockSwapDayTime;
+        public static ConfigEntry<float> clockFontSize;
+        public static ConfigEntry<Color> clockFontColor;
+        public static ConfigEntry<ClockTimeType> clockTimeType;
+        public static ConfigEntry<string> clockFuzzy;
 
-        internal static ConfigEntry<bool> forecastEnabled;
-        internal static ConfigEntry<bool> forecastShowBackground;
-        internal static ConfigEntry<Color> forecastBackgroundColor;
-        internal static ConfigEntry<Vector2> forecastPosition;
-        internal static ConfigEntry<Vector2> forecastPositionNomap;
-        internal static ConfigEntry<Vector2> forecastSize;
-        internal static ConfigEntry<float> forecastFontSize;
-        internal static ConfigEntry<Color> forecastFontColor;
-        internal static ConfigEntry<float> forecastTextPadding;
+        public static ConfigEntry<bool> forecastEnabled;
+        public static ConfigEntry<bool> forecastShowBackground;
+        public static ConfigEntry<Color> forecastBackgroundColor;
+        public static ConfigEntry<Vector2> forecastPosition;
+        public static ConfigEntry<Vector2> forecastPositionNomap;
+        public static ConfigEntry<Vector2> forecastSize;
+        public static ConfigEntry<float> forecastFontSize;
+        public static ConfigEntry<Color> forecastFontColor;
+        public static ConfigEntry<float> forecastTextPadding;
 
-        internal static ConfigEntry<string> forecastListRain;
-        internal static ConfigEntry<string> forecastListSnow;
-        internal static ConfigEntry<string> forecastListThunder;
-        internal static ConfigEntry<string> forecastListMist;
-        internal static ConfigEntry<string> forecastListRainCinder;
+        public static ConfigEntry<string> forecastListRain;
+        public static ConfigEntry<string> forecastListSnow;
+        public static ConfigEntry<string> forecastListThunder;
+        public static ConfigEntry<string> forecastListMist;
+        public static ConfigEntry<string> forecastListRainCinder;
 
-        internal static ConfigEntry<bool> windsEnabled;
-        internal static ConfigEntry<bool> windsShowBackground;
-        internal static ConfigEntry<bool> windsShowProgress;
-        internal static ConfigEntry<Color> windsBackgroundColor;
-        internal static ConfigEntry<Color> windsProgressColor;
-        internal static ConfigEntry<Color> windsArrowColor;
-        internal static ConfigEntry<float> windsMinimumAlpha;
-        internal static ConfigEntry<bool> windsAlphaIntensity;
+        public static ConfigEntry<bool> windsEnabled;
+        public static ConfigEntry<bool> windsShowBackground;
+        public static ConfigEntry<bool> windsShowProgress;
+        public static ConfigEntry<Color> windsBackgroundColor;
+        public static ConfigEntry<Color> windsProgressColor;
+        public static ConfigEntry<Color> windsArrowColor;
+        public static ConfigEntry<float> windsMinimumAlpha;
+        public static ConfigEntry<bool> windsAlphaIntensity;
 
-        internal static ConfigEntry<Vector2> windsPosition;
-        internal static ConfigEntry<Vector2> windsPositionNomap;
-        internal static ConfigEntry<Vector2> windsSize;
-        internal static ConfigEntry<Vector2> windsSizeNomap;
-        internal static ConfigEntry<int> windsCount;
-        internal static ConfigEntry<int> windsCountNomap;
-        internal static ConfigEntry<float> windsPositionSpacing;
-        internal static ConfigEntry<float> windsPositionSpacingNomap;
-        internal static ConfigEntry<ListDirection> windsFillingDirection;
-        internal static ConfigEntry<ListDirection> windsFillingDirectionNomap;
+        public static ConfigEntry<Vector2> windsPosition;
+        public static ConfigEntry<Vector2> windsPositionNomap;
+        public static ConfigEntry<Vector2> windsSize;
+        public static ConfigEntry<Vector2> windsSizeNomap;
+        public static ConfigEntry<int> windsCount;
+        public static ConfigEntry<int> windsCountNomap;
+        public static ConfigEntry<float> windsPositionSpacing;
+        public static ConfigEntry<float> windsPositionSpacingNomap;
+        public static ConfigEntry<ListDirection> windsFillingDirection;
+        public static ConfigEntry<ListDirection> windsFillingDirectionNomap;
 
-        internal static ConfigEntry<bool> ammoCountEnabled;
-        internal static ConfigEntry<Color> ammoCountColor;
-        internal static ConfigEntry<Vector2> ammoCountPosition;
-        internal static ConfigEntry<int> ammoCountFontSize;
-        internal static ConfigEntry<HorizontalAlignmentOptions> ammoCountAlignment;
-        internal static ConfigEntry<bool> ammoIconEnabled;
-        internal static ConfigEntry<Vector2> ammoIconPosition;
-        internal static ConfigEntry<Vector2> ammoIconSize;
-        internal static ConfigEntry<bool> baitIconEnabled;
-        internal static ConfigEntry<bool> baitCountEnabled;
+        public static ConfigEntry<bool> ammoCountEnabled;
+        public static ConfigEntry<Color> ammoCountColor;
+        public static ConfigEntry<Vector2> ammoCountPosition;
+        public static ConfigEntry<int> ammoCountFontSize;
+        public static ConfigEntry<HorizontalAlignmentOptions> ammoCountAlignment;
+        public static ConfigEntry<bool> ammoIconEnabled;
+        public static ConfigEntry<Vector2> ammoIconPosition;
+        public static ConfigEntry<Vector2> ammoIconSize;
+        public static ConfigEntry<bool> baitIconEnabled;
+        public static ConfigEntry<bool> baitCountEnabled;
 
-        internal static ConfigEntry<bool> showAvailableItemsAmount;
-        internal static ConfigEntry<Color> availableItemsAmountColor;
-        internal static ConfigEntry<bool> showMulticraftButtons;
+        public static ConfigEntry<bool> showAvailableItemsAmount;
+        public static ConfigEntry<Color> availableItemsAmountColor;
+        public static ConfigEntry<bool> showMulticraftButtons;
 
         public static ConfigEntry<bool> craftingFilterEnabled;
 
@@ -131,52 +131,52 @@ namespace MyLittleUI
         public static ConfigEntry<bool> itemQualityHideLvl1;
         public static ConfigEntry<bool> itemQualityHideCustomEquipmentSlots;
 
-        private static ConfigEntry<float> inventoryOpenCloseAnimationSpeed;
+        public static ConfigEntry<float> inventoryOpenCloseAnimationSpeed;
 
-        private static ConfigEntry<bool> statsMainMenu;
-        private static ConfigEntry<bool> statsMainMenuAdvanced;
-        private static ConfigEntry<bool> statsMainMenuAll;
+        public static ConfigEntry<bool> statsMainMenu;
+        public static ConfigEntry<bool> statsMainMenuAdvanced;
+        public static ConfigEntry<bool> statsMainMenuAll;
 
         public static ConfigEntry<bool> statsCharacterArmor;
         public static ConfigEntry<bool> statsCharacterEffects;
         public static ConfigEntry<bool> statsCharacterEffectsMagic;
 
-        private static ConfigEntry<bool> hoverFermenterEnabled;
-        private static ConfigEntry<bool> hoverPlantEnabled;
-        private static ConfigEntry<bool> hoverCookingEnabled;
-        private static ConfigEntry<bool> hoverBeeHiveEnabled;
-        private static ConfigEntry<StationHover> hoverFermenter;
-        private static ConfigEntry<StationHover> hoverPlant;
-        private static ConfigEntry<StationHover> hoverCooking;
-        private static ConfigEntry<StationHover> hoverBeeHive;
-        private static ConfigEntry<bool> hoverBeeHiveTotal;
+        public static ConfigEntry<bool> hoverFermenterEnabled;
+        public static ConfigEntry<bool> hoverPlantEnabled;
+        public static ConfigEntry<bool> hoverCookingEnabled;
+        public static ConfigEntry<bool> hoverBeeHiveEnabled;
+        public static ConfigEntry<StationHover> hoverFermenter;
+        public static ConfigEntry<StationHover> hoverPlant;
+        public static ConfigEntry<StationHover> hoverCooking;
+        public static ConfigEntry<StationHover> hoverBeeHive;
+        public static ConfigEntry<bool> hoverBeeHiveTotal;
 
         public static ConfigEntry<StationHover> hoverCharacter;
         public static ConfigEntry<bool> hoverCharacterGrowth;
         public static ConfigEntry<bool> hoverCharacterProcreation;
         public static ConfigEntry<bool> hoverCharacterEggGrow;
 
-        private static ConfigEntry<StationHover> hoverTame;
-        private static ConfigEntry<bool> hoverTameTimeToTame;
-        private static ConfigEntry<bool> hoverTameTimeToFed;
+        public static ConfigEntry<StationHover> hoverTame;
+        public static ConfigEntry<bool> hoverTameTimeToTame;
+        public static ConfigEntry<bool> hoverTameTimeToFed;
 
-        private static ConfigEntry<bool> hoverSmelterEstimatedTime;
-        private static ConfigEntry<bool> hoverSmelterShowFuelAndItem;
-        private static ConfigEntry<bool> hoverSmelterShowQueuedItems;
+        public static ConfigEntry<bool> hoverSmelterEstimatedTime;
+        public static ConfigEntry<bool> hoverSmelterShowFuelAndItem;
+        public static ConfigEntry<bool> hoverSmelterShowQueuedItems;
 
-        internal static ConfigEntry<ChestItemsHover> chestHoverItems;
-        internal static ConfigEntry<ChestNameHover> chestHoverName;
-        internal static ConfigEntry<bool> chestCustomName;
-        internal static ConfigEntry<bool> chestShowHoldToStack;
-        internal static ConfigEntry<bool> chestShowRename;
+        public static ConfigEntry<ChestItemsHover> chestHoverItems;
+        public static ConfigEntry<ChestNameHover> chestHoverName;
+        public static ConfigEntry<bool> chestCustomName;
+        public static ConfigEntry<bool> chestShowHoldToStack;
+        public static ConfigEntry<bool> chestShowRename;
 
-        internal static ConfigEntry<bool> chestContentEnabled;
-        internal static ConfigEntry<int> chestContentLinesToShow;
-        internal static ConfigEntry<ContentSortType> chestContentSortType;
-        internal static ConfigEntry<ContentSortDir> chestContentSortDir;
-        internal static ConfigEntry<string> chestContentEntryFormat;
-        internal static ConfigEntry<Color> chestContentItemColor;
-        internal static ConfigEntry<Color> chestContentAmountColor;
+        public static ConfigEntry<bool> chestContentEnabled;
+        public static ConfigEntry<int> chestContentLinesToShow;
+        public static ConfigEntry<ContentSortType> chestContentSortType;
+        public static ConfigEntry<ContentSortDir> chestContentSortDir;
+        public static ConfigEntry<string> chestContentEntryFormat;
+        public static ConfigEntry<Color> chestContentItemColor;
+        public static ConfigEntry<Color> chestContentAmountColor;
 
         public static ConfigEntry<bool> statusEffectsPositionEnabled;
         public static ConfigEntry<Vector2> statusEffectsPositionAnchor;
@@ -205,6 +205,24 @@ namespace MyLittleUI
         public static ConfigEntry<float> sailingIndicatorPowerIconScaleNomap;
         public static ConfigEntry<Vector2> sailingIndicatorWindIndicatorPositionNomap;
         public static ConfigEntry<float> sailingIndicatorWindIndicatorScaleNomap;
+
+        public static ConfigEntry<bool> showWeight;
+        public static ConfigEntry<bool> showSlots;
+        public static ConfigEntry<Color> weightBackgroundColor;
+        public static ConfigEntry<Color> slotsBackgroundColor;
+
+        public static ConfigEntry<Color> weightSlotsFine;
+        public static ConfigEntry<Color> weightSlotsHalf;
+        public static ConfigEntry<Color> weightSlotsALot;
+        public static ConfigEntry<Color> weightSlotsFull;
+
+        public static ConfigEntry<Vector2> weightPosition;
+        public static ConfigEntry<Vector2> slotsPosition;
+
+        public static ConfigEntry<Color> weightFontColor;
+        public static ConfigEntry<Color> slotsFontColor;
+
+
 
         private static readonly Dictionary<string, string> characterNames = new Dictionary<string, string>();
 
@@ -445,6 +463,11 @@ namespace MyLittleUI
             durabilityAtRisk = config("Item - Durability", "3 - At risk", defaultValue: new Color(0.72941f, 0.34902f, 0.03529f, 1f), "Color of durability > 25%.");
             durabilityBroken = config("Item - Durability", "4 - Broken", defaultValue: new Color(0.72941f, 0.03529f, 0.03529f, 1f), "Color of durability >= 0%.");
 
+            durabilityFine.SettingChanged += (sender, args) => ItemIcon.UpdateGradient();
+            durabilityWorn.SettingChanged += (sender, args) => ItemIcon.UpdateGradient();
+            durabilityAtRisk.SettingChanged += (sender, args) => ItemIcon.UpdateGradient();
+            durabilityBroken.SettingChanged += (sender, args) => ItemIcon.UpdateGradient();
+
             itemIconScale = config("Item - Icon", "Icon scale", defaultValue: 1.0f, "Relative scale size of item icons.");
             itemEquippedColor = config("Item - Icon", "Equipped color", defaultValue: Color.clear, "Override for color of equipped items.");
 
@@ -586,6 +609,27 @@ namespace MyLittleUI
             sailingIndicatorPowerIconScaleNomap.SettingChanged += (sender, args) => CustomStatusEffectsList.ChangeSailingIndicator();
             sailingIndicatorWindIndicatorPositionNomap.SettingChanged += (sender, args) => CustomStatusEffectsList.ChangeSailingIndicator();
             sailingIndicatorWindIndicatorScaleNomap.SettingChanged += (sender, args) => CustomStatusEffectsList.ChangeSailingIndicator();
+
+            showWeight = config("Info - Inventory", "Show current weight", defaultValue: true, "Enable showing weight (current / max) [Synced with Server]", synchronizedSetting: true);
+            showSlots = config("Info - Inventory", "Show current slots", defaultValue: true, "Enable current slots (emtpy / max) [Synced with Server]", synchronizedSetting: true);
+            weightBackgroundColor = config("Info - Inventory", "Weight background", defaultValue: new Color(0f, 0f, 0f, 0.5f), "Color of weight block background");
+            slotsBackgroundColor = config("Info - Inventory", "Slots background", defaultValue: new Color(0f, 0f, 0f, 0.5f), "Color of slots block background");
+
+            weightSlotsFine = config("Info - Inventory - Colors", "1 - Fine", defaultValue: new Color(0.11765f, 0.72941f, 0.03529f, 1f), "Color of amount < 50%.");
+            weightSlotsHalf = config("Info - Inventory - Colors", "2 - Half", defaultValue: new Color(0.72941f, 0.72941f, 0.03529f, 1f), "Color of amount > 50%.");
+            weightSlotsALot = config("Info - Inventory - Colors", "3 - A lot", defaultValue: new Color(0.72941f, 0.34902f, 0.03529f, 1f), "Color of amount > 75%.");
+            weightSlotsFull = config("Info - Inventory - Colors", "4 - Full", defaultValue: new Color(0.72941f, 0.03529f, 0.03529f, 1f), "Color of amount >= 100%.");
+
+            weightSlotsFine.SettingChanged += (sender, args) => InventoryPanel.UpdateGradient();
+            weightSlotsHalf.SettingChanged += (sender, args) => InventoryPanel.UpdateGradient();
+            weightSlotsALot.SettingChanged += (sender, args) => InventoryPanel.UpdateGradient();
+            weightSlotsFull.SettingChanged += (sender, args) => InventoryPanel.UpdateGradient();
+
+            weightPosition = config("Info - Inventory", "Weight position", defaultValue: new Vector2(-898f, -276.1f), "Position from middle of the screen");
+            slotsPosition = config("Info - Inventory", "Slots position", defaultValue: new Vector2(-898f, -209.9f), "Position from middle of the screen");
+
+            weightFontColor = config("Info - Inventory", "Weight font color", defaultValue: new Color(1f, 0.848f, 0, 1f), "Font color.");
+            slotsFontColor = config("Info - Inventory", "Slots font color", defaultValue: new Color(1f, 0.848f, 0, 1f), "Font color.");
         }
 
         ConfigEntry<T> config<T>(string group, string name, T defaultValue, ConfigDescription description, bool synchronizedSetting = false)
