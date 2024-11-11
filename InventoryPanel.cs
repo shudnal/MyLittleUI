@@ -3,7 +3,9 @@ using BepInEx.Bootstrap;
 using BepInEx.Configuration;
 using HarmonyLib;
 using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -256,6 +258,27 @@ namespace MyLittleUI
                     return;
 
                 if (__instance != Player.m_localPlayer || __instance.m_isLoading)
+                    return;
+
+                UpdateStats();
+            }
+        }
+
+        [HarmonyPatch]
+        public static class Humanoid_UpdateStats
+        {
+            private static IEnumerable<MethodBase> TargetMethods()
+            {
+                yield return AccessTools.Method(typeof(Humanoid), nameof(Humanoid.EquipItem));
+                yield return AccessTools.Method(typeof(Humanoid), nameof(Humanoid.UnequipItem));
+            }
+
+            private static void Postfix(Humanoid __instance)
+            {
+                if (!modEnabled.Value)
+                    return;
+
+                if (__instance != Player.m_localPlayer || (__instance as Player).m_isLoading)
                     return;
 
                 UpdateStats();

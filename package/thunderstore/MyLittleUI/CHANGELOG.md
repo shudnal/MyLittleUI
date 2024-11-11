@@ -1,3 +1,6 @@
+# 1.1.14
+* weight panel will be more responsive on items equipment
+
 # 1.1.13
 * inventory panel spam fixed
 * minimap info blocks incorrect loading fixed

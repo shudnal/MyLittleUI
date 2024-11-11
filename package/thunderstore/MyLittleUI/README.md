@@ -40,7 +40,7 @@ Bunch of little UI tweaks. Tooltips for production timers, player status, items.
 * Default position is above the food slots
 * Show/hide/move current weight or empty slots or both
 * Bar colors, font color and background color could be changed
-* Equipment slots from EaQS, AzuEPI and ExtraSlots doesn't count as empty slots, only quick slots count as empty that can handle any item you grab.
+* Equipment slots from EaQS, AzuEPI and ExtraSlots doesn't count as empty slots, only quick slots count as empty that can handle any item you grab
 
 ## Stats
 * Advanced character stats in character selection screen
