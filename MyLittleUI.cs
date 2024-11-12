@@ -24,7 +24,7 @@ namespace MyLittleUI
     {
         const string pluginID = "shudnal.MyLittleUI";
         const string pluginName = "My Little UI";
-        const string pluginVersion = "1.1.14";
+        const string pluginVersion = "1.1.15";
 
         private readonly Harmony harmony = new Harmony(pluginID);
 
@@ -1423,7 +1423,7 @@ namespace MyLittleUI
                 mapUpdated = false;
             }
 
-            public static void Prefix(ZInput __instance)
+            public static void Prefix()
             {
                 if (!modEnabled.Value)
                     return;

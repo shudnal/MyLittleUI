@@ -1,3 +1,6 @@
+# 1.1.15
+* ExtraSlots API removed
+
 # 1.1.14
 * weight panel will be more responsive on items equipment
 

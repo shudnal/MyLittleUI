@@ -201,7 +201,7 @@ namespace MyLittleUI
             int height = Player.m_localPlayer.GetInventory().GetHeight();
             if (AzuExtendedPlayerInventory.API.IsLoaded())
                 height -= AzuExtendedPlayerInventory.API.GetAddedRows(width);
-            else if (ExtraSlots.API.IsLoaded())
+            else if (Chainloader.PluginInfos.ContainsKey("shudnal.ExtraSlots"))
                 height = ExtraSlots.API.GetInventoryHeightPlayer();
 
             slotsAmount = width * height;
@@ -213,7 +213,7 @@ namespace MyLittleUI
                 emptySlots += quickslots - AzuExtendedPlayerInventory.API.GetQuickSlotsItems().Count;
                 slotsAmount += quickslots;
             }
-            else if (ExtraSlots.API.IsLoaded())
+            else if (Chainloader.PluginInfos.ContainsKey("shudnal.ExtraSlots"))
             {
                 int quickslots = ExtraSlots.API.GetQuickSlots().Count(slot => slot.IsActive);
                 emptySlots += quickslots - ExtraSlots.API.GetQuickSlotsItems().Count;
