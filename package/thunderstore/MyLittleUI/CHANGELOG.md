@@ -1,3 +1,7 @@
+# 1.1.16
+* ExtraSlots API rework
+* inventory weight will be more responsive to status effects
+
 # 1.1.15
 * ExtraSlots API removed
 

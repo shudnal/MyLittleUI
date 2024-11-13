@@ -180,7 +180,7 @@ namespace MyLittleUI
             private static bool IgnoreItemQuality(InventoryGrid grid, ItemDrop.ItemData item)
             {
                 return filterItemQuality.Contains(item) ||
-                      (itemQualityIgnoreCustomEquipmentSlots.Value || itemQualityIgnoreCustomSlots.Value) && ExtraSlots.API.IsItemInSlot(item) ||
+                      (itemQualityIgnoreCustomEquipmentSlots.Value || itemQualityIgnoreCustomSlots.Value) && ExtraSlotsAPI.API.IsItemInSlot(item) ||
                       itemQualityIgnoreCustomEquipmentSlots.Value && grid.name == "EquipmentSlotGrid" ||
                       itemQualityIgnoreCustomSlots.Value && (grid.name == "QuickSlotGrid" || grid.name == "EquipmentSlotGrid") ||
                        (itemQualityIgnoreCustomSlots.Value && (item.m_gridPos.y >= grid.m_height || item.m_gridPos.x >= grid.m_width));
@@ -188,7 +188,7 @@ namespace MyLittleUI
 
             private static bool HideEquipmentSlotsQuality(InventoryGrid grid, ItemDrop.ItemData item)
             {
-                return grid.name == "EquipmentSlotGrid" || hideItemQuality.Contains(item) || ExtraSlots.API.IsItemInEquipmentSlot(item);
+                return grid.name == "EquipmentSlotGrid" || hideItemQuality.Contains(item) || ExtraSlotsAPI.API.IsItemInEquipmentSlot(item);
             }
 
             private static void Postfix(InventoryGrid __instance, Inventory ___m_inventory, List<InventoryGrid.Element> ___m_elements)

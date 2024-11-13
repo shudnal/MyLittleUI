@@ -201,8 +201,8 @@ namespace MyLittleUI
             int height = Player.m_localPlayer.GetInventory().GetHeight();
             if (AzuExtendedPlayerInventory.API.IsLoaded())
                 height -= AzuExtendedPlayerInventory.API.GetAddedRows(width);
-            else if (Chainloader.PluginInfos.ContainsKey("shudnal.ExtraSlots"))
-                height = ExtraSlots.API.GetInventoryHeightPlayer();
+            else if (ExtraSlotsAPI.API.IsReady())
+                height = ExtraSlotsAPI.API.GetInventoryHeightPlayer();
 
             slotsAmount = width * height;
             emptySlots = slotsAmount - Player.m_localPlayer.GetInventory().m_inventory.Where(item => item.m_gridPos.x < width && item.m_gridPos.y < height).Count();
@@ -213,10 +213,10 @@ namespace MyLittleUI
                 emptySlots += quickslots - AzuExtendedPlayerInventory.API.GetQuickSlotsItems().Count;
                 slotsAmount += quickslots;
             }
-            else if (Chainloader.PluginInfos.ContainsKey("shudnal.ExtraSlots"))
+            else if (ExtraSlotsAPI.API.IsReady())
             {
-                int quickslots = ExtraSlots.API.GetQuickSlots().Count(slot => slot.IsActive);
-                emptySlots += quickslots - ExtraSlots.API.GetQuickSlotsItems().Count;
+                int quickslots = ExtraSlotsAPI.API.GetQuickSlots().Count(slot => slot.IsActive);
+                emptySlots += quickslots - ExtraSlotsAPI.API.GetQuickSlotsItems().Count;
                 slotsAmount += quickslots;
             }
             else if (Chainloader.PluginInfos.TryGetValue("randyknapp.mods.equipmentandquickslots", out PluginInfo eaqs) && eaqs.Instance.Config.TryGetEntry("Toggles", "Enable Quick Slots", out ConfigEntry<bool> entry) && entry.Value)
@@ -309,6 +309,19 @@ namespace MyLittleUI
                     return;
 
                 UpdateVisuals();
+            }
+        }
+
+        [HarmonyPatch(typeof(SEMan), nameof(SEMan.AddStatusEffect), typeof(StatusEffect), typeof(bool), typeof(int), typeof(float))]
+        public static class SEManAddStatusEffect_UpdateStats
+        {
+            public static void Postfix(StatusEffect __result)
+            {
+                if (!modEnabled.Value)
+                    return;
+
+                if (__result is SE_Stats se && se.m_addMaxCarryWeight > 0)
+                    UpdateVisuals();
             }
         }
     }
