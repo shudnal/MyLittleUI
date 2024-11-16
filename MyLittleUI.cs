@@ -24,7 +24,7 @@ namespace MyLittleUI
     {
         public const string pluginID = "shudnal.MyLittleUI";
         public const string pluginName = "My Little UI";
-        public const string pluginVersion = "1.1.16";
+        public const string pluginVersion = "1.1.17";
 
         private readonly Harmony harmony = new Harmony(pluginID);
 

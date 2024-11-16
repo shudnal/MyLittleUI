@@ -1,3 +1,7 @@
+# 1.1.17
+* fix for MMHOOK dependent mods generating warnings on ExtraSlots API initialization
+* minor performance improvements
+
 # 1.1.16
 * ExtraSlots API rework
 * inventory weight will be more responsive to status effects
