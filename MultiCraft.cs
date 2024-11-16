@@ -21,6 +21,7 @@ namespace MyLittleUI
         private static readonly Recipe tempRecipe = ScriptableObject.CreateInstance<Recipe>();
         private static readonly StringBuilder sb = new StringBuilder(10);
         private static readonly Dictionary<Recipe, Tuple<string, int>> cachedAmount = new Dictionary<Recipe, Tuple<string, int>>();
+        private static readonly List<TMP_Text> resAmountElements = new List<TMP_Text>();
 
         private static RectTransform panel;
         private static RectTransform craftButton;
@@ -234,7 +235,7 @@ namespace MyLittleUI
 
             [HarmonyPriority(Priority.Last)]
             [HarmonyAfter("Azumatt.AzuCraftyBoxes", "aedenthorn.CraftFromContainers", "org.bepinex.plugins.valheim_plus")]
-            public static void Postfix(InventoryGui __instance, Player player)
+            public static void Postfix(InventoryGui __instance)
             {
                 UpdateMulticraftPanel();
 
@@ -260,24 +261,7 @@ namespace MyLittleUI
                     queueNextCraft = amount > 0;
                 }
 
-                sb.Clear();
-                for (int i = 0; i < __instance.m_recipeRequirementList.Length; i++)
-                {
-                    TMP_Text text = __instance.m_recipeRequirementList[i].transform.Find("res_amount")?.GetComponent<TMP_Text>();
-                    if (text == null || !text.isActiveAndEnabled)
-                        continue;
-
-                    sb.Append(text.text);
-                }
-
-                string numbers = Regex.Replace(Regex.Replace(sb.ToString(), "<.*?>", String.Empty), @"[^\d]", String.Empty);
-                if (__instance.m_selectedRecipe.Recipe.m_requireOnlyOneIngredient)
-                    numbers += Mathf.Sin(Time.time * 5f) > 0f;
-
-                if (!cachedAmount.TryGetValue(__instance.m_selectedRecipe.Recipe, out Tuple<string, int> tuple) || tuple.Item1 != numbers)
-                    cachedAmount[__instance.m_selectedRecipe.Recipe] = Tuple.Create(numbers, GetMaximumAmount(__instance.m_selectedRecipe.Recipe, player));
-
-                int maxAmount = cachedAmount[__instance.m_selectedRecipe.Recipe].Item2;
+                int maxAmount = GetMaxAmountCached();
 
                 if (AmountScrollHandler.hovered && ZInput.GetMouseScrollWheel() != 0 && Time.frameCount - lastScrollTriggerFrame > 2)
                 {
@@ -312,15 +296,68 @@ namespace MyLittleUI
 
                 queueNextCraft = false;
 
-                bool CanIncrease()
+                bool CanIncrease() => amount < maxAmount;
+                bool CanDecrease() => amount > 1;
+            }
+
+            private static string CombinedResAmount()
+            {
+                if (resAmountElements.Count == 0)
+                    for (int i = 0; i < InventoryGui.instance.m_recipeRequirementList.Length; i++)
+                        resAmountElements.Add(InventoryGui.instance.m_recipeRequirementList[i].transform.Find("res_amount")?.GetComponent<TMP_Text>());
+
+                if (resAmountElements.Count == 0)
+                    return "";
+
+                bool clearAndRestart = false;
+                sb.Clear(); 
+                foreach (TMP_Text text in resAmountElements)
                 {
-                    return amount < maxAmount;
+                    if (text == null)
+                    {
+                        clearAndRestart = true;
+                        break;
+                    }
+
+                    if (text.isActiveAndEnabled)
+                        sb.Append(text.text);
                 }
 
-                bool CanDecrease()
+                if (clearAndRestart)
                 {
-                    return amount > 1;
+                    resAmountElements.Clear();
+                    return CombinedResAmount();
                 }
+                    
+                return sb.ToString();
+            }
+
+            private static string GetNumbersString()
+            {
+                string combinedResources = CombinedResAmount();
+                if (combinedResources.IsNullOrWhiteSpace())
+                    return combinedResources;
+
+                // Clear tags and get only numbers from string
+                string numbers = Regex.Replace(Regex.Replace(combinedResources, "<.*?>", string.Empty), @"[^\d]", string.Empty);
+                if (InventoryGui.instance.m_selectedRecipe.Recipe.m_requireOnlyOneIngredient)
+                    numbers += Mathf.Sin(Time.time * 5f) > 0f;
+
+                return numbers;
+            }
+
+            private static int GetMaxAmountCached()
+            {
+                string numbers = GetNumbersString();
+                if (numbers.IsNullOrWhiteSpace())
+                    return 0;
+
+                if (cachedAmount.TryGetValue(InventoryGui.instance.m_selectedRecipe.Recipe, out Tuple<string, int> tuple) && tuple.Item1 == numbers)
+                    return tuple.Item2;
+
+                int maxAmount = GetMaximumAmount(InventoryGui.instance.m_selectedRecipe.Recipe, Player.m_localPlayer);
+                cachedAmount[InventoryGui.instance.m_selectedRecipe.Recipe] = Tuple.Create(numbers, maxAmount);
+                return maxAmount;
             }
         }
 
@@ -347,15 +384,7 @@ namespace MyLittleUI
                 buttonIncrease = null;
                 buttonDecrease = null;
                 textAmount = null;
-            }
-        }
-
-        [HarmonyPatch(typeof(Player), nameof(Player.OnInventoryChanged))]
-        public static class Player_OnInventoryChanged_MulticraftUpdateMaxAmount
-        {
-            public static void Postfix()
-            {
-                cachedAmount.Clear();
+                resAmountElements.Clear();
             }
         }
 
