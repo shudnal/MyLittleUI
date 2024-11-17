@@ -162,8 +162,16 @@ namespace MyLittleUI
         {
             public static void Postfix()
             {
-                recipeCache.Clear();
                 ClearText();
+            }
+        }
+
+        [HarmonyPatch(typeof(InventoryGui), nameof(InventoryGui.OnDestroy))]
+        public static class InventoryGui_OnDestroy_ClearCache
+        {
+            public static void Postfix()
+            {
+                recipeCache.Clear();
             }
         }
 

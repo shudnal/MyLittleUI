@@ -1,3 +1,6 @@
+# 1.1.18
+* multicraft and craft filter performance improvements
+
 # 1.1.17
 * fix for MMHOOK dependent mods generating warnings on ExtraSlots API initialization
 * minor performance improvements
