@@ -24,7 +24,7 @@ namespace MyLittleUI
     {
         public const string pluginID = "shudnal.MyLittleUI";
         public const string pluginName = "My Little UI";
-        public const string pluginVersion = "1.1.18";
+        public const string pluginVersion = "1.1.19";
 
         private readonly Harmony harmony = new Harmony(pluginID);
 
@@ -156,6 +156,7 @@ namespace MyLittleUI
         public static ConfigEntry<bool> hoverCharacterGrowth;
         public static ConfigEntry<bool> hoverCharacterProcreation;
         public static ConfigEntry<bool> hoverCharacterEggGrow;
+        public static ConfigEntry<bool> hoverCharacterLovePoints;
 
         public static ConfigEntry<StationHover> hoverTame;
         public static ConfigEntry<bool> hoverTameTimeToTame;
@@ -520,6 +521,7 @@ namespace MyLittleUI
             hoverCharacterGrowth = config("Hover - Character", "Show baby growth", true, "Show total growth percentage/remaining for babies. [Synced with Server]", synchronizedSetting: true);
             hoverCharacterProcreation = config("Hover - Character", "Show offspring", true, "Show percentage/remaining for new offspring. [Synced with Server]", synchronizedSetting: true);
             hoverCharacterEggGrow = config("Hover - Character", "Show egg hatching", true, "Show percentage/remaining for egg hatching. [Synced with Server]", synchronizedSetting: true);
+            hoverCharacterLovePoints = config("Hover - Character", "Show love points", true, "Show how many love points creature has (likeliness to be pregnant). [Synced with Server]", synchronizedSetting: true);
 
             hoverFermenterEnabled = config("Hover - Stations", "Fermenter Hover Enabled", defaultValue: true, "Enable Hover text for fermenter. [Synced with Server]", synchronizedSetting: true);
             hoverPlantEnabled = config("Hover - Stations", "Plants Hover Enabled", defaultValue: true, "Enable Hover text for plants. [Synced with Server]", synchronizedSetting: true);
@@ -1269,10 +1271,7 @@ namespace MyLittleUI
                 if (!___m_nview.IsValid())
                     return;
 
-                if (hoverCharacter.Value == StationHover.Vanilla)
-                    return;
-
-                if (hoverCharacterGrowth.Value && __instance.TryGetComponent(out Growup growup) && growup.m_growTime != 0f)
+                if (hoverCharacter.Value != StationHover.Vanilla && hoverCharacterGrowth.Value && __instance.TryGetComponent(out Growup growup) && growup.m_growTime != 0f)
                 {
                     double timeSinceSpawned = growup.m_baseAI.GetTimeSinceSpawned().TotalSeconds;
                     if (timeSinceSpawned > growup.m_growTime)
@@ -1295,27 +1294,36 @@ namespace MyLittleUI
                     }
                 }
 
-                if (hoverCharacterProcreation.Value && __instance.TryGetComponent(out Procreation procreation) && procreation.IsPregnant())
+                if (__instance.TryGetComponent(out Procreation procreation))
                 {
-                    long @long = ___m_nview.GetZDO().GetLong(ZDOVars.s_pregnant, 0L);
-                    double timeSincePregnant = (ZNet.instance.GetTime() - new DateTime(@long)).TotalSeconds;
-                    if (timeSincePregnant > procreation.m_pregnancyDuration)
-                        return;
-
-                    string offspring = procreation.m_offspring.name;
-                    if (!characterNames.ContainsKey(offspring))
-                        characterNames.Add(offspring, procreation.m_offspring.GetComponent<Character>()?.m_name);
-
-                    switch (hoverCharacter.Value)
+                    if (hoverCharacterLovePoints.Value && procreation.m_requiredLovePoints > 0)
                     {
-                        case StationHover.Percentage:
-                            __result += $"\n{Localization.instance.Localize(characterNames[offspring])}: {timeSincePregnant / procreation.m_pregnancyDuration:P0}";
+                        int lovePoints = ___m_nview.GetZDO().GetInt(ZDOVars.s_lovePoints);
+                        __result += $"\n♥: {lovePoints}/{procreation.m_requiredLovePoints}";
+                    }
+
+                    if (hoverCharacter.Value != StationHover.Vanilla && hoverCharacterProcreation.Value && procreation.IsPregnant())
+                    {
+                        long @long = ___m_nview.GetZDO().GetLong(ZDOVars.s_pregnant, 0L);
+                        double timeSincePregnant = (ZNet.instance.GetTime() - new DateTime(@long)).TotalSeconds;
+                        if (timeSincePregnant > procreation.m_pregnancyDuration)
                             return;
-                        case StationHover.MinutesSeconds:
-                            __result += $"\n{Localization.instance.Localize(characterNames[offspring])}: {FromSeconds(procreation.m_pregnancyDuration - timeSincePregnant)}";
-                            return;
-                        default:
-                            return;
+
+                        string offspring = procreation.m_offspring.name;
+                        if (!characterNames.ContainsKey(offspring))
+                            characterNames.Add(offspring, procreation.m_offspring.GetComponent<Character>()?.m_name);
+
+                        switch (hoverCharacter.Value)
+                        {
+                            case StationHover.Percentage:
+                                __result += $"\n{Localization.instance.Localize(characterNames[offspring])}: {timeSincePregnant / procreation.m_pregnancyDuration:P0}";
+                                return;
+                            case StationHover.MinutesSeconds:
+                                __result += $"\n{Localization.instance.Localize(characterNames[offspring])}: {FromSeconds(procreation.m_pregnancyDuration - timeSincePregnant)}";
+                                return;
+                            default:
+                                return;
+                        }
                     }
                 }
             }

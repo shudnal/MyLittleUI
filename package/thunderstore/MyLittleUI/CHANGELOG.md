@@ -1,3 +1,6 @@
+# 1.1.19
+* breeding love points on character hover
+
 # 1.1.18
 * multicraft and craft filter performance improvements
 
