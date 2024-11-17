@@ -8,6 +8,7 @@ using TMPro;
 using UnityEngine;
 using static MyLittleUI.MyLittleUI;
 using UnityEngine.UI;
+using System.Diagnostics;
 
 namespace MyLittleUI
 {
@@ -355,7 +356,10 @@ namespace MyLittleUI
                 if (cachedAmount.TryGetValue(InventoryGui.instance.m_selectedRecipe.Recipe, out Tuple<string, int> tuple) && tuple.Item1 == numbers)
                     return tuple.Item2;
 
+                Stopwatch stopwatch = Stopwatch.StartNew();
                 int maxAmount = GetMaximumAmount(InventoryGui.instance.m_selectedRecipe.Recipe, Player.m_localPlayer);
+                LogInfo($"Multicraft max amount calculated in {(double)stopwatch.ElapsedTicks / Stopwatch.Frequency * 1000d:F2} ms");
+                
                 cachedAmount[InventoryGui.instance.m_selectedRecipe.Recipe] = Tuple.Create(numbers, maxAmount);
                 return maxAmount;
             }
