@@ -24,7 +24,7 @@ namespace MyLittleUI
     {
         public const string pluginID = "shudnal.MyLittleUI";
         public const string pluginName = "My Little UI";
-        public const string pluginVersion = "1.1.19";
+        public const string pluginVersion = "1.1.20";
 
         private readonly Harmony harmony = new Harmony(pluginID);
 
@@ -212,6 +212,8 @@ namespace MyLittleUI
         public static ConfigEntry<bool> showSlots;
         public static ConfigEntry<Color> weightBackgroundColor;
         public static ConfigEntry<Color> slotsBackgroundColor;
+        public static ConfigEntry<bool> showWeightLeft;
+        public static ConfigEntry<bool> showSlotsTaken;
 
         public static ConfigEntry<Color> weightSlotsFine;
         public static ConfigEntry<Color> weightSlotsHalf;
@@ -617,6 +619,11 @@ namespace MyLittleUI
             showSlots = config("Info - Inventory", "Show current slots", defaultValue: true, "Enable current slots (emtpy / max) [Synced with Server]", synchronizedSetting: true);
             weightBackgroundColor = config("Info - Inventory", "Weight background", defaultValue: new Color(0f, 0f, 0f, 0.5f), "Color of weight block background");
             slotsBackgroundColor = config("Info - Inventory", "Slots background", defaultValue: new Color(0f, 0f, 0f, 0.5f), "Color of slots block background");
+            showWeightLeft = config("Info - Inventory", "Show weight left until encumbered", defaultValue: false, "Invert weight value. Show how much weight you can take until encumbered.");
+            showSlotsTaken = config("Info - Inventory", "Show slots space taken", defaultValue: false, "Invern current slots. Show how much space is taken.");
+
+            showWeightLeft.SettingChanged += (sender, args) => InventoryPanel.UpdateStats();
+            showSlotsTaken.SettingChanged += (sender, args) => InventoryPanel.UpdateStats();
 
             weightSlotsFine = config("Info - Inventory - Colors", "1 - Fine", defaultValue: new Color(0.11765f, 0.72941f, 0.03529f, 1f), "Color of amount < 50%.");
             weightSlotsHalf = config("Info - Inventory - Colors", "2 - Half", defaultValue: new Color(0.72941f, 0.72941f, 0.03529f, 1f), "Color of amount > 50%.");
@@ -1447,6 +1454,8 @@ namespace MyLittleUI
                     keyCodeValues.Do(key => ZInput.s_keyLocalizationMap.Remove(key));
             }
         }
+
+        public void UpdateCraftingPanel() => CraftFilter.UpdateCraftingPanel();
     }
 }
 

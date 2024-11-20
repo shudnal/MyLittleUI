@@ -1,3 +1,9 @@
+# 1.1.20
+* craft filter optimizations
+* inventory weight and slots fix
+* option to see how much weight until encumbered
+* option to see how much slots is taken
+
 # 1.1.19
 * breeding love points on character hover
 

@@ -23,6 +23,7 @@ namespace MyLittleUI
         private static GuiInputField playerFilter;
 
         private static string[] filterString = Array.Empty<string>();
+        private static bool applyFilter;
 
         private static readonly StringBuilder sb = new StringBuilder();
         private static readonly StringBuilder sbItem = new StringBuilder();
@@ -71,7 +72,7 @@ namespace MyLittleUI
             playerFilter.onValueChanged.AddListener(delegate
             {
                 UpdateFilterString();
-                UpdateCraftingPanel();
+                StartPanelUpdate();
             });
         }
 
@@ -88,11 +89,13 @@ namespace MyLittleUI
 
         public static void UpdateFilterString() 
         {
-            filterString = playerFilter?.text.ToLower().Split(new char[] { ' ' }, StringSplitOptions.None);
+            if (applyFilter = !string.IsNullOrWhiteSpace(playerFilter?.text))
+                filterString = playerFilter?.text.ToLower().Split(new char[] { ' ' }, StringSplitOptions.None);
         }
 
         public static void ClearText()
         {
+            applyFilter = false;
             if (playerFilter)
                 playerFilter.text = "";
         }
@@ -135,6 +138,12 @@ namespace MyLittleUI
         private static bool FitsFilterString(Recipe recipe)
         {
             return recipeCache.ContainsKey(recipe) && filterString.All(substr => recipeCache[recipe].Contains(substr));
+        }
+
+        private static void StartPanelUpdate()
+        {
+            instance.CancelInvoke("UpdateCraftingPanel");
+            instance.Invoke("UpdateCraftingPanel", recipeCache.Count == 0f ? 0.4f : 0.2f);
         }
 
         public static void UpdateCraftingPanel()
@@ -193,7 +202,7 @@ namespace MyLittleUI
                 if (!modEnabled.Value || !craftingFilterEnabled.Value)
                     return;
 
-                if (filterString.Length == 0)
+                if (!applyFilter)
                     return;
 
                 Stopwatch stopwatch = Stopwatch.StartNew();

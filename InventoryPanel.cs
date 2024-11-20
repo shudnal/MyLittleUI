@@ -147,18 +147,26 @@ namespace MyLittleUI
             if (slotsBackground)
                 slotsBackground.color = slotsBackgroundColor.Value;
 
-            weight?.gameObject.SetActive(modEnabled.Value && showWeight.Value);
-            if (weight.gameObject.activeInHierarchy)
+            if (weight)
             {
-                weight.anchoredPosition = weightPosition.Value;
-                weightText.color = weightFontColor.Value;
+                weight.gameObject.SetActive(modEnabled.Value && showWeight.Value);
+                if (weight.gameObject.activeInHierarchy)
+                {
+                    weight.anchoredPosition = weightPosition.Value;
+                    if (weightText)
+                        weightText.color = weightFontColor.Value;
+                }
             }
 
-            slots?.gameObject.SetActive(modEnabled.Value && showSlots.Value);
-            if (slots.gameObject.activeInHierarchy)
+            if (slots)
             {
-                slots.anchoredPosition = slotsPosition.Value;
-                slotsText.color = slotsFontColor.Value;
+                slots.gameObject.SetActive(modEnabled.Value && showSlots.Value);
+                if (slots.gameObject.activeInHierarchy)
+                {
+                    slots.anchoredPosition = slotsPosition.Value;
+                    if (slotsText)
+                        slotsText.color = slotsFontColor.Value;
+                }
             }
         }
 
@@ -169,29 +177,37 @@ namespace MyLittleUI
 
             UpdateConfigurableValues();
 
-            if (weight.gameObject.activeInHierarchy)
+            if ((bool)weight && weight.gameObject.activeInHierarchy)
             {
-                if (totalWeight > maxWeight && Mathf.Sin(Time.time * 10f) > 0f)
-                    weightText?.SetText($"<color=red>{totalWeight}</color>/{maxWeight}");
-                else
-                    weightText?.SetText($"{totalWeight}/{maxWeight}");
+                if (weightText)
+                    if (totalWeight > maxWeight && Mathf.Sin(Time.time * 10f) > 0f)
+                        weightText.SetText($"<color=red>{(showWeightLeft.Value ? maxWeight - totalWeight : totalWeight)}</color>/{maxWeight}");
+                    else
+                        weightText.SetText($"{(showWeightLeft.Value ? maxWeight - totalWeight : totalWeight)}/{maxWeight}");
 
-                weightBar?.SetMaxValue(maxWeight);
-                weightBar?.SetValue(totalWeight);
-                weightBar?.SetColor(gradient.Evaluate(Mathf.Clamp01(weightBar.m_value / weightBar.m_maxValue)));
+                if (weightBar)
+                {
+                    weightBar.SetMaxValue(maxWeight);
+                    weightBar.SetValue(totalWeight);
+                    weightBar.SetColor(gradient.Evaluate(Mathf.Clamp01(weightBar.m_value / weightBar.m_maxValue)));
+                }
             }
 
-            if (slots.gameObject.activeInHierarchy)
+            if ((bool)slots && slots.gameObject.activeInHierarchy)
             {
-                if (emptySlots <= 0 && Mathf.Sin(Time.time * 10f) > 0f)
-                    slotsText?.SetText($"<color=red>{emptySlots}</color>/{maxSlots}");
-                else
-                    slotsText?.SetText($"{emptySlots}/{maxSlots}");
+                if (slotsText)
+                    if (emptySlots <= 0 && Mathf.Sin(Time.time * 10f) > 0f)
+                        slotsText.SetText($"<color=red>{(showSlotsTaken.Value ? maxSlots - emptySlots : emptySlots)}</color>/{maxSlots}");
+                    else
+                        slotsText.SetText($"{(showSlotsTaken.Value ? maxSlots - emptySlots : emptySlots)}/{maxSlots}");
 
-                slotsBar?.SetMaxValue(maxSlots);
-                slotsBar?.SetValue(maxSlots - emptySlots);
-                if (slotsBar?.m_maxValue != 0f)
-                    slotsBar?.SetColor(gradient.Evaluate(Mathf.Clamp01(slotsBar.m_value / slotsBar.m_maxValue)));
+                if (slotsBar)
+                {
+                    slotsBar.SetMaxValue(maxSlots);
+                    slotsBar.SetValue(maxSlots - emptySlots);
+                    if (slotsBar.m_maxValue != 0f)
+                        slotsBar.SetColor(gradient.Evaluate(Mathf.Clamp01(slotsBar.m_value / slotsBar.m_maxValue)));
+                }
             }
         }
 
