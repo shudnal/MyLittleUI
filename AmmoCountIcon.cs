@@ -214,7 +214,10 @@ namespace MyLittleUI
                 {
                     isDirty[__instance] = false;
                     if (__instance.m_elements.Count > 0)
+                    {
+                        __instance.m_items.Clear();
                         __instance.UpdateIcons(null);
+                    }
                 }
             }
         }

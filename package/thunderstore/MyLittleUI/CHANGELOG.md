@@ -1,3 +1,6 @@
+# 1.1.21
+* Valheim Enchantment System compatibility
+
 # 1.1.20
 * craft filter optimizations
 * inventory weight and slots fix
