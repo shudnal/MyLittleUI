@@ -24,7 +24,7 @@ namespace MyLittleUI
     {
         public const string pluginID = "shudnal.MyLittleUI";
         public const string pluginName = "My Little UI";
-        public const string pluginVersion = "1.1.21";
+        public const string pluginVersion = "1.1.22";
 
         private readonly Harmony harmony = new Harmony(pluginID);
 
@@ -144,10 +144,12 @@ namespace MyLittleUI
 
         public static ConfigEntry<bool> hoverFermenterEnabled;
         public static ConfigEntry<bool> hoverPlantEnabled;
+        public static ConfigEntry<bool> hoverPickableEnabled;
         public static ConfigEntry<bool> hoverCookingEnabled;
         public static ConfigEntry<bool> hoverBeeHiveEnabled;
         public static ConfigEntry<StationHover> hoverFermenter;
         public static ConfigEntry<StationHover> hoverPlant;
+        public static ConfigEntry<StationHover> hoverPickable;
         public static ConfigEntry<StationHover> hoverCooking;
         public static ConfigEntry<StationHover> hoverBeeHive;
         public static ConfigEntry<bool> hoverBeeHiveTotal;
@@ -238,7 +240,8 @@ namespace MyLittleUI
         {
             Vanilla,
             Percentage,
-            MinutesSeconds
+            MinutesSeconds,
+            Bar
         }
 
         public enum ChestItemsHover
@@ -527,10 +530,12 @@ namespace MyLittleUI
 
             hoverFermenterEnabled = config("Hover - Stations", "Fermenter Hover Enabled", defaultValue: true, "Enable Hover text for fermenter. [Synced with Server]", synchronizedSetting: true);
             hoverPlantEnabled = config("Hover - Stations", "Plants Hover Enabled", defaultValue: true, "Enable Hover text for plants. [Synced with Server]", synchronizedSetting: true);
+            hoverPickableEnabled = config("Hover - Stations", "Pickables Hover Enabled", defaultValue: true, "Enable Hover text for pickables. [Synced with Server]", synchronizedSetting: true);
             hoverCookingEnabled = config("Hover - Stations", "Cooking stations Hover Enabled", defaultValue: true, "Enable Hover text for cooking stations. [Synced with Server]", synchronizedSetting: true);
             hoverBeeHiveEnabled = config("Hover - Stations", "Bee Hive Hover Enabled", defaultValue: true, "Enable Hover text for bee hive. [Synced with Server]", synchronizedSetting: true);
             hoverFermenter = config("Hover - Stations", "Fermenter Hover", defaultValue: StationHover.Vanilla, "Hover text for fermenter.");
             hoverPlant = config("Hover - Stations", "Plants Hover", defaultValue: StationHover.Vanilla, "Hover text for plants.");
+            hoverPickable = config("Hover - Stations", "Pickables Hover", defaultValue: StationHover.Vanilla, "Hover text for pickables.");
             hoverCooking = config("Hover - Stations", "Cooking stations Hover", defaultValue: StationHover.Vanilla, "Hover text for cooking stations.");
             hoverBeeHive = config("Hover - Stations", "Bee Hive Hover", defaultValue: StationHover.Vanilla, "Hover text for bee hive.");
             hoverBeeHiveTotal = config("Hover - Stations", "Bee Hive Show total", defaultValue: true, "Show total needed time/percent for bee hive.");
@@ -700,6 +705,8 @@ namespace MyLittleUI
             return ts.ToString(ts.Hours > 0 ? @"h\:mm\:ss" : @"m\:ss");
         }
 
+        private static string FromPercent(double percent) => "<sup><alpha=#ff>▀▀▀▀▀▀▀▀▀▀<alpha=#ff></sup>".Insert(Mathf.Clamp(Mathf.RoundToInt((float)percent * 10), 0, 10) + 16, "<alpha=#33>");
+
         [HarmonyPatch(typeof(Fermenter), nameof(Fermenter.GetHoverText))]
         private class Fermenter_GetHoverText_Duration
         {
@@ -711,7 +718,7 @@ namespace MyLittleUI
                 if (!hoverFermenterEnabled.Value || hoverFermenter.Value == StationHover.Vanilla)
                     return;
 
-                if (__result.IsNullOrWhiteSpace())
+                if (string.IsNullOrWhiteSpace(__result))
                     return;
 
                 if (___m_exposed)
@@ -727,6 +734,8 @@ namespace MyLittleUI
                 if (__instance.GetStatus() == Fermenter.Status.Fermenting)
                     if (hoverFermenter.Value == StationHover.Percentage)
                         __result += $"\n{__instance.GetFermentationTime() / __instance.m_fermentationDuration:P0}";
+                    else if (hoverFermenter.Value == StationHover.Bar)
+                        __result += $"\n{FromPercent(__instance.GetFermentationTime() / __instance.m_fermentationDuration)}";
                     else if (hoverFermenter.Value == StationHover.MinutesSeconds)
                         __result += $"\n{FromSeconds(__instance.m_fermentationDuration - __instance.GetFermentationTime())}";
             }
@@ -743,7 +752,7 @@ namespace MyLittleUI
                 if (!hoverPlantEnabled.Value || hoverPlant.Value == StationHover.Vanilla)
                     return;
 
-                if (__result.IsNullOrWhiteSpace())
+                if (string.IsNullOrWhiteSpace(__result))
                     return;
 
                 if (__instance.GetStatus() != Plant.Status.Healthy)
@@ -751,8 +760,42 @@ namespace MyLittleUI
 
                 if (hoverPlant.Value == StationHover.Percentage)
                     __result += $"\n{__instance.TimeSincePlanted() / __instance.GetGrowTime():P0}";
+                else if (hoverPlant.Value == StationHover.Bar)
+                    __result += $"\n{FromPercent(__instance.TimeSincePlanted() / __instance.GetGrowTime())}";
                 else if (hoverPlant.Value == StationHover.MinutesSeconds)
                     __result += $"\n{FromSeconds(__instance.GetGrowTime() - __instance.TimeSincePlanted())}";
+            }
+        }
+
+        [HarmonyPatch(typeof(Pickable), nameof(Pickable.GetHoverText))]
+        private class Pickable_GetHoverText_Duration
+        {
+            private static void Postfix(Pickable __instance, ref string __result)
+            {
+                if (!modEnabled.Value)
+                    return;
+
+                if (!hoverPickableEnabled.Value || hoverPickable.Value == StationHover.Vanilla)
+                    return;
+
+                if (!__instance.m_picked || __instance.m_enabled == 0 || __instance.m_nview == null || !__instance.m_nview.IsValid())
+                    return;
+
+                long pickedTime = __instance.m_nview.GetZDO().GetLong(ZDOVars.s_pickedTime, 0L);
+                if (pickedTime <= 1)
+                    return;
+
+                if (string.IsNullOrWhiteSpace(__result))
+                    __result = Localization.instance.Localize(__instance.GetHoverName());
+
+                TimeSpan timeSpan = ZNet.instance.GetTime() - new DateTime(pickedTime);
+
+                if (hoverPickable.Value == StationHover.Percentage)
+                    __result += $"\n{timeSpan.TotalSeconds / (double)(__instance.m_respawnTimeMinutes * 60):P0}";
+                else if (hoverPickable.Value == StationHover.Bar)
+                    __result += $"\n{FromPercent(timeSpan.TotalSeconds / (__instance.m_respawnTimeMinutes * 60))}";
+                else if (hoverPickable.Value == StationHover.MinutesSeconds)
+                    __result += $"\n{FromSeconds((double)(__instance.m_respawnTimeMinutes * 60) - timeSpan.TotalSeconds)}";
             }
         }
 
@@ -767,7 +810,7 @@ namespace MyLittleUI
                 if (!hoverBeeHiveEnabled.Value || hoverBeeHive.Value == StationHover.Vanilla)
                     return;
 
-                if (__result.IsNullOrWhiteSpace())
+                if (string.IsNullOrWhiteSpace(__result))
                     return;
 
                 int honeyLevel = __instance.GetHoneyLevel();
@@ -779,12 +822,16 @@ namespace MyLittleUI
 
                 if (hoverBeeHive.Value == StationHover.Percentage)
                     __result += $"\n{product / __instance.m_secPerUnit:P0}";
+                else if (hoverBeeHive.Value == StationHover.Bar)
+                    __result += $"\n{FromPercent(product / __instance.m_secPerUnit)}";
                 else if (hoverBeeHive.Value == StationHover.MinutesSeconds)
                     __result += $"\n{FromSeconds(__instance.m_secPerUnit - product)}";
 
                 if (hoverBeeHiveTotal.Value && honeyLevel < 3)
                     if (hoverBeeHive.Value == StationHover.Percentage)
                         __result += $"\n{(product + __instance.m_secPerUnit * honeyLevel) / (__instance.m_secPerUnit * __instance.m_maxHoney):P0}";
+                    else if (hoverBeeHive.Value == StationHover.Bar)
+                        __result += $"\n{FromPercent((product + __instance.m_secPerUnit * honeyLevel) / (__instance.m_secPerUnit * __instance.m_maxHoney))}";
                     else if (hoverBeeHive.Value == StationHover.MinutesSeconds)
                         __result += $"\n{FromSeconds((__instance.m_secPerUnit * __instance.m_maxHoney) - (product + (__instance.m_secPerUnit * honeyLevel)))}";
             }
@@ -820,9 +867,17 @@ namespace MyLittleUI
             {
                 sb.Clear();
 
+                sb.Append(___m_name);
+                sb.Append("\n[<color=yellow><b>$KEY_Use</b></color>] ");
+                sb.Append(___m_addItemTooltip);
+                if (!ZInput.GamepadActive)
+                {
+                    sb.Append("\n[<color=yellow><b>1-8</b></color>] ");
+                    sb.Append(___m_addItemTooltip);
+                }
+
                 if (___m_nview.IsOwner())
                 {
-
                     for (int slot = 0; slot < __instance.m_slots.Length; slot++)
                     {
                         __instance.GetSlot(slot, out string itemName, out float cookedTime, out _);
@@ -848,6 +903,11 @@ namespace MyLittleUI
 
                         if (hoverCooking.Value == StationHover.Percentage)
                             sb.Append($"{(cookedTime - (itemReady ? itemConversion.m_cookTime : 0)) / itemConversion.m_cookTime:P0}");
+                        else if (hoverCooking.Value == StationHover.Bar)
+                        {
+                            sb.Append("\n");
+                            sb.Append(FromPercent((cookedTime - (itemReady ? itemConversion.m_cookTime : 0)) / itemConversion.m_cookTime));
+                        }
                         else if (hoverCooking.Value == StationHover.MinutesSeconds)
                             sb.Append(FromSeconds(itemConversion.m_cookTime - (cookedTime - (itemReady ? itemConversion.m_cookTime : 0))));
 
@@ -856,7 +916,7 @@ namespace MyLittleUI
                     }
                 }
 
-                return ___m_name + "\n[<color=yellow><b>$KEY_Use</b></color>] " + ___m_addItemTooltip + (ZInput.GamepadActive ? "" : ("\n[<color=yellow><b>1-8</b></color>] " + ___m_addItemTooltip)) + Localization.instance.Localize(sb.ToString());
+                return sb.ToString();
             }
 
             private static void Postfix(CookingStation __instance, Switch ___m_addFoodSwitch, string ___m_addItemTooltip, string ___m_name, ZNetView ___m_nview)
@@ -906,7 +966,7 @@ namespace MyLittleUI
                 if (!hoverCookingEnabled.Value || hoverCooking.Value == StationHover.Vanilla)
                     return;
 
-                if (__result.IsNullOrWhiteSpace())
+                if (string.IsNullOrWhiteSpace(__result))
                     return;
 
                 if (!___m_nview.IsOwner())
@@ -938,6 +998,11 @@ namespace MyLittleUI
 
                     if (hoverCooking.Value == StationHover.Percentage)
                         sb.Append($"{(cookedTime - (itemReady ? itemConversion.m_cookTime : 0)) / itemConversion.m_cookTime:P0}");
+                    else if (hoverCooking.Value == StationHover.Bar)
+                    {
+                        sb.Append("\n");
+                        sb.Append(FromPercent((cookedTime - (itemReady ? itemConversion.m_cookTime : 0)) / itemConversion.m_cookTime));
+                    }
                     else if (hoverCooking.Value == StationHover.MinutesSeconds)
                         sb.Append(FromSeconds(itemConversion.m_cookTime - (cookedTime - (itemReady ? itemConversion.m_cookTime : 0))));
 
@@ -1243,6 +1308,8 @@ namespace MyLittleUI
 
                             if (hoverTame.Value == StationHover.Percentage)
                                 __result += Localization.instance.Localize($"\n$hud_tame: {(__instance.m_tamingTime - timeLeftToTame) / __instance.m_tamingTime:P0}");
+                            else if (hoverTame.Value == StationHover.Bar)
+                                __result += Localization.instance.Localize($"\n$hud_tame: \n{FromPercent((__instance.m_tamingTime - timeLeftToTame) / __instance.m_tamingTime)}");
                             else if (hoverTame.Value == StationHover.MinutesSeconds)
                                 __result += Localization.instance.Localize($"\n$hud_tame: {FromSeconds(timeLeftToTame)}");
                     }
@@ -1262,6 +1329,8 @@ namespace MyLittleUI
 
                 if (hoverTame.Value == StationHover.Percentage)
                     __result += Localization.instance.Localize($"\n$hud_tamehappy: {timeLeft / __instance.m_fedDuration:P0}");
+                else if (hoverTame.Value == StationHover.Bar)
+                    __result += Localization.instance.Localize($"\n$hud_tamehappy: \n{FromPercent(timeLeft / __instance.m_fedDuration)}");
                 else if (hoverTame.Value == StationHover.MinutesSeconds)
                     __result += Localization.instance.Localize($"\n$hud_tamehappy: {FromSeconds(timeLeft)}");
             }
@@ -1281,56 +1350,62 @@ namespace MyLittleUI
                 if (hoverCharacter.Value != StationHover.Vanilla && hoverCharacterGrowth.Value && __instance.TryGetComponent(out Growup growup) && growup.m_growTime != 0f)
                 {
                     double timeSinceSpawned = growup.m_baseAI.GetTimeSinceSpawned().TotalSeconds;
-                    if (timeSinceSpawned > growup.m_growTime)
-                        return;
-
-                    string grownup = growup.GetPrefab().name;
-                    if (!characterNames.ContainsKey(grownup))
-                        characterNames.Add(grownup, growup.GetPrefab().GetComponent<Character>()?.m_name);
-
-                    switch (hoverCharacter.Value)
+                    if (timeSinceSpawned <= growup.m_growTime)
                     {
-                        case StationHover.Percentage:
-                            __result += $"\n{Localization.instance.Localize(characterNames[grownup])}: {timeSinceSpawned / growup.m_growTime:P0}";
-                            return;
-                        case StationHover.MinutesSeconds:
-                            __result += $"\n{Localization.instance.Localize(characterNames[grownup])}: {FromSeconds(growup.m_growTime - timeSinceSpawned)}";
-                            return;
-                        default:
-                            return;
+                        string grownup = growup.GetPrefab().name;
+                        if (!characterNames.ContainsKey(grownup))
+                            characterNames.Add(grownup, growup.GetPrefab().GetComponent<Character>()?.m_name);
+
+                        switch (hoverCharacter.Value)
+                        {
+                            case StationHover.Percentage:
+                                __result += $"\n{Localization.instance.Localize(characterNames[grownup])}: {timeSinceSpawned / growup.m_growTime:P0}";
+                                break;
+                            case StationHover.Bar:
+                                __result += $"\n{Localization.instance.Localize(characterNames[grownup])}: \n{FromPercent(timeSinceSpawned / growup.m_growTime)}";
+                                break;
+                            case StationHover.MinutesSeconds:
+                                __result += $"\n{Localization.instance.Localize(characterNames[grownup])}: {FromSeconds(growup.m_growTime - timeSinceSpawned)}";
+                                break;
+                            default:
+                                break;
+                        }
                     }
                 }
 
                 if (__instance.TryGetComponent(out Procreation procreation))
                 {
-                    if (hoverCharacterLovePoints.Value && procreation.m_requiredLovePoints > 0)
-                    {
-                        int lovePoints = ___m_nview.GetZDO().GetInt(ZDOVars.s_lovePoints);
-                        __result += $"\n♥: {lovePoints}/{procreation.m_requiredLovePoints}";
-                    }
-
                     if (hoverCharacter.Value != StationHover.Vanilla && hoverCharacterProcreation.Value && procreation.IsPregnant())
                     {
                         long @long = ___m_nview.GetZDO().GetLong(ZDOVars.s_pregnant, 0L);
                         double timeSincePregnant = (ZNet.instance.GetTime() - new DateTime(@long)).TotalSeconds;
-                        if (timeSincePregnant > procreation.m_pregnancyDuration)
-                            return;
-
-                        string offspring = procreation.m_offspring.name;
-                        if (!characterNames.ContainsKey(offspring))
-                            characterNames.Add(offspring, procreation.m_offspring.GetComponent<Character>()?.m_name);
-
-                        switch (hoverCharacter.Value)
+                        if (timeSincePregnant <= procreation.m_pregnancyDuration)
                         {
-                            case StationHover.Percentage:
-                                __result += $"\n{Localization.instance.Localize(characterNames[offspring])}: {timeSincePregnant / procreation.m_pregnancyDuration:P0}";
-                                return;
-                            case StationHover.MinutesSeconds:
-                                __result += $"\n{Localization.instance.Localize(characterNames[offspring])}: {FromSeconds(procreation.m_pregnancyDuration - timeSincePregnant)}";
-                                return;
-                            default:
-                                return;
+                            string offspring = procreation.m_offspring.name;
+                            if (!characterNames.ContainsKey(offspring))
+                                characterNames.Add(offspring, procreation.m_offspring.GetComponent<Character>()?.m_name);
+
+                            switch (hoverCharacter.Value)
+                            {
+                                case StationHover.Percentage:
+                                    __result += $"\n{Localization.instance.Localize(characterNames[offspring])}: {timeSincePregnant / procreation.m_pregnancyDuration:P0}";
+                                    break;
+                                case StationHover.Bar:
+                                    __result += $"\n{Localization.instance.Localize(characterNames[offspring])}: \n{FromPercent(timeSincePregnant / procreation.m_pregnancyDuration)}";
+                                    break;
+                                case StationHover.MinutesSeconds:
+                                    __result += $"\n{Localization.instance.Localize(characterNames[offspring])}: {FromSeconds(procreation.m_pregnancyDuration - timeSincePregnant)}";
+                                    break;
+                                default:
+                                    break;
+                            }
                         }
+                    }
+
+                    if (hoverCharacterLovePoints.Value && procreation.m_requiredLovePoints > 0)
+                    {
+                        int lovePoints = ___m_nview.GetZDO().GetInt(ZDOVars.s_lovePoints);
+                        __result += $"\n♥: {lovePoints}/{procreation.m_requiredLovePoints}";
                     }
                 }
             }
@@ -1372,6 +1447,9 @@ namespace MyLittleUI
                     {
                         case StationHover.Percentage:
                             __result += $"\n{Localization.instance.Localize(characterNames[offspring])}: {timeSinceGrowStart/__instance.m_growTime:P0}";
+                            return;
+                        case StationHover.Bar:
+                            __result += $"\n{Localization.instance.Localize(characterNames[offspring])}: \n{FromPercent(timeSinceGrowStart / __instance.m_growTime)}";
                             return;
                         case StationHover.MinutesSeconds:
                             __result += $"\n{Localization.instance.Localize(characterNames[offspring])}: {FromSeconds(__instance.m_growTime - timeSinceGrowStart)}";
@@ -1458,4 +1536,3 @@ namespace MyLittleUI
         public void UpdateCraftingPanel() => CraftFilter.UpdateCraftingPanel();
     }
 }
-

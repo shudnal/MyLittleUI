@@ -1,3 +1,8 @@
+# 1.1.22
+* new visual type for stations hover: Bar
+* new config option for hover text with respawn time for Pickable
+* deeper weather forecast for occasional case of very long time of similar weather
+
 # 1.1.21
 * Valheim Enchantment System compatibility
 

@@ -47,14 +47,13 @@ namespace MyLittleUI
 
         public static void UpdateWeather()
         {
-            if (!EnvMan.instance)
-                return;
-
             InfoBlocks.forecastObject.SetActive(nextWeatherChange > 0);
 
             UpdateWeatherIcon();
-            UpdateWeatherTimer();
             InfoBlocks.UpdateForecastBackground();
+
+            if (EnvMan.instance)
+                UpdateWeatherTimer();
         }
 
         public static void UpdateWindTimer(float time)
@@ -185,12 +184,20 @@ namespace MyLittleUI
         [HarmonyPatch(typeof(EnvMan), nameof(EnvMan.UpdateEnvironment))]
         public static class EnvMan_UpdateEnvironment_UpdateForecast
         {
+            private static long preCalculatedPeriod = -1L;
+
+            public static void Prefix(EnvMan __instance)
+            {
+                // In case m_environmentPeriod was changed to force update environment
+                preCalculatedPeriod = __instance.m_environmentPeriod;
+            }
+
             public static void Postfix(EnvMan __instance)
             {
                 if (!modEnabled.Value || !forecastEnabled.Value)
                     return;
 
-                if (__instance.m_environmentPeriod == environmentPeriod && __instance.m_currentBiome == currentBiome && __instance.m_inAshlandsOrDeepnorth == inAshlandsOrDeepnorth)
+                if (__instance.m_environmentPeriod == environmentPeriod && __instance.m_environmentPeriod == preCalculatedPeriod && __instance.m_currentBiome == currentBiome && __instance.m_inAshlandsOrDeepnorth == inAshlandsOrDeepnorth)
                 {
                     UpdateWeatherTimer();
                     return;
@@ -259,7 +266,7 @@ namespace MyLittleUI
                 bool inDeepNorth = WorldGenerator.IsDeepnorth(position.x, position.y);
 
                 WeatherState currentState = GetWeatherState(EnvMan.instance.m_nextEnv ?? EnvMan.instance.GetCurrentEnvironment());
-                for (int i = 1; i <= 15; i++)
+                for (int i = 1; i <= 30; i++)
                 {
                     WeatherState nextState = GetWeatherState(GetEnvironment(environmentPeriod + i, currentBiome, inAshlands, inDeepNorth));
                     if (currentState != nextState)

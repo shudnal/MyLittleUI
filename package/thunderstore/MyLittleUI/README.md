@@ -82,5 +82,7 @@ The best way to handle configs is [Configuration Manager](https://thunderstore.i
 Or [Official BepInEx Configuration Manager](https://valheim.thunderstore.io/package/Azumatt/Official_BepInEx_ConfigurationManager/).
 
 ## Mirrors
-
 [Nexus](https://www.nexusmods.com/valheim/mods/2562)
+
+## Donation
+[Buy Me a Coffee](https://buymeacoffee.com/shudnal)
