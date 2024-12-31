@@ -24,7 +24,7 @@ namespace MyLittleUI
     {
         public const string pluginID = "shudnal.MyLittleUI";
         public const string pluginName = "My Little UI";
-        public const string pluginVersion = "1.1.22";
+        public const string pluginVersion = "1.1.23";
 
         private readonly Harmony harmony = new Harmony(pluginID);
 
@@ -133,6 +133,7 @@ namespace MyLittleUI
         public static ConfigEntry<bool> itemQualityHideCustomEquipmentSlots;
 
         public static ConfigEntry<float> inventoryOpenCloseAnimationSpeed;
+        public static ConfigEntry<bool> inventoryHideLongStack;
 
         public static ConfigEntry<bool> statsMainMenu;
         public static ConfigEntry<bool> statsMainMenuAdvanced;
@@ -508,6 +509,7 @@ namespace MyLittleUI
             itemQualityHideLvl1.SettingChanged += (sender, args) => AmmoCountIcon.UpdateVisibility();
 
             inventoryOpenCloseAnimationSpeed = config("Inventory", "Animation speed", defaultValue: 1f, "Inventory show/close animation speed");
+            inventoryHideLongStack = config("Inventory", "Hide long stacks", defaultValue: true, "Hide max stack size if it is too long to show in inventory or hotbar");
 
             inventoryOpenCloseAnimationSpeed.SettingChanged += (sender, args) => SetInventoryAnimationSpeed();
 

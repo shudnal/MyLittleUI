@@ -243,6 +243,9 @@ namespace MyLittleUI
                             element.m_quality.SetText("");
                         else if (!IgnoreItemQuality(__instance, item))
                             UpdateItemQuality(element.m_quality, item.m_quality);
+
+                        if (inventoryHideLongStack.Value && element.m_amount.text.Length > 7)
+                            element.m_amount.text = element.m_amount.text.Substring(0, element.m_amount.text.IndexOf('/'));
                     }
                 }
             }
@@ -262,7 +265,11 @@ namespace MyLittleUI
                     return;
 
                 foreach(HotkeyBar.ElementData element in __instance.m_elements)
+                {
                     UpdateItemIcon(element.m_durability, element.m_icon, itemEquippedColor.Value != Color.clear ? element.m_equiped.GetComponent<Image>() : null);
+                    if (inventoryHideLongStack.Value && element.m_amount.text.Length > 9)
+                        element.m_amount.text = element.m_stackText.ToFastString();
+                }
             }
         }
     }

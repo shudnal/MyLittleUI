@@ -1,3 +1,6 @@
+# 1.1.23
+* new config option to hide max stack size if it is too long
+
 # 1.1.22
 * new visual type for stations hover: Bar
 * new config option for hover text with respawn time for Pickable
