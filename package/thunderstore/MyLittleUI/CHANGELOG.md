@@ -1,3 +1,6 @@
+# 1.1.24
+* fixed random but nasty bug with inventory panel
+
 # 1.1.23
 * new config option to hide max stack size if it is too long
 

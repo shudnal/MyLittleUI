@@ -189,7 +189,9 @@ namespace MyLittleUI
                 {
                     weightBar.SetMaxValue(maxWeight);
                     weightBar.SetValue(totalWeight);
-                    weightBar.SetColor(gradient.Evaluate(Mathf.Clamp01(weightBar.m_value / weightBar.m_maxValue)));
+
+                    if (gradient != null && weightBar.m_maxValue != 0f)
+                        weightBar.SetColor(gradient.Evaluate(Mathf.Clamp01(weightBar.m_value / weightBar.m_maxValue)));
                 }
             }
 
@@ -205,7 +207,7 @@ namespace MyLittleUI
                 {
                     slotsBar.SetMaxValue(maxSlots);
                     slotsBar.SetValue(maxSlots - emptySlots);
-                    if (slotsBar.m_maxValue != 0f)
+                    if (gradient != null && slotsBar.m_maxValue != 0f)
                         slotsBar.SetColor(gradient.Evaluate(Mathf.Clamp01(slotsBar.m_value / slotsBar.m_maxValue)));
                 }
             }
