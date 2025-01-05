@@ -18,6 +18,7 @@ Bunch of little UI tweaks. Tooltips for production timers, player status, items.
 * Present quality level as configurable symbols (star by default)
 * Configurable ammo and bait icons and amount for weapons using ammo
 * Craft list filter
+* Hold Use key on crafting station to repair items en masse
 
 ## Clock
 * Default position is above the minimap (you can move it to any position in the screen)
