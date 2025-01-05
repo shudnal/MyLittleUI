@@ -1,3 +1,8 @@
+# 1.1.25
+* more responsive Cooking station hover text
+* new option to see next item to cook at cooking station hover
+* new feature: hold Use key on crafting station to repair items en masse
+
 # 1.1.24
 * fixed random but nasty bug with inventory panel
 

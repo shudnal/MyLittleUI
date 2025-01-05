@@ -24,7 +24,7 @@ namespace MyLittleUI
     {
         public const string pluginID = "shudnal.MyLittleUI";
         public const string pluginName = "My Little UI";
-        public const string pluginVersion = "1.1.24";
+        public const string pluginVersion = "1.1.25";
 
         private readonly Harmony harmony = new Harmony(pluginID);
 
@@ -134,6 +134,7 @@ namespace MyLittleUI
 
         public static ConfigEntry<float> inventoryOpenCloseAnimationSpeed;
         public static ConfigEntry<bool> inventoryHideLongStack;
+        public static ConfigEntry<bool> inventoryEnableRepairOnHold;
 
         public static ConfigEntry<bool> statsMainMenu;
         public static ConfigEntry<bool> statsMainMenuAdvanced;
@@ -154,6 +155,7 @@ namespace MyLittleUI
         public static ConfigEntry<StationHover> hoverCooking;
         public static ConfigEntry<StationHover> hoverBeeHive;
         public static ConfigEntry<bool> hoverBeeHiveTotal;
+        public static ConfigEntry<bool> hoverCookingNextItem;
 
         public static ConfigEntry<StationHover> hoverCharacter;
         public static ConfigEntry<bool> hoverCharacterGrowth;
@@ -510,6 +512,7 @@ namespace MyLittleUI
 
             inventoryOpenCloseAnimationSpeed = config("Inventory", "Animation speed", defaultValue: 1f, "Inventory show/close animation speed");
             inventoryHideLongStack = config("Inventory", "Hide long stacks", defaultValue: true, "Hide max stack size if it is too long to show in inventory or hotbar");
+            inventoryEnableRepairOnHold = config("Inventory", "Hide long stacks", defaultValue: true, "Hold Use key on crafting station to repair all items and close crafting station [Synced with Server]", synchronizedSetting: true);
 
             inventoryOpenCloseAnimationSpeed.SettingChanged += (sender, args) => SetInventoryAnimationSpeed();
 
@@ -541,6 +544,7 @@ namespace MyLittleUI
             hoverCooking = config("Hover - Stations", "Cooking stations Hover", defaultValue: StationHover.Vanilla, "Hover text for cooking stations.");
             hoverBeeHive = config("Hover - Stations", "Bee Hive Hover", defaultValue: StationHover.Vanilla, "Hover text for bee hive.");
             hoverBeeHiveTotal = config("Hover - Stations", "Bee Hive Show total", defaultValue: true, "Show total needed time/percent for bee hive.");
+            hoverCookingNextItem = config("Hover - Stations", "Cooking station next item", defaultValue: true, "Show next item to be added to cooking station.");
 
             hoverTame = config("Hover - Tameable", "Tameable Hover", defaultValue: StationHover.Vanilla, "Format of total needed time/percent to tame or to stay fed.");
             hoverTameTimeToTame = config("Hover - Tameable", "Show time to tame", defaultValue: true, "Show total needed time/percent to tame. [Synced with Server]", synchronizedSetting: true);
@@ -839,103 +843,18 @@ namespace MyLittleUI
             }
         }
 
-        [HarmonyPatch(typeof(CookingStation), nameof(CookingStation.UpdateCooking))]
-        private class CookingStation_UpdateCooking_Duration
+        [HarmonyPatch(typeof(CookingStation), nameof(CookingStation.Awake))]
+        public class CookingStation_Awake_HoverDelegate
         {
-            private static readonly StringBuilder sb = new StringBuilder();
-
-            private static string GetItemName(CookingStation __instance, string currentItem, out bool itemReady, out CookingStation.ItemConversion conversion)
+            public static void Postfix(CookingStation __instance)
             {
-                string itemName = currentItem;
-
-                conversion = __instance.GetItemConversion(currentItem);
-                if (conversion != null)
-                {
-                    itemReady = conversion.m_to.gameObject.name == itemName;
-                    itemName = itemReady ? conversion.m_to.GetHoverName() : conversion.m_from.GetHoverName();
-                }
-                else
-                {
-                    itemReady = false;
-                    List<ItemDrop> itemsList = ObjectDB.instance.GetAllItems(ItemDrop.ItemData.ItemType.Material, currentItem);
-                    if (itemsList.Count > 0)
-                        itemName = itemsList[0].GetHoverName();
-                }
-
-                return itemName;
-            }
-
-            private static string HoverText(CookingStation __instance, string ___m_name, string ___m_addItemTooltip, ZNetView ___m_nview)
-            {
-                sb.Clear();
-
-                sb.Append(___m_name);
-                sb.Append("\n[<color=yellow><b>$KEY_Use</b></color>] ");
-                sb.Append(___m_addItemTooltip);
-                if (!ZInput.GamepadActive)
-                {
-                    sb.Append("\n[<color=yellow><b>1-8</b></color>] ");
-                    sb.Append(___m_addItemTooltip);
-                }
-
-                if (___m_nview.IsOwner())
-                {
-                    for (int slot = 0; slot < __instance.m_slots.Length; slot++)
-                    {
-                        __instance.GetSlot(slot, out string itemName, out float cookedTime, out _);
-                        if (itemName == "")
-                            continue;
-
-                        sb.Append("\n");
-
-                        string itemListName = GetItemName(__instance, itemName, out bool itemReady, out CookingStation.ItemConversion itemConversion);
-
-                        if (itemConversion == null || itemName == __instance.m_overCookedItem.name)
-                        {
-                            sb.Append(itemListName);
-                            continue;
-                        }
-
-                        sb.Append(itemListName);
-                        sb.Append(" ");
-
-                        bool colorRed = itemReady && Mathf.Sin(Time.time * 10f) > 0f;
-                        if (colorRed)
-                            sb.Append("<color=red>");
-
-                        if (hoverCooking.Value == StationHover.Percentage)
-                            sb.Append($"{(cookedTime - (itemReady ? itemConversion.m_cookTime : 0)) / itemConversion.m_cookTime:P0}");
-                        else if (hoverCooking.Value == StationHover.Bar)
-                        {
-                            sb.Append("\n");
-                            sb.Append(FromPercent((cookedTime - (itemReady ? itemConversion.m_cookTime : 0)) / itemConversion.m_cookTime));
-                        }
-                        else if (hoverCooking.Value == StationHover.MinutesSeconds)
-                            sb.Append(FromSeconds(itemConversion.m_cookTime - (cookedTime - (itemReady ? itemConversion.m_cookTime : 0))));
-
-                        if (colorRed)
-                            sb.Append("</color>");
-                    }
-                }
-
-                return sb.ToString();
-            }
-
-            private static void Postfix(CookingStation __instance, Switch ___m_addFoodSwitch, string ___m_addItemTooltip, string ___m_name, ZNetView ___m_nview)
-            {
-                if (!modEnabled.Value)
-                    return;
-
-                if (!hoverCookingEnabled.Value || hoverCooking.Value == StationHover.Vanilla)
-                    return;
-
-                if ((bool)___m_addFoodSwitch)
-                    ___m_addFoodSwitch.m_hoverText = HoverText(__instance, ___m_name, ___m_addItemTooltip, ___m_nview);
+                if ((bool)__instance.m_addFoodSwitch)
+                    __instance.m_addFoodSwitch.m_onHover ??= __instance.HoverText;
             }
         }
 
         [HarmonyPatch(typeof(CookingStation), nameof(CookingStation.HoverText))]
-        private class CookingStation_HoverText_Duration
+        public class CookingStation_HoverText_ExtendedHover
         {
             private static readonly StringBuilder sb = new StringBuilder();
 
@@ -960,23 +879,24 @@ namespace MyLittleUI
                 return itemName;
             }
 
-            private static void Postfix(CookingStation __instance, ref string __result, ZNetView ___m_nview)
+            public static string HoverText(CookingStation __instance, string m_name, string m_addItemTooltip)
             {
-                if (!modEnabled.Value)
-                    return;
-
-                if (!hoverCookingEnabled.Value || hoverCooking.Value == StationHover.Vanilla)
-                    return;
-
-                if (string.IsNullOrWhiteSpace(__result))
-                    return;
-
-                if (!___m_nview.IsOwner())
-                    return;
-
                 sb.Clear();
 
-                for (int slot = 0; slot < __instance.m_slots.Length; slot++)
+                sb.Append(m_name);
+                sb.Append("\n[<color=yellow><b>$KEY_Use</b></color>] ");
+                sb.Append(m_addItemTooltip);
+
+                if (hoverCookingNextItem.Value && Player.m_localPlayer != null && __instance.FindCookableItem(Player.m_localPlayer.GetInventory()) is ItemDrop.ItemData itemToCook)
+                    sb.Append($" (<color=#add8e6ff>{itemToCook.m_shared.m_name}</color>)");
+
+                if (!ZInput.GamepadActive)
+                {
+                    sb.Append("\n[<color=yellow><b>1-8</b></color>] ");
+                    sb.Append(m_addItemTooltip);
+                }
+
+                for (int slot = 0; slot < __instance.m_slots?.Length; slot++)
                 {
                     __instance.GetSlot(slot, out string itemName, out float cookedTime, out _);
                     if (itemName == "")
@@ -995,7 +915,8 @@ namespace MyLittleUI
                     sb.Append(itemListName);
                     sb.Append(" ");
 
-                    if (itemReady && Mathf.Sin(Time.time * 10f) > 0f)
+                    bool colorRed = itemReady && Mathf.Sin(Time.time * 10f) > 0f;
+                    if (colorRed)
                         sb.Append("<color=red>");
 
                     if (hoverCooking.Value == StationHover.Percentage)
@@ -1008,11 +929,25 @@ namespace MyLittleUI
                     else if (hoverCooking.Value == StationHover.MinutesSeconds)
                         sb.Append(FromSeconds(itemConversion.m_cookTime - (cookedTime - (itemReady ? itemConversion.m_cookTime : 0))));
 
-                    if (itemReady && Mathf.Sin(Time.time * 10f) > 0f)
+                    if (colorRed)
                         sb.Append("</color>");
                 }
 
-                __result += Localization.instance.Localize(sb.ToString());
+                return Localization.instance.Localize(sb.ToString());
+            }
+
+            private static void Postfix(CookingStation __instance, ref string __result)
+            {
+                if (!modEnabled.Value)
+                    return;
+
+                if (!hoverCookingEnabled.Value || hoverCooking.Value == StationHover.Vanilla)
+                    return;
+
+                if (string.IsNullOrWhiteSpace(__result) || !__instance.m_nview.IsValid())
+                    return;
+
+                __result = HoverText(__instance, __instance.m_name, __instance.m_addItemTooltip);
             }
         }
 
@@ -1216,7 +1151,7 @@ namespace MyLittleUI
                 statCount = 0;
             }
 
-            private static void Postfix(TMPro.TMP_Text ___m_csSourceInfo, List<PlayerProfile> ___m_profiles, int ___m_profileIndex, GameObject ___m_playerInstance)
+            private static void Postfix(TMP_Text ___m_csSourceInfo, List<PlayerProfile> ___m_profiles, int ___m_profileIndex, GameObject ___m_playerInstance)
             {
                 if (!modEnabled.Value)
                     return;
