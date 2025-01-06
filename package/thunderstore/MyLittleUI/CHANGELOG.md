@@ -1,3 +1,8 @@
+# 1.1.26
+* fixed next item to cook interaction with craft from containers
+* hold Use to repair: inventory will hide properly if there is no item to repair
+* more fixing to oven and other cooking stations
+
 # 1.1.25
 * more responsive Cooking station hover text
 * new option to see next item to cook at cooking station hover

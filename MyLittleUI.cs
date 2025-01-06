@@ -24,7 +24,7 @@ namespace MyLittleUI
     {
         public const string pluginID = "shudnal.MyLittleUI";
         public const string pluginName = "My Little UI";
-        public const string pluginVersion = "1.1.25";
+        public const string pluginVersion = "1.1.26";
 
         private readonly Harmony harmony = new Harmony(pluginID);
 
@@ -544,7 +544,7 @@ namespace MyLittleUI
             hoverCooking = config("Hover - Stations", "Cooking stations Hover", defaultValue: StationHover.Vanilla, "Hover text for cooking stations.");
             hoverBeeHive = config("Hover - Stations", "Bee Hive Hover", defaultValue: StationHover.Vanilla, "Hover text for bee hive.");
             hoverBeeHiveTotal = config("Hover - Stations", "Bee Hive Show total", defaultValue: true, "Show total needed time/percent for bee hive.");
-            hoverCookingNextItem = config("Hover - Stations", "Cooking station next item", defaultValue: true, "Show next item to be added to cooking station.");
+            hoverCookingNextItem = config("Hover - Stations", "Cooking station next item", defaultValue: true, "Show next item to be added to cooking station. Player inventory only.");
 
             hoverTame = config("Hover - Tameable", "Tameable Hover", defaultValue: StationHover.Vanilla, "Format of total needed time/percent to tame or to stay fed.");
             hoverTameTimeToTame = config("Hover - Tameable", "Show time to tame", defaultValue: true, "Show total needed time/percent to tame. [Synced with Server]", synchronizedSetting: true);
@@ -848,8 +848,36 @@ namespace MyLittleUI
         {
             public static void Postfix(CookingStation __instance)
             {
+                if (!modEnabled.Value)
+                    return;
+
+                if (!hoverCookingEnabled.Value || hoverCooking.Value == StationHover.Vanilla)
+                    return;
+
+                if (!__instance.m_nview.IsValid())
+                    return;
+
                 if ((bool)__instance.m_addFoodSwitch)
                     __instance.m_addFoodSwitch.m_onHover ??= __instance.HoverText;
+            }
+        }
+
+        [HarmonyPatch(typeof(CookingStation), nameof(CookingStation.UpdateCooking))]
+        public class CookingStation_UpdateCooking_HoverUpdate
+        {
+            public static void Postfix(CookingStation __instance)
+            {
+                if (!modEnabled.Value)
+                    return;
+
+                if (!hoverCookingEnabled.Value || hoverCooking.Value == StationHover.Vanilla)
+                    return;
+
+                if (!__instance.m_nview.IsValid())
+                    return;
+
+                if ((bool)__instance.m_addFoodSwitch && __instance.m_addFoodSwitch.m_onHover == null)
+                    __instance.m_addFoodSwitch.m_hoverText = CookingStation_HoverText_ExtendedHover.HoverText(__instance, __instance.m_name, __instance.m_addItemTooltip);
             }
         }
 
@@ -879,6 +907,18 @@ namespace MyLittleUI
                 return itemName;
             }
 
+            public static ItemDrop.ItemData FindCookableItem(CookingStation __instance, Inventory inventory)
+            {
+                foreach (CookingStation.ItemConversion item2 in __instance.m_conversion)
+                {
+                    ItemDrop.ItemData item = inventory.GetItem(item2.m_from.m_itemData.m_shared.m_name);
+                    if (item != null)
+                        return item;
+                }
+
+                return null;
+            }
+
             public static string HoverText(CookingStation __instance, string m_name, string m_addItemTooltip)
             {
                 sb.Clear();
@@ -887,7 +927,7 @@ namespace MyLittleUI
                 sb.Append("\n[<color=yellow><b>$KEY_Use</b></color>] ");
                 sb.Append(m_addItemTooltip);
 
-                if (hoverCookingNextItem.Value && Player.m_localPlayer != null && __instance.FindCookableItem(Player.m_localPlayer.GetInventory()) is ItemDrop.ItemData itemToCook)
+                if (hoverCookingNextItem.Value && Player.m_localPlayer != null && FindCookableItem(__instance, Player.m_localPlayer.GetInventory()) is ItemDrop.ItemData itemToCook)
                     sb.Append($" (<color=#add8e6ff>{itemToCook.m_shared.m_name}</color>)");
 
                 if (!ZInput.GamepadActive)
@@ -944,7 +984,7 @@ namespace MyLittleUI
                 if (!hoverCookingEnabled.Value || hoverCooking.Value == StationHover.Vanilla)
                     return;
 
-                if (string.IsNullOrWhiteSpace(__result) || !__instance.m_nview.IsValid())
+                if (!__instance.m_nview.IsValid())
                     return;
 
                 __result = HoverText(__instance, __instance.m_name, __instance.m_addItemTooltip);

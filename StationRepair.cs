@@ -7,26 +7,30 @@ namespace MyLittleUI
     internal static class StationRepair
     {
         private static readonly WaitForSeconds wait = new WaitForSeconds(0.1f);
-
+        private const float delay = 0.4f;
         public static IEnumerator RepairOnHold()
         {
             if (!InventoryGui.instance)
                 yield break;
 
-            yield return new WaitForSeconds(0.4f);
+            yield return new WaitForSeconds(delay);
             
             int itemsRepaired = 0;
-            while (ZInput.GetButtonPressedTimer("Use") >= 0.4f && InventoryGui.instance.HaveRepairableItems())
+            while (ZInput.GetButtonPressedTimer("Use") >= delay && InventoryGui.instance.HaveRepairableItems())
             {
                 InventoryGui.instance.RepairOneItem();
                 itemsRepaired++;
                 yield return wait;
             }
 
-            if (itemsRepaired == 0)
+            if (!ZInput.GetButton("Use"))
                 yield break;
 
-            Player.m_localPlayer.Message(MessageHud.MessageType.Center, Localization.instance.Localize("$msg_repaired", itemsRepaired.ToString()));
+            if (itemsRepaired == 0)
+                Player.m_localPlayer.Message(MessageHud.MessageType.Center, Localization.instance.Localize("$settings_inventory $msg_doesnotneedrepair", itemsRepaired.ToString()));
+            else
+                Player.m_localPlayer.Message(MessageHud.MessageType.Center, Localization.instance.Localize("$msg_repaired", itemsRepaired.ToString()));
+            
             InventoryGui.instance.Hide();
         }
 
@@ -38,7 +42,7 @@ namespace MyLittleUI
                 if (__result)
                     return;
 
-                if (InventoryGui.IsVisible() && InventoryGui.instance.HaveRepairableItems())
+                if (InventoryGui.IsVisible())
                     __instance.StartCoroutine(RepairOnHold());
             }
         }
