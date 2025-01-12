@@ -120,8 +120,8 @@ namespace MyLittleUI
 
             UpdateGradient();
 
-            totalWeight = Mathf.CeilToInt(Player.m_localPlayer.GetInventory().GetTotalWeight());
-            maxWeight = Mathf.CeilToInt(Player.m_localPlayer.GetMaxCarryWeight());
+            totalWeight = Mathf.FloorToInt(Player.m_localPlayer.GetInventory().GetTotalWeight());
+            maxWeight = Mathf.FloorToInt(Player.m_localPlayer.GetMaxCarryWeight());
 
             GetCurrentSlotsAmount(out emptySlots, out maxSlots);
         }

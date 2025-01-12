@@ -35,10 +35,10 @@ namespace MyLittleUI
         private static void FillTooltipTails()
         {
             tails.Clear();
-            if (epicLootPlugin != null)
+            if (epicLootAssembly != null)
             {
-                var methodGetRarityColor = AccessTools.Method(epicLootPlugin.GetType(), "GetRarityColor");
-                var enumItemRarity = AccessTools.TypeByName("EpicLoot.ItemRarity");
+                var methodGetRarityColor = AccessTools.Method(epicLootAssembly.GetType("EpicLoot.EpicLoot"), "GetRarityColor");
+                var enumItemRarity = epicLootAssembly.GetType("EpicLoot.ItemRarity");
                 if (methodGetRarityColor != null && enumItemRarity != null)
                     foreach (var rarity in enumItemRarity.GetEnumValues())
                     {
@@ -318,15 +318,18 @@ namespace MyLittleUI
             };
         }
 
+        internal static void UpdateRecipeDescriptionFontSize()
+        {
+            if (!InventoryGui.instance || InventoryGui.instance.m_recipeDecription == null)
+                return;
+
+            InventoryGui.instance.m_recipeDecription.fontSizeMin = itemTooltipRecipeFontSize.Value;
+        }
+
         [HarmonyPatch(typeof(InventoryGui), nameof(InventoryGui.Awake))]
         private class InventoryGui_Awake_ItemTooltipCraftingFontSize
         {
-            private static void Postfix(InventoryGui __instance)
-            {
-                TMPro.TextMeshProUGUI description = __instance.m_recipeDecription?.GetComponent<TMPro.TextMeshProUGUI>();
-                if (description != null)
-                    description.fontSizeMin = 12;
-            }
+            private static void Postfix() => UpdateRecipeDescriptionFontSize();
         }
 
         [HarmonyPatch(typeof(ItemDrop.ItemData), nameof(ItemDrop.ItemData.GetTooltip), typeof(ItemDrop.ItemData), typeof(int), typeof(bool), typeof(float), typeof(int))]

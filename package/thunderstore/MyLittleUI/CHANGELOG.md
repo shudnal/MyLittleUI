@@ -1,3 +1,8 @@
+# 1.1.27
+* fixed occasional warning spam
+* font size of recipe description made configurable
+* active effects tooltip made wider to better fit text
+
 # 1.1.26
 * fixed next item to cook interaction with craft from containers
 * hold Use to repair: inventory will hide properly if there is no item to repair

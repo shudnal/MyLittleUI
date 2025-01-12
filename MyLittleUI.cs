@@ -11,6 +11,7 @@ using TMPro;
 using UnityEngine;
 using ServerSync;
 using UnityEngine.InputSystem;
+using BepInEx.Bootstrap;
 
 namespace MyLittleUI
 {
@@ -24,7 +25,7 @@ namespace MyLittleUI
     {
         public const string pluginID = "shudnal.MyLittleUI";
         public const string pluginName = "My Little UI";
-        public const string pluginVersion = "1.1.26";
+        public const string pluginVersion = "1.1.27";
 
         private readonly Harmony harmony = new Harmony(pluginID);
 
@@ -116,6 +117,7 @@ namespace MyLittleUI
 
         public static ConfigEntry<bool> itemTooltip;
         public static ConfigEntry<bool> itemTooltipColored;
+        public static ConfigEntry<float> itemTooltipRecipeFontSize;
 
         public static ConfigEntry<bool> itemQuality;
         public static ConfigEntry<string> itemQualitySymbol;
@@ -231,11 +233,9 @@ namespace MyLittleUI
         public static ConfigEntry<Color> weightFontColor;
         public static ConfigEntry<Color> slotsFontColor;
 
-
-
         private static readonly Dictionary<string, string> characterNames = new Dictionary<string, string>();
 
-        public static Component epicLootPlugin;
+        public static Assembly epicLootAssembly;
 
         public static readonly int layerUI = LayerMask.NameToLayer("UI");
 
@@ -301,7 +301,8 @@ namespace MyLittleUI
             ConfigInit();
             _ = configSync.AddLockingConfigEntry(configLocked);
 
-            epicLootPlugin = GetComponent("EpicLoot");
+            if (Chainloader.PluginInfos.TryGetValue("randyknapp.mods.epicloot", out PluginInfo epicLootPlugin))
+                epicLootAssembly ??= Assembly.GetAssembly(epicLootPlugin.Instance.GetType());
 
             ItemTooltip.Initialize();
 
@@ -483,6 +484,9 @@ namespace MyLittleUI
 
             itemTooltip = config("Item - Tooltip", "Enabled", defaultValue: true, "Updated item tooltip. Hold Alt to see original tooltip");
             itemTooltipColored = config("Item - Tooltip", "Colored numbers", defaultValue: true, "Orange and yellow value numbers in tooltip, light blue if disabled");
+            itemTooltipRecipeFontSize = config("Item - Tooltip", "Recipe description min font size", defaultValue: 10f, "Make description font smaller to fit more lines");
+
+            itemTooltipRecipeFontSize.SettingChanged += (sender, args) => ItemTooltip.UpdateRecipeDescriptionFontSize();
 
             itemQuality = config("Item - Quality", "Enabled", defaultValue: true, "Show item quality as symbol");
             itemQualitySymbol = config("Item - Quality", "Symbol", defaultValue: "★", "Symbol to show.");
@@ -512,7 +516,7 @@ namespace MyLittleUI
 
             inventoryOpenCloseAnimationSpeed = config("Inventory", "Animation speed", defaultValue: 1f, "Inventory show/close animation speed");
             inventoryHideLongStack = config("Inventory", "Hide long stacks", defaultValue: true, "Hide max stack size if it is too long to show in inventory or hotbar");
-            inventoryEnableRepairOnHold = config("Inventory", "Hide long stacks", defaultValue: true, "Hold Use key on crafting station to repair all items and close crafting station [Synced with Server]", synchronizedSetting: true);
+            inventoryEnableRepairOnHold = config("Inventory", "Enable repair on hold", defaultValue: true, "Hold Use key on crafting station to repair all items and close crafting station [Synced with Server]", synchronizedSetting: true);
 
             inventoryOpenCloseAnimationSpeed.SettingChanged += (sender, args) => SetInventoryAnimationSpeed();
 

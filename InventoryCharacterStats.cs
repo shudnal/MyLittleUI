@@ -22,6 +22,8 @@ namespace MyLittleUI
         private static readonly Dictionary<HitData.DamageType, HitData.DamageModifier> mods = new Dictionary<HitData.DamageType, HitData.DamageModifier>();
         private static SE_Stats stats;
 
+        private static GameObject effectsTooltip;
+
         private static void ClearStats(this SE_Stats statsEffect)
         {
             foreach (FieldInfo field in AccessTools.GetDeclaredFields(typeof(SE_Stats)))
@@ -33,9 +35,9 @@ namespace MyLittleUI
             statsEffect.m_staminaRegenMultiplier = 1f;
             statsEffect.m_eitrRegenMultiplier = 1f;
             statsEffect.m_damageModifier = 1f;
-    }
+        }
 
-    public static void UpdateTooltipState()
+        public static void UpdateTooltipState()
         {
             if (characterStatsTooltip != null)
                 characterStatsTooltip.enabled = statsCharacterArmor.Value;
@@ -44,31 +46,42 @@ namespace MyLittleUI
                 characterEffectsTooltip.enabled = statsCharacterEffects.Value;
         }
 
+        private static void InitEffectsTooltipPrefab(UITooltip prefabTooltip)
+        {
+            effectsTooltip = UnityEngine.Object.Instantiate(prefabTooltip.m_tooltipPrefab);
+            effectsTooltip.name = "InventoryCharacterEffectsTooltip";
+            effectsTooltip.GetComponentsInChildren<RectTransform>(includeInactive: true).Do(rt => rt.sizeDelta += new Vector2(150f, 0f));
+        }
+
         private static void InitCharacterTooltips(InventoryGui __instance, Player player)
         {
             UITooltip prefabTooltip = __instance.m_containerGrid.m_elementPrefab.GetComponent<UITooltip>();
 
+            if (effectsTooltip == null)
+                InitEffectsTooltipPrefab(prefabTooltip);
+
             if (characterStatsTooltip == null)
-                characterStatsTooltip = InitTooltip(prefabTooltip, __instance.m_armor, player.GetPlayerName(), __instance.m_containerGrid.m_tooltipAnchor);
+                characterStatsTooltip = InitTooltip(prefabTooltip, prefabTooltip.m_tooltipPrefab, __instance.m_armor, player.GetPlayerName(), __instance.m_containerGrid.m_tooltipAnchor);
 
             if (characterEffectsTooltip == null)
-                characterEffectsTooltip = InitTooltip(prefabTooltip, __instance.m_weight, "$inventory_activeeffects", __instance.m_containerGrid.m_tooltipAnchor);
+                characterEffectsTooltip = InitTooltip(prefabTooltip, effectsTooltip, __instance.m_weight, "$inventory_activeeffects", __instance.m_containerGrid.m_tooltipAnchor);
 
             LogInfo("Character inventory stats patched");
         }
 
-        private static UITooltip InitTooltip(UITooltip prefabTooltip, TMPro.TMP_Text text, string topic, RectTransform tooltipAnchor)
+        private static UITooltip InitTooltip(UITooltip uiTooltip, GameObject tooltipPrefab, TMPro.TMP_Text text, string topic, RectTransform tooltipAnchor)
         {
-            FieldInfo[] fields = prefabTooltip.GetType().GetFields();
+            FieldInfo[] fields = uiTooltip.GetType().GetFields();
 
             UITooltip tooltip = text.transform.parent.gameObject.AddComponent<UITooltip>();
 
             foreach (FieldInfo field in fields)
-                field.SetValue(tooltip, field.GetValue(prefabTooltip));
+                field.SetValue(tooltip, field.GetValue(uiTooltip));
 
             tooltip.m_topic = topic;
             tooltip.m_anchor = tooltipAnchor;
             tooltip.m_gamepadFocusObject = null;
+            tooltip.m_tooltipPrefab = tooltipPrefab;
 
             return tooltip;
         }
@@ -211,9 +224,9 @@ namespace MyLittleUI
                 if (skill.Value != 0)
                     sb.AppendFormat("\n{0} <color=orange>{1}</color>", "$skill_" + skill.Key.ToString().ToLower(), skill.Value.ToString("+0;-0"));
 
-            if (epicLootPlugin != null && statsCharacterEffectsMagic.Value)
+            if (epicLootAssembly != null && statsCharacterEffectsMagic.Value)
             {
-                var patchUpdateTextsList = AccessTools.TypeByName("EpicLoot.TextsDialog_UpdateTextsList_Patch");
+                var patchUpdateTextsList = epicLootAssembly.GetType("EpicLoot.TextsDialog_UpdateTextsList_Patch");
                 if (patchUpdateTextsList != null)
                 {
                     var methodAddMagicEffectsPage = AccessTools.Method(patchUpdateTextsList, "AddMagicEffectsPage");
