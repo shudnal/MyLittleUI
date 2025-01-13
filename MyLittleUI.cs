@@ -25,7 +25,7 @@ namespace MyLittleUI
     {
         public const string pluginID = "shudnal.MyLittleUI";
         public const string pluginName = "My Little UI";
-        public const string pluginVersion = "1.1.27";
+        public const string pluginVersion = "1.1.28";
 
         private readonly Harmony harmony = new Harmony(pluginID);
 
@@ -158,6 +158,7 @@ namespace MyLittleUI
         public static ConfigEntry<StationHover> hoverBeeHive;
         public static ConfigEntry<bool> hoverBeeHiveTotal;
         public static ConfigEntry<bool> hoverCookingNextItem;
+        public static ConfigEntry<bool> hoverCookingRemoveLastItem;
 
         public static ConfigEntry<StationHover> hoverCharacter;
         public static ConfigEntry<bool> hoverCharacterGrowth;
@@ -172,6 +173,7 @@ namespace MyLittleUI
         public static ConfigEntry<bool> hoverSmelterEstimatedTime;
         public static ConfigEntry<bool> hoverSmelterShowFuelAndItem;
         public static ConfigEntry<bool> hoverSmelterShowQueuedItems;
+        public static ConfigEntry<bool> hoverSmelterHoldToAddSeveral;
 
         public static ConfigEntry<ChestItemsHover> chestHoverItems;
         public static ConfigEntry<ChestNameHover> chestHoverName;
@@ -549,6 +551,7 @@ namespace MyLittleUI
             hoverBeeHive = config("Hover - Stations", "Bee Hive Hover", defaultValue: StationHover.Vanilla, "Hover text for bee hive.");
             hoverBeeHiveTotal = config("Hover - Stations", "Bee Hive Show total", defaultValue: true, "Show total needed time/percent for bee hive.");
             hoverCookingNextItem = config("Hover - Stations", "Cooking station next item", defaultValue: true, "Show next item to be added to cooking station. Player inventory only.");
+            hoverCookingRemoveLastItem = config("Hover - Stations", "Cooking station Remove last item", defaultValue: true, "Add an option to remove last uncooked item. [Synced with Server]", synchronizedSetting: true);
 
             hoverTame = config("Hover - Tameable", "Tameable Hover", defaultValue: StationHover.Vanilla, "Format of total needed time/percent to tame or to stay fed.");
             hoverTameTimeToTame = config("Hover - Tameable", "Show time to tame", defaultValue: true, "Show total needed time/percent to tame. [Synced with Server]", synchronizedSetting: true);
@@ -557,6 +560,7 @@ namespace MyLittleUI
             hoverSmelterEstimatedTime = config("Hover - Smelters", "Show estimated time", defaultValue: true, "Show estimated end time for a smelter station (charcoal kiln, forge, etc. including non vanilla). [Synced with Server]", synchronizedSetting: true);
             hoverSmelterShowFuelAndItem = config("Hover - Smelters", "Always show fuel and item", defaultValue: true, "Show current smelting item and fuel loaded on both fuel and ore switches.");
             hoverSmelterShowQueuedItems = config("Hover - Smelters", "Show queued items", defaultValue: true, "Show queued items currently being smelted. Doesn't show the list if there is only one item to smelt. [Synced with Server]", synchronizedSetting: true);
+            hoverSmelterHoldToAddSeveral = config("Hover - Smelters", "Hold E to add several items", defaultValue: true, "Hold E to add several items in faster manner. Can't add more items than station capacity [Synced with Server]", synchronizedSetting: true);
 
             chestCustomName = config("Hover - Chests", "Enable custom names", defaultValue: true, "Enable custom names for chests. [Synced with Server]", synchronizedSetting: true);
             chestHoverItems = config("Hover - Chests", "Hover items format", defaultValue: ChestItemsHover.Vanilla, "Chest items details format to be shown in hover.");
@@ -933,6 +937,19 @@ namespace MyLittleUI
 
                 if (hoverCookingNextItem.Value && Player.m_localPlayer != null && FindCookableItem(__instance, Player.m_localPlayer.GetInventory()) is ItemDrop.ItemData itemToCook)
                     sb.Append($" (<color=#add8e6ff>{itemToCook.m_shared.m_name}</color>)");
+
+                if (hoverCookingRemoveLastItem.Value && __instance.m_nview.IsValid() &&  __instance.GetFreeSlot() != 0)
+                {
+                    if (CookingStationRemoveItem.GetSlotToRemove(__instance, out string itemName, out _) != -1)
+                    {
+                        if (!ZInput.IsNonClassicFunctionality() || !ZInput.IsGamepadActive())
+                            sb.Append($"\n[<color=yellow><b>$KEY_AltPlace + $KEY_Use</b></color>] $hud_remove");
+                        else
+                            sb.Append($"\n[<color=yellow><b>$KEY_JoyAltKeys + $KEY_Use</b></color>] $hud_remove");
+
+                        sb.Append($" (<color=#add8e6ff>{ObjectDB.instance.GetItemPrefab(itemName)?.GetComponent<ItemDrop>()?.m_itemData.m_shared.m_name}</color>)");
+                    }
+                }
 
                 if (!ZInput.GamepadActive)
                 {

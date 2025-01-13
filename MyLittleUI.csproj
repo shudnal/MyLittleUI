@@ -38,7 +38,9 @@
   <ItemGroup>
     <Compile Include="AmmoCountIcon.cs" />
     <Compile Include="ChestHoverText.cs" />
+    <Compile Include="CookingStationRemoveItem.cs" />
     <Compile Include="CraftFilter.cs" />
+    <Compile Include="HoldToFuel.cs" />
     <Compile Include="InfoBlocks.cs" />
     <Compile Include="InventoryCharacterStats.cs" />
     <Compile Include="ItemIcon.cs" />
