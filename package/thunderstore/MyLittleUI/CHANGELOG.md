@@ -1,3 +1,6 @@
+# 1.1.29
+* more detailed hover for windmills
+
 # 1.1.28
 * new option to remove last uncooked item from Cooking station and Oven (Cooking skill will be undone)
 * hold E to add ore/fuel to smelters faster than vanilla

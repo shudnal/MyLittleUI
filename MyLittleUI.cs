@@ -25,7 +25,7 @@ namespace MyLittleUI
     {
         public const string pluginID = "shudnal.MyLittleUI";
         public const string pluginName = "My Little UI";
-        public const string pluginVersion = "1.1.28";
+        public const string pluginVersion = "1.1.29";
 
         private readonly Harmony harmony = new Harmony(pluginID);
 
@@ -1097,17 +1097,21 @@ namespace MyLittleUI
                 sb.Append(___m_name);
                 sb.Append($" ({queueSize}/{___m_maxOre})");
 
-                if (hoverSmelterShowFuelAndItem.Value && ___m_fuelItem != null && ___m_maxFuel > 0)
+                if (hoverSmelterShowFuelAndItem.Value)
                 {
-                    sb.Append(" (");
-                    sb.Append(___m_fuelItem.m_itemData.m_shared.m_name);
-                    sb.Append($" {Mathf.CeilToInt(fuel)}/{___m_maxFuel})");
+                    if (___m_fuelItem != null && ___m_maxFuel > 0)
+                    {
+                        sb.Append(" (");
+                        sb.Append(___m_fuelItem.m_itemData.m_shared.m_name);
+                        sb.Append($" {Mathf.CeilToInt(fuel)}/{___m_maxFuel})");
+                    }
+
+                    if (__instance.m_emptyOreSwitch != null)
+                        sb.Append($" ({__instance.GetProcessedQueueSize()} $piece_smelter_ready)");
                 }
 
                 if (___m_requiresRoof && !___m_haveRoof && Mathf.Sin(Time.time * 10f) > 0f)
-                {
                     sb.Append(" <color=yellow>$piece_smelter_reqroof</color>");
-                }
 
                 sb.Append("\n[<color=yellow><b>$KEY_Use</b></color>] " + ___m_addOreTooltip);
 
@@ -1158,6 +1162,51 @@ namespace MyLittleUI
                         sb.Append(String.Join("\n", items));
                     }
 
+                }
+
+                __result = Localization.instance.Localize(sb.ToString());
+            }
+        }
+        
+        [HarmonyPatch(typeof(Smelter), nameof(Smelter.OnHoverEmptyOre))]
+        private class Smelter_OnHoverEmptyOre_SmelterHover
+        {
+            private static readonly StringBuilder sb = new StringBuilder();
+
+            private static void Postfix(Smelter __instance, ref string __result, string ___m_name, ItemDrop ___m_fuelItem, int ___m_maxFuel, int ___m_maxOre, int ___m_fuelPerProduct, float ___m_secPerProduct, Windmill ___m_windmill)
+            {
+                if (!modEnabled.Value)
+                    return;
+
+                if (!hoverSmelterShowFuelAndItem.Value && !hoverSmelterEstimatedTime.Value)
+                    return;
+
+                int processedQueueSize = __instance.GetProcessedQueueSize();
+                int queueSize = __instance.GetQueueSize();
+
+                sb.Clear();
+                sb.Append(___m_name);
+                sb.Append($" ({processedQueueSize} $piece_smelter_ready)");
+                if (hoverSmelterShowFuelAndItem.Value && ___m_maxOre > 0)
+                {
+                    string ore = __instance.GetQueuedOre();
+                    if (ore != "" && ObjectDB.instance?.GetItemPrefab(ore)?.GetComponent<ItemDrop>()?.m_itemData is ItemDrop.ItemData item)
+                        sb.Append($" {item.m_shared.m_name}");
+
+                    sb.Append($" ({queueSize}/{___m_maxOre})");
+                }
+
+                sb.Append($"\n[<color=yellow><b>$KEY_Use</b></color>] {__instance.m_emptyOreTooltip}");
+
+                if (hoverSmelterEstimatedTime.Value && __instance.IsActive() && ___m_maxOre > 0)
+                {
+                    sb.Append($"\n");
+
+                    float fuel = __instance.GetFuel();
+                    float power = Mathf.Max(___m_windmill != null ? ___m_windmill.GetPowerOutput() : 1f, 0.0001f);
+
+                    float estTime = (___m_fuelPerProduct != 0 ? Math.Min(Mathf.FloorToInt(fuel / ___m_fuelPerProduct), queueSize) : queueSize) * ___m_secPerProduct;
+                    sb.Append(FromSeconds((___m_fuelPerProduct == 0 || (fuel / ___m_fuelPerProduct) >= queueSize) ? (estTime - __instance.GetBakeTimer()) / power : ___m_secPerProduct * fuel / ___m_fuelPerProduct));
                 }
 
                 __result = Localization.instance.Localize(sb.ToString());
