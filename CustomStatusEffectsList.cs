@@ -123,7 +123,7 @@ namespace MyLittleUI
         [HarmonyPatch(typeof(Hud), nameof(Hud.Awake))]
         public static class Hud_Awake_CustomTemplate
         {
-            [HarmonyBefore("Azumatt.MinimalUI")]
+            [HarmonyBefore("Azumatt.MinimalUI", "org.bepinex.plugins.passivepowers")]
             public static void Postfix()
             {
                 UpdateStatusEffectList();
@@ -143,7 +143,7 @@ namespace MyLittleUI
         [HarmonyPatch(typeof(Hud), nameof(Hud.UpdateStatusEffects))]
         public static class Hud_UpdateStatusEffects_Patch
         {
-            [HarmonyAfter("Azumatt.MinimalUI")]
+            [HarmonyAfter("Azumatt.MinimalUI", "org.bepinex.plugins.passivepowers")]
             public static void Postfix(Hud __instance, List<StatusEffect> statusEffects, List<RectTransform> ___m_statusEffects)
             {
                 if (!modEnabled.Value)

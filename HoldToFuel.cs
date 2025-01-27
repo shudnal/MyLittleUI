@@ -61,7 +61,7 @@ namespace MyLittleUI
                 if (!hoverSmelterHoldToAddSeveral.Value || !hold || !__runOriginal)
                     return;
 
-                if (__instance.m_onUse != null && __instance.GetComponentInParent<Smelter>() is Smelter smelter && smelter.m_addOreAnimationDuration <= 0)
+                if (__instance.m_onUse != null && __instance.GetComponentInParent<Smelter>() is Smelter smelter)
                 {
                     worker = AddOnHold(__instance, smelter, character);
                     instance.StartCoroutine(worker);

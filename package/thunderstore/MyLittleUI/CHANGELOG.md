@@ -1,3 +1,7 @@
+# 1.1.30
+* fixed incompatibility when both MinimalUI and PassivePowers installed
+* Eitr Refinery can also be fueled by holding E
+
 # 1.1.29
 * more detailed hover for windmills
 

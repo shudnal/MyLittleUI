@@ -430,6 +430,7 @@ namespace MyLittleUI
         [HarmonyPatch(typeof(Hud), nameof(Hud.Awake))]
         public static class Hud_Awake_AddInfoBlocks
         {
+            [HarmonyAfter("Azumatt.MinimalUI", "org.bepinex.plugins.passivepowers")]
             public static void Postfix(Hud __instance)
             {
                 if (!modEnabled.Value)
