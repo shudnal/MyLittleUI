@@ -45,7 +45,7 @@ namespace MyLittleUI
         private static int GetMaximumAmount(Recipe recipe, Player player)
         {
             if (player.NoCostCheat())
-                return 999;
+                return 99;
 
             CraftingStation currentCraftingStation = player.GetCurrentCraftingStation();
             bool haveStation = !recipe.GetRequiredStation(1) || ((bool)currentCraftingStation && currentCraftingStation.CheckUsable(player, showMessage: false));
@@ -54,16 +54,10 @@ namespace MyLittleUI
                 return 0;
 
             if (ZoneSystem.instance.GetGlobalKey(GlobalKeys.NoCraftCost))
-                return 999;
+                return 99;
 
-            int result = 0;
             if (!recipe.m_requireOnlyOneIngredient)
-            {
-                while (player.HaveRequirements(recipe, discover: false, qualityLevel: 1, amount: result + 1))
-                    result++;
-
-                return result;
-            }
+                return GetMaxCraftAmount(player, recipe);
 
             // Vanilla logic only counts max amount on single resource usage
             // To get proper max amount calculate maximum amount of every resource available
@@ -79,6 +73,7 @@ namespace MyLittleUI
             tempRecipe.m_requireOnlyOneIngredient = false;
             tempRecipe.m_resources = new Piece.Requirement[1];
 
+            int result = 0;
             for (int i = 0; i < recipe.m_resources.Length; i++)
             {
                 Piece.Requirement requirement = recipe.m_resources[i];
@@ -87,14 +82,36 @@ namespace MyLittleUI
 
                 tempRecipe.m_resources[0] = JsonUtility.FromJson<Piece.Requirement>(JsonUtility.ToJson(requirement));
 
-                int j = 0;
-                while (player.HaveRequirements(tempRecipe, discover: false, qualityLevel: 1, amount: j + 1))
-                    j++;
+                result += GetMaxCraftAmount(player, tempRecipe);
 
-                result += j;
+                if (result >= 99)
+                {
+                    result = 99;
+                    break;
+                }
             }
 
             return result;
+        }
+
+        private static int GetMaxCraftAmount(Player player, Recipe recipe)
+        {
+            if (!HaveRequirements(1))
+                return 0;
+
+            int left = 1, right = 99;
+            while (left < right)
+            {
+                int mid = (left + right + 1) / 2;
+                if (HaveRequirements(mid))
+                    left = mid;
+                else
+                    right = mid - 1;
+            }
+
+            return left;
+
+            bool HaveRequirements(int amount) => player.HaveRequirements(recipe, discover: false, qualityLevel: 1, amount: amount);
         }
 
         private static void CreateMulticraftPanel()
@@ -178,7 +195,7 @@ namespace MyLittleUI
             rtAmount.sizeDelta = new Vector2(-4f, 0f);
 
             textAmount = amount.GetComponent<TMP_Text>();
-            textAmount.SetText("999");
+            textAmount.SetText("99");
             textAmount.fontSizeMax = 32f;
 
             LogInfo("Multicraft panel initialized");
@@ -213,7 +230,7 @@ namespace MyLittleUI
         {
             int delta = 1;
             if (UnityInput.Current.GetKey(KeyCode.LeftControl))
-                delta = 999;
+                delta = 99;
             else if (UnityInput.Current.GetKey(KeyCode.LeftShift))
                 delta = 10;
 

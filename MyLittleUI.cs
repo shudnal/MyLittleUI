@@ -1579,7 +1579,5 @@ namespace MyLittleUI
                     keyCodeValues.Do(key => ZInput.s_keyLocalizationMap.Remove(key));
             }
         }
-
-        public void UpdateCraftingPanel() => CraftFilter.UpdateCraftingPanel();
     }
 }
