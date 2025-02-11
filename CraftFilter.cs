@@ -211,9 +211,11 @@ namespace MyLittleUI
 
                 LogInfo($"Recipe cache: verified {recipeCache.Count} in {(double)stopwatch.ElapsedTicks / Stopwatch.Frequency * 1000d:F2} ms");
                 
-                stopwatch.Restart();
+                stopwatch.Reset();
 
                 LogInfo($"Recipe filter: removed {available.RemoveAll(recipe => !FitsFilterString(recipe))} in {(double)stopwatch.ElapsedTicks / Stopwatch.Frequency * 1000d:F2} ms");
+
+                stopwatch.Stop();
             }
         }
 
