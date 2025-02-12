@@ -25,7 +25,7 @@ namespace MyLittleUI
     {
         public const string pluginID = "shudnal.MyLittleUI";
         public const string pluginName = "My Little UI";
-        public const string pluginVersion = "1.1.30";
+        public const string pluginVersion = "1.1.31";
 
         private readonly Harmony harmony = new Harmony(pluginID);
 
@@ -46,6 +46,7 @@ namespace MyLittleUI
         public static ConfigEntry<Color> clockBackgroundColor;
         public static ConfigEntry<float> clockTextPadding;
         public static ConfigEntry<Vector2> clockPosition;
+        public static ConfigEntry<ElementAnchor> clockPositionAnchor;
         public static ConfigEntry<Vector2> clockSize;
         public static ConfigEntry<bool> clockSwapDayTime;
         public static ConfigEntry<float> clockFontSize;
@@ -56,6 +57,7 @@ namespace MyLittleUI
         public static ConfigEntry<bool> forecastEnabled;
         public static ConfigEntry<bool> forecastShowBackground;
         public static ConfigEntry<Color> forecastBackgroundColor;
+        public static ConfigEntry<ElementAnchor> forecastPositionAnchor;
         public static ConfigEntry<Vector2> forecastPosition;
         public static ConfigEntry<Vector2> forecastPositionNomap;
         public static ConfigEntry<Vector2> forecastSize;
@@ -78,6 +80,7 @@ namespace MyLittleUI
         public static ConfigEntry<float> windsMinimumAlpha;
         public static ConfigEntry<bool> windsAlphaIntensity;
 
+        public static ConfigEntry<ElementAnchor> windsPositionAnchor;
         public static ConfigEntry<Vector2> windsPosition;
         public static ConfigEntry<Vector2> windsPositionNomap;
         public static ConfigEntry<Vector2> windsSize;
@@ -231,6 +234,8 @@ namespace MyLittleUI
 
         public static ConfigEntry<Vector2> weightPosition;
         public static ConfigEntry<Vector2> slotsPosition;
+        public static ConfigEntry<ElementAnchor> weightPositionAnchor;
+        public static ConfigEntry<ElementAnchor> slotsPositionAnchor;
 
         public static ConfigEntry<Color> weightFontColor;
         public static ConfigEntry<Color> slotsFontColor;
@@ -294,6 +299,19 @@ namespace MyLittleUI
             RealTime
         }
 
+        public enum ElementAnchor
+        {
+            TopLeft,
+            Top,
+            TopRight,
+            Right,
+            BottomRight,
+            Bottom,
+            BottomLeft,
+            Left,
+            Middle
+        }
+
         private void Awake()
         {
             harmony.PatchAll();
@@ -345,6 +363,7 @@ namespace MyLittleUI
             clockBackgroundColor = config("Info - Clock", "Background color", defaultValue: Color.clear, "Clock background color. If not set - minimap background color is used.");
             clockTextPadding = config("Info - Clock", "Padding", defaultValue: 5f, "Left and right indentation for text if both time and day used");
             clockPosition = config("Info - Clock", "Position", defaultValue: new Vector2(-140f, -25f), "anchoredPosition of clock object transform");
+            clockPositionAnchor = config("Info - Clock", "Position Anchor", defaultValue: ElementAnchor.TopRight, "Anchor point of clock object transform");
             clockSize = config("Info - Clock", "Size", defaultValue: new Vector2(200f, 25f), "sizeDelta of clock object transform");
             clockSwapDayTime = config("Info - Clock", "Swap day and time", defaultValue: false, "Swap day and time positions");
             clockFontSize = config("Info - Clock", "Font size", defaultValue: 0f, "If not set - value is taken from minimap small biome label");
@@ -358,6 +377,7 @@ namespace MyLittleUI
             clockShowTime.SettingChanged += (sender, args) => InfoBlocks.UpdateDayTimeText();
             clockTextPadding.SettingChanged += (sender, args) => InfoBlocks.UpdateDayTimeText();
             clockPosition.SettingChanged += (sender, args) => InfoBlocks.UpdateDayTimeText();
+            clockPositionAnchor.SettingChanged += (sender, args) => InfoBlocks.UpdateDayTimeText();
             clockSize.SettingChanged += (sender, args) => InfoBlocks.UpdateDayTimeText();
             clockSwapDayTime.SettingChanged += (sender, args) => InfoBlocks.UpdateDayTimeText();
             clockFontSize.SettingChanged += (sender, args) => InfoBlocks.UpdateDayTimeText();
@@ -369,6 +389,7 @@ namespace MyLittleUI
             forecastEnabled = config("Info - Forecast", "Enabled", defaultValue: true, "Enable next change of weather [Synced with Server]", synchronizedSetting: true);
             forecastShowBackground = config("Info - Forecast", "Weather background enabled", defaultValue: false, "Show forecast background");
             forecastBackgroundColor = config("Info - Forecast", "Weather background color", defaultValue: Color.clear, "Forecast background color. If not set - minimap background color is used.");
+            forecastPositionAnchor = config("Info - Forecast", "Position Anchor", defaultValue: ElementAnchor.TopRight, "Anchor point of forecast object transform");
             forecastPosition = config("Info - Forecast", "Position", defaultValue: new Vector2(-78f, -255f), "anchoredPosition of forecast object transform");
             forecastPositionNomap = config("Info - Forecast", "Position in nomap", defaultValue: new Vector2(-78f, -55f), "anchoredPosition of forecast object transform in nomap mode");
             forecastSize = config("Info - Forecast", "Size", defaultValue: new Vector2(75f, 25f), "sizeDelta of forecast object transform");
@@ -380,6 +401,7 @@ namespace MyLittleUI
             forecastBackgroundColor.SettingChanged += (sender, args) => InfoBlocks.UpdateForecastBackground();
 
             forecastEnabled.SettingChanged += (sender, args) => InfoBlocks.UpdateForecastBlock();
+            forecastPositionAnchor.SettingChanged += (sender, args) => InfoBlocks.UpdateForecastBlock();
             forecastPosition.SettingChanged += (sender, args) => InfoBlocks.UpdateForecastBlock();
             forecastPositionNomap.SettingChanged += (sender, args) => InfoBlocks.UpdateForecastBlock();
             forecastSize.SettingChanged += (sender, args) => InfoBlocks.UpdateForecastBlock();
@@ -415,6 +437,7 @@ namespace MyLittleUI
             windsCount = config("Info - Winds - List", "Wind arrows amount", defaultValue: 5, "Amount of winds to forecast");
             windsFillingDirection = config("Info - Winds - List", "Direction", defaultValue: ListDirection.LeftToRight, "Direction of filling");
             windsPositionSpacing = config("Info - Winds - List", "Spacing", defaultValue: 1f, "Spacing between arrows");
+            windsPositionAnchor = config("Info - Winds - List", "Position Anchor", defaultValue: ElementAnchor.TopRight, "Anchor point of winds object transform");
             windsPosition = config("Info - Winds - List", "Position", defaultValue: new Vector2(-180f, -255f), "anchoredPosition of winds object transform");
             windsSize = config("Info - Winds - List", "Size", defaultValue: new Vector2(119f, 25f), "sizeDelta of winds object transform");
 
@@ -424,6 +447,7 @@ namespace MyLittleUI
             windsPositionNomap = config("Info - Winds - List", "Nomap Position", defaultValue: new Vector2(-180f, -55f), "anchoredPosition of winds object transform in nomap mode");
             windsSizeNomap = config("Info - Winds - List", "Nomap Size", defaultValue: new Vector2(119f, 25f), "sizeDelta of winds object transform");
 
+            windsPositionAnchor.SettingChanged += (sender, args) => InfoBlocks.UpdateWindsBlock();
             windsPosition.SettingChanged += (sender, args) => InfoBlocks.UpdateWindsBlock();
             windsPositionNomap.SettingChanged += (sender, args) => InfoBlocks.UpdateWindsBlock();
             windsSize.SettingChanged += (sender, args) => InfoBlocks.UpdateWindsBlock(forceRebuildList: true);
@@ -654,11 +678,23 @@ namespace MyLittleUI
             weightSlotsALot.SettingChanged += (sender, args) => InventoryPanel.UpdateGradient();
             weightSlotsFull.SettingChanged += (sender, args) => InventoryPanel.UpdateGradient();
 
-            weightPosition = config("Info - Inventory", "Weight position", defaultValue: new Vector2(-898f, -276.1f), "Position from middle of the screen");
-            slotsPosition = config("Info - Inventory", "Slots position", defaultValue: new Vector2(-898f, -209.9f), "Position from middle of the screen");
+            weightPositionAnchor = config("Info - Inventory", "Weight position Anchor", defaultValue: ElementAnchor.BottomLeft, "Anchor point of an element");
+            slotsPositionAnchor = config("Info - Inventory", "Slots position Anchor", defaultValue: ElementAnchor.BottomLeft, "Anchor point of an element");
+            weightPosition = config("Info - Inventory", "Weight position", defaultValue: new Vector2(62f, 332f), "anchoredPosition from anchor point");
+            slotsPosition = config("Info - Inventory", "Slots position", defaultValue: new Vector2(62f, 265f), "anchoredPosition from anchor point");
 
             weightFontColor = config("Info - Inventory", "Weight font color", defaultValue: new Color(1f, 0.848f, 0, 1f), "Font color.");
             slotsFontColor = config("Info - Inventory", "Slots font color", defaultValue: new Color(1f, 0.848f, 0, 1f), "Font color.");
+
+            if (pluginVersion == "1.1.31")
+            {
+                // new default values were updated for new anchor point
+                if (weightPosition.Value == new Vector2(-898f, -276.1f))
+                    weightPosition.Value = (Vector2)weightPosition.DefaultValue;
+
+                if (slotsPosition.Value == new Vector2(-898f, -209.9f))
+                    slotsPosition.Value = (Vector2)slotsPosition.DefaultValue;
+            }
         }
 
         ConfigEntry<T> config<T>(string group, string name, T defaultValue, ConfigDescription description, bool synchronizedSetting = false)

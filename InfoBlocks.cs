@@ -169,8 +169,7 @@ namespace MyLittleUI
             weatherText.fontSize = forecastFontSize.Value == 0f ? weatherText.fontSizeMin : forecastFontSize.Value;
 
             RectTransform rtForecast = forecastObject.GetComponent<RectTransform>();
-            rtForecast.anchorMin = Vector2.one;
-            rtForecast.anchorMax = Vector2.one;
+            rtForecast.SetAnchor(forecastPositionAnchor.Value);
             rtForecast.anchoredPosition = Game.m_noMap ? forecastPositionNomap.Value : forecastPosition.Value;
             rtForecast.sizeDelta = forecastSize.Value;
 
@@ -255,8 +254,7 @@ namespace MyLittleUI
             windsObject.SetActive(windsEnabled.Value);
             windTemplate.SetActive(false);
 
-            windsObjectRect.anchorMin = Vector2.one;
-            windsObjectRect.anchorMax = Vector2.one;
+            windsObjectRect.SetAnchor(ElementAnchor.TopRight);
             windsObjectRect.anchoredPosition = GetWindsPosition();
             windsObjectRect.sizeDelta = GetWindsSize();
 
@@ -326,8 +324,7 @@ namespace MyLittleUI
             dayText.fontSize = clockFontSize.Value == 0f ? dayText.fontSizeMin : clockFontSize.Value;
 
             RectTransform rtClock = clockObject.GetComponent<RectTransform>();
-            rtClock.anchorMin = Vector2.one;
-            rtClock.anchorMax = Vector2.one;
+            rtClock.SetAnchor(clockPositionAnchor.Value);
             rtClock.anchoredPosition = clockPosition.Value;
             rtClock.sizeDelta = clockSize.Value;
 

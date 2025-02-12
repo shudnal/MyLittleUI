@@ -1,3 +1,8 @@
+# 1.1.31
+* major optimization for Multicraft calculations (now works decently with AzuCraftyBoxes)
+* Multicraft max amount limited to 99
+* clock, forecast, winds, weight and slots UI elements now has configurable anchor to make it work the same on clients with different resolutions and GUI scales (if you moved slots and weight panels you will need to reposition it again)
+
 # 1.1.30
 * fixed incompatibility when both MinimalUI and PassivePowers installed
 * Eitr Refinery can also be fueled by holding E

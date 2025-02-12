@@ -15,11 +15,9 @@ namespace MyLittleUI
 {
     public static class InventoryPanel
     {
-        private const string objectPanelName = "InventoryPanel";
         private const string objectWeightName = "Weight";
         private const string objectSlotsName = "Slots";
 
-        public static GameObject panel;
         public static RectTransform weight;
         public static RectTransform slots;
 
@@ -45,26 +43,15 @@ namespace MyLittleUI
             if (parentObject == null)
                 return;
 
-            panel = new GameObject(objectPanelName, typeof(RectTransform))
-            {
-                layer = layerUI
-            };
-            panel.transform.SetParent(parentObject.transform, false);
-            RectTransform panelRT = panel.GetComponent<RectTransform>();
-            panelRT.anchorMin = new Vector2(0.5f, 0.5f);
-            panelRT.anchorMax = new Vector2(0.5f, 0.5f);
-            panelRT.sizeDelta = Vector2.zero;
-
             weight = new GameObject(objectWeightName, typeof(RectTransform))
             {
                 layer = layerUI
             }.GetComponent<RectTransform>();
 
-            weight.SetParent(panel.transform, false);
-            weight.anchorMin = Vector2.zero;
-            weight.anchorMax = Vector2.one;
+            weight.SetParent(parentObject.transform, false);
+            weight.SetAnchor(ElementAnchor.BottomLeft);
             weight.sizeDelta = Vector2.one * 64f;
-            weight.anchoredPosition = new Vector2(-898f, -276.1f);
+            weight.anchoredPosition = new Vector2(62f, 332f);
 
             RectTransform weightIcon = UnityEngine.Object.Instantiate(InventoryGui.instance.m_weight?.transform.parent.Find("weight_icon")?.transform as RectTransform, weight);
             weightIcon.name = "Icon";
@@ -97,9 +84,9 @@ namespace MyLittleUI
             weightBackground.sprite = bkg.sprite;
             weightBackground.color = new Color(0f, 0f, 0f, 0.5f);
 
-            slots = UnityEngine.Object.Instantiate(weight, panel.transform);
+            slots = UnityEngine.Object.Instantiate(weight, parentObject.transform);
             slots.name = objectSlotsName;
-            slots.anchoredPosition = new Vector2(-898f, -209.9f);
+            slots.anchoredPosition = new Vector2(62f, 265f);
 
             RectTransform slotsIcon = slots.Find("Icon") as RectTransform;
             slotsIcon.GetComponent<Image>().sprite = Minimap.instance.m_locationIcons.Select(loc => loc.m_icon).FirstOrDefault(icon => icon.name == "mapicon_trader");
@@ -152,6 +139,7 @@ namespace MyLittleUI
                 weight.gameObject.SetActive(modEnabled.Value && showWeight.Value);
                 if (weight.gameObject.activeInHierarchy)
                 {
+                    weight.SetAnchor(weightPositionAnchor.Value);
                     weight.anchoredPosition = weightPosition.Value;
                     if (weightText)
                         weightText.color = weightFontColor.Value;
@@ -163,6 +151,7 @@ namespace MyLittleUI
                 slots.gameObject.SetActive(modEnabled.Value && showSlots.Value);
                 if (slots.gameObject.activeInHierarchy)
                 {
+                    slots.SetAnchor(slotsPositionAnchor.Value);
                     slots.anchoredPosition = slotsPosition.Value;
                     if (slotsText)
                         slotsText.color = slotsFontColor.Value;
@@ -179,11 +168,9 @@ namespace MyLittleUI
 
             if ((bool)weight && weight.gameObject.activeInHierarchy)
             {
-                if (weightText)
-                    if (totalWeight > maxWeight && Mathf.Sin(Time.time * 10f) > 0f)
-                        weightText.SetText($"<color=red>{(showWeightLeft.Value ? maxWeight - totalWeight : totalWeight)}</color>/{maxWeight}");
-                    else
-                        weightText.SetText($"{(showWeightLeft.Value ? maxWeight - totalWeight : totalWeight)}/{maxWeight}");
+                int currentWeight = showWeightLeft.Value ? maxWeight - totalWeight : totalWeight;
+
+                weightText?.SetText(maxWeight <= 0 ? currentWeight.ToFastString() : string.Format(GetFormatString(totalWeight > maxWeight), currentWeight, maxWeight));
 
                 if (weightBar)
                 {
@@ -197,11 +184,7 @@ namespace MyLittleUI
 
             if ((bool)slots && slots.gameObject.activeInHierarchy)
             {
-                if (slotsText)
-                    if (emptySlots <= 0 && Mathf.Sin(Time.time * 10f) > 0f)
-                        slotsText.SetText($"<color=red>{(showSlotsTaken.Value ? maxSlots - emptySlots : emptySlots)}</color>/{maxSlots}");
-                    else
-                        slotsText.SetText($"{(showSlotsTaken.Value ? maxSlots - emptySlots : emptySlots)}/{maxSlots}");
+                slotsText?.SetText(string.Format(GetFormatString(emptySlots <= 0), (showSlotsTaken.Value ? maxSlots - emptySlots : emptySlots).ToFastString(), maxSlots.ToFastString()));
 
                 if (slotsBar)
                 {
@@ -211,6 +194,8 @@ namespace MyLittleUI
                         slotsBar.SetColor(gradient.Evaluate(Mathf.Clamp01(slotsBar.m_value / slotsBar.m_maxValue)));
                 }
             }
+
+            static string GetFormatString(bool condition) => condition && Mathf.Sin(Time.time * 10f) > 0f ? "<color=red>{0}</color>/{1}" : "{0}/{1}";
         }
 
         public static void GetCurrentSlotsAmount(out int emptySlots, out int slotsAmount)
@@ -252,7 +237,6 @@ namespace MyLittleUI
                 if (!modEnabled.Value)
                     return;
 
-                panel = null;
                 weight = null;
                 slots = null;
 
