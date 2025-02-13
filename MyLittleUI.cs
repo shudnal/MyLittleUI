@@ -25,7 +25,7 @@ namespace MyLittleUI
     {
         public const string pluginID = "shudnal.MyLittleUI";
         public const string pluginName = "My Little UI";
-        public const string pluginVersion = "1.1.31";
+        public const string pluginVersion = "1.1.32";
 
         private readonly Harmony harmony = new Harmony(pluginID);
 
@@ -686,15 +686,12 @@ namespace MyLittleUI
             weightFontColor = config("Info - Inventory", "Weight font color", defaultValue: new Color(1f, 0.848f, 0, 1f), "Font color.");
             slotsFontColor = config("Info - Inventory", "Slots font color", defaultValue: new Color(1f, 0.848f, 0, 1f), "Font color.");
 
-            if (pluginVersion == "1.1.31")
-            {
-                // new default values were updated for new anchor point
-                if (weightPosition.Value == new Vector2(-898f, -276.1f))
-                    weightPosition.Value = (Vector2)weightPosition.DefaultValue;
+            // new default values were updated in 1.1.31 for new anchor point
+            if (weightPosition.Value == new Vector2(-898f, -276.1f))
+                weightPosition.Value = (Vector2)weightPosition.DefaultValue;
 
-                if (slotsPosition.Value == new Vector2(-898f, -209.9f))
-                    slotsPosition.Value = (Vector2)slotsPosition.DefaultValue;
-            }
+            if (slotsPosition.Value == new Vector2(-898f, -209.9f))
+                slotsPosition.Value = (Vector2)slotsPosition.DefaultValue;
         }
 
         ConfigEntry<T> config<T>(string group, string name, T defaultValue, ConfigDescription description, bool synchronizedSetting = false)
@@ -1615,5 +1612,7 @@ namespace MyLittleUI
                     keyCodeValues.Do(key => ZInput.s_keyLocalizationMap.Remove(key));
             }
         }
+
+        public void UpdateCraftingPanel() => CraftFilter.UpdateCraftingPanel();
     }
 }

@@ -1,3 +1,6 @@
+# 1.1.32
+* fixed broken crafting filter
+
 # 1.1.31
 * major optimization for Multicraft calculations (now works decently with AzuCraftyBoxes)
 * Multicraft max amount limited to 99

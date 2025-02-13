@@ -44,11 +44,11 @@ namespace MyLittleUI
             playerFilterRT.anchoredPosition = new Vector2(recipeList.anchoredPosition.x, 4);
             playerFilterRT.pivot = Vector2.zero;
 
-            GuiInputField filter = filterField.GetComponent<GuiInputField>();
-            filter.VirtualKeyboardTitle = "$menu_filter";
-            filter.transform.Find("Text Area/Placeholder").GetComponent<TMP_Text>().SetText(Localization.instance.Localize("$menu_filter"));
+            playerFilter = filterField.GetComponent<GuiInputField>();
+            playerFilter.VirtualKeyboardTitle = "$menu_filter";
+            playerFilter.transform.Find("Text Area/Placeholder").GetComponent<TMP_Text>().SetText(Localization.instance.Localize("$menu_filter"));
 
-            filter.restoreOriginalTextOnEscape = false;
+            playerFilter.restoreOriginalTextOnEscape = false;
 
             Button clearButton = UnityEngine.Object.Instantiate(InventoryGui.instance.m_splitOkButton, filterField.transform);
             clearButton.name = "ClearTextButton";
@@ -68,7 +68,6 @@ namespace MyLittleUI
 
             clearButton.transform.Find("gamepad_hint").localPosition = new Vector3(-0.75f, 23.8f, 0f);
 
-            playerFilter = filter;
             playerFilter.onValueChanged.AddListener(delegate
             {
                 UpdateFilterString();
