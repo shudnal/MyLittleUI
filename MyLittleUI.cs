@@ -25,7 +25,7 @@ namespace MyLittleUI
     {
         public const string pluginID = "shudnal.MyLittleUI";
         public const string pluginName = "My Little UI";
-        public const string pluginVersion = "1.1.32";
+        public const string pluginVersion = "1.1.33";
 
         private readonly Harmony harmony = new Harmony(pluginID);
 
@@ -1307,7 +1307,7 @@ namespace MyLittleUI
 
                 playerProfile = ___m_profiles[___m_profileIndex];
 
-                sb.Append(Localization.instance.Localize(((playerProfile.m_fileSource == FileHelpers.FileSource.Legacy) ? "$menu_legacynotice \n\n" : "") + ((!FileHelpers.m_cloudEnabled) ? "$menu_cloudsavesdisabled" : "")));
+                sb.Append(Localization.instance.Localize(((playerProfile.m_fileSource == FileHelpers.FileSource.Legacy) ? "$menu_legacynotice \n\n" : "") + ((!FileHelpers.CloudStorageEnabled) ? "$menu_cloudsavesdisabled" : "")));
 
                 if (statsMainMenuAll.Value)
                 {

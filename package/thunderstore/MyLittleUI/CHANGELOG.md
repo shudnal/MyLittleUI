@@ -1,3 +1,6 @@
+# 1.1.33
+* patch 0.220.3
+
 # 1.1.32
 * fixed broken crafting filter
 
