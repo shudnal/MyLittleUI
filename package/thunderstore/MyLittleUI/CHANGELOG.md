@@ -1,3 +1,6 @@
+# 1.1.34
+* ServerSync updated
+
 # 1.1.33
 * patch 0.220.3
 
