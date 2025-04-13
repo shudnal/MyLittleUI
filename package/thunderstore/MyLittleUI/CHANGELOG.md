@@ -1,3 +1,7 @@
+# 1.1.35
+* ServerSync updated
+* new clock format - game and real time
+
 # 1.1.34
 * ServerSync updated
 

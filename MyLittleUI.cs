@@ -25,7 +25,7 @@ namespace MyLittleUI
     {
         public const string pluginID = "shudnal.MyLittleUI";
         public const string pluginName = "My Little UI";
-        public const string pluginVersion = "1.1.34";
+        public const string pluginVersion = "1.1.35";
 
         private readonly Harmony harmony = new Harmony(pluginID);
 
@@ -53,6 +53,7 @@ namespace MyLittleUI
         public static ConfigEntry<Color> clockFontColor;
         public static ConfigEntry<ClockTimeType> clockTimeType;
         public static ConfigEntry<string> clockFuzzy;
+        public static ConfigEntry<string> clockFormatGameAndRealTime;
 
         public static ConfigEntry<bool> forecastEnabled;
         public static ConfigEntry<bool> forecastShowBackground;
@@ -292,11 +293,13 @@ namespace MyLittleUI
             Asc,
             Desc
         }
+
         public enum ClockTimeType
         {
             GameTime,
             Fuzzy,
-            RealTime
+            RealTime,
+            GameAndRealTime
         }
 
         public enum ElementAnchor
@@ -370,6 +373,7 @@ namespace MyLittleUI
             clockFontColor = config("Info - Clock", "Font color", defaultValue: Color.clear, "If not set - value is taken from minimap small biome label");
             clockTimeType = config("Info - Clock", "Time type", defaultValue: ClockTimeType.GameTime, "Time to show");
             clockFuzzy = config("Info - Clock", "Time fuzzy words", defaultValue: "Midnight,Early Morning,Before Dawn,Dawn,Morning,Late Morning,Midday,Early Afternoon,Afternoon,Evening,Night,Late Night", "The length of the day will be divided into equal periods of time according to the number of words specified.");
+            clockFormatGameAndRealTime = config("Info - Clock", "Time format game and real time", defaultValue: "{0} ({1})", "String format for GameAndRealTime time type. Where {0} is game time and {1} is real time");
 
             clockShowBackground.SettingChanged += (sender, args) => InfoBlocks.UpdateDayTimeBackground();
             clockBackgroundColor.SettingChanged += (sender, args) => InfoBlocks.UpdateDayTimeBackground();
@@ -385,6 +389,7 @@ namespace MyLittleUI
             clockTimeFormat24h.SettingChanged += (sender, args) => InfoBlocks.UpdateClock();
             clockTimeType.SettingChanged += (sender, args) => InfoBlocks.UpdateClock();
             clockFuzzy.SettingChanged += (sender, args) => InfoBlocks.FuzzyWordsOnChange();
+            clockFormatGameAndRealTime.SettingChanged += (sender, args) => InfoBlocks.UpdateClock();
 
             forecastEnabled = config("Info - Forecast", "Enabled", defaultValue: true, "Enable next change of weather [Synced with Server]", synchronizedSetting: true);
             forecastShowBackground = config("Info - Forecast", "Weather background enabled", defaultValue: false, "Show forecast background");
@@ -1206,7 +1211,7 @@ namespace MyLittleUI
         {
             private static readonly StringBuilder sb = new StringBuilder();
 
-            private static void Postfix(Smelter __instance, ref string __result, string ___m_name, ItemDrop ___m_fuelItem, int ___m_maxFuel, int ___m_maxOre, int ___m_fuelPerProduct, float ___m_secPerProduct, Windmill ___m_windmill)
+            private static void Postfix(Smelter __instance, ref string __result, string ___m_name, int ___m_maxOre, int ___m_fuelPerProduct, float ___m_secPerProduct, Windmill ___m_windmill)
             {
                 if (!modEnabled.Value)
                     return;

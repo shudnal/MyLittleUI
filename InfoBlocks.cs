@@ -381,6 +381,17 @@ namespace MyLittleUI
             UpdateClock();
         }
 
+        internal static string GetRealTime() => DateTime.Now.ToString(clockTimeFormat24h.Value ? "HH:mm" : "hh:mm tt");
+
+        internal static string GetGameTime()
+        {
+            float smoothDayFraction = EnvMan.instance.m_smoothDayFraction;
+            int hour = Mathf.CeilToInt(smoothDayFraction * 24);
+            int minute = 5 * (Mathf.CeilToInt((smoothDayFraction * 24 - hour) * 60) / 5);
+
+            return DateTime.MinValue.AddMonths(2).AddDays(EnvMan.instance.GetCurrentDay()).AddHours(hour).AddMinutes(minute).ToString(clockTimeFormat24h.Value ? "HH:mm" : "hh:mm tt");
+        }
+
         internal static string GetTimeString()
         {
             if (clockTimeType.Value == ClockTimeType.Fuzzy)
@@ -394,13 +405,11 @@ namespace MyLittleUI
                 }
             }
             else if (clockTimeType.Value == ClockTimeType.RealTime)
-                return DateTime.Now.ToString(clockTimeFormat24h.Value ? "HH:mm" : "hh:mm tt");
+                return GetRealTime();
+            else if (clockTimeType.Value == ClockTimeType.GameTime)
+                return GetGameTime();
 
-            float smoothDayFraction = EnvMan.instance.m_smoothDayFraction;
-            int hour = Mathf.CeilToInt(smoothDayFraction * 24);
-            int minute = 5 * (Mathf.CeilToInt((smoothDayFraction * 24 - hour) * 60) / 5);
-
-            return DateTime.MinValue.AddMonths(2).AddDays(EnvMan.instance.GetCurrentDay()).AddHours(hour).AddMinutes(minute).ToString(clockTimeFormat24h.Value ? "HH:mm" : "hh:mm tt");
+            return string.Format(clockFormatGameAndRealTime.Value, GetGameTime(), GetRealTime());
         }
 
         [HarmonyPatch(typeof(EnvMan), nameof(EnvMan.UpdateTriggers))]
