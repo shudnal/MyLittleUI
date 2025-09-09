@@ -17,6 +17,7 @@ namespace MyLittleUI
             public TMP_Text m_ammo;
             public Image m_icon;
             public Image m_bait;
+            public Image m_mead;
             public ItemDrop.ItemData m_item;
 
             public void UpdateState(ElementData elementData)
@@ -26,6 +27,7 @@ namespace MyLittleUI
                     m_ammo?.gameObject.SetActive(false);
                     m_icon?.gameObject.SetActive(false);
                     m_bait?.gameObject.SetActive(false);
+                    m_mead?.gameObject.SetActive(false);
                     return;
                 }
 
@@ -56,11 +58,16 @@ namespace MyLittleUI
                     elementData.m_amount.gameObject.SetActive(true);
                     elementData.m_amount.SetText(baits.ToString());
                 }
+
+                Sprite meadSprite = GetCurrentMead()?.GetIcon();
+                m_mead?.gameObject.SetActive(meadIconEnabled.Value && meadSprite != null);
+                if (meadSprite != null && m_mead != null)
+                    m_mead.overrideSprite = meadSprite;
             }
 
             private ItemDrop.ItemData GetCurrentAmmo()
             {
-                if (m_item == null || m_item.m_shared.m_ammoType.IsNullOrWhiteSpace() || IsBaitAmmo() || IsAmmo())
+                if (m_item == null || m_item.m_shared.m_ammoType.IsNullOrWhiteSpace() || IsBaitAmmo() || IsAmmo() || IsMeadAmmo())
                     return null;
 
                 ItemDrop.ItemData ammo = Player.m_localPlayer.GetAmmoItem();
@@ -82,26 +89,35 @@ namespace MyLittleUI
                 return ammo;
             }
 
+            private ItemDrop.ItemData GetCurrentMead()
+            {
+                if (m_item == null || m_item.m_shared.m_ammoType.IsNullOrWhiteSpace() || IsBaitAmmo() || IsAmmo() || !IsMeadAmmo())
+                    return null;
+
+                return Player.m_localPlayer.GetInventory().GetAmmoItem(m_item.m_shared.m_ammoType);
+            }
+
             private bool IsAmmo()
             {
                 return m_item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Ammo || m_item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.AmmoNonEquipable || m_item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Consumable;
             }
 
-            private bool IsBaitAmmo()
-            {
-                return m_item.m_shared.m_ammoType == "$item_fishingbait";
-            }
+            private bool IsBaitAmmo() => m_item.m_shared.m_ammoType == "$item_fishingbait";
+
+            private bool IsMeadAmmo() => m_item.m_shared.m_ammoType == "mead";
         }
 
         internal const string objectAmmoName = "MLUI_AmmoAmount";
         internal const string objectIconName = "MLUI_AmmoIcon";
         internal const string objectBaitName = "MLUI_AmmoBait";
+        internal const string objectMeadName = "MLUI_AmmoMead";
 
         internal static GameObject elementPrefab;
 
         internal static GameObject ammoCount;
         internal static GameObject ammoIcon;
         internal static GameObject ammoBait;
+        internal static GameObject ammoMead;
 
         internal static readonly Dictionary<HotkeyBar, bool> isDirty = new Dictionary<HotkeyBar, bool>();
 
@@ -124,6 +140,10 @@ namespace MyLittleUI
             RectTransform rtBait = ammoBait.GetComponent<RectTransform>();
             rtBait.anchorMin = new Vector2(0.5f, 0f);
             rtBait.anchorMax = new Vector2(1f, 0.5f);
+
+            RectTransform rtMead = ammoMead.GetComponent<RectTransform>();
+            rtMead.anchorMin = new Vector2(0.6f, 0.6f);
+            rtMead.anchorMax = new Vector2(1f, 1f);
 
             foreach (HotkeyBar bar in isDirty.Keys.ToList())
                 isDirty[bar] = true;
@@ -190,10 +210,27 @@ namespace MyLittleUI
                     ammoBait.name = objectBaitName;
                     ammoBait.transform.SetParent(__instance.m_elementPrefab.transform);
                     ammoBait.transform.SetSiblingIndex(index);
+                    index++;
 
                     ammoBait.SetActive(false);
 
                     FillFields(icon.GetComponent<RectTransform>(), ammoBait.GetComponent<RectTransform>());
+                }
+
+                ammoMead = __instance.m_elementPrefab.transform.Find(objectMeadName)?.gameObject;
+
+                if (ammoMead == null)
+                {
+                    GameObject icon = __instance.m_elementPrefab.transform.Find("icon").gameObject;
+                    ammoMead = UnityEngine.Object.Instantiate(icon);
+                    ammoMead.name = objectMeadName;
+                    ammoMead.transform.SetParent(__instance.m_elementPrefab.transform);
+                    ammoMead.transform.SetSiblingIndex(index);
+                    index++;
+
+                    ammoMead.SetActive(false);
+
+                    FillFields(icon.GetComponent<RectTransform>(), ammoMead.GetComponent<RectTransform>());
                 }
 
                 UpdateVisibility();
@@ -259,7 +296,8 @@ namespace MyLittleUI
                         {
                             m_ammo = elementData.m_go.transform.Find(objectAmmoName).GetComponent<TMP_Text>(),
                             m_icon = elementData.m_go.transform.Find(objectIconName).GetComponent<Image>(),
-                            m_bait = elementData.m_go.transform.Find(objectBaitName).GetComponent<Image>()
+                            m_bait = elementData.m_go.transform.Find(objectBaitName).GetComponent<Image>(),
+                            m_mead = elementData.m_go.transform.Find(objectMeadName).GetComponent<Image>()
                         };
 
                         elementExtras.Add(elementData, extraData);

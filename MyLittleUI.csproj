@@ -83,6 +83,10 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\Assemblies\stable\gui_framework.dll</HintPath>
     </Reference>
+    <Reference Include="netstandard, Version=2.1.0.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\Assemblies\beta\netstandard.dll</HintPath>
+    </Reference>
     <Reference Include="ServerSync, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\Assemblies\Managers\ServerSync.dll</HintPath>
@@ -166,6 +170,9 @@
       <Version>2.0.34.2</Version>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="System.Memory">
+      <Version>4.6.3</Version>
     </PackageReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

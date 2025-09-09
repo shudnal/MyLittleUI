@@ -47,6 +47,7 @@ namespace MyLittleUI
                     }
             }
             tails.Add("\n\n$item_seteffect");
+            tails.Add("\n$item_fulladrenaline:");
         }
 
         private static void InitTooltipTokens()
@@ -95,8 +96,14 @@ namespace MyLittleUI
                 "$inventory_poison",
                 "$inventory_spirit",
                 "$se_staminaregen",
+                "$se_eitrregen",
                 "$item_newgameplusitem",
                 "$item_tamedonly",
+                "$item_chancetoapplyse",
+                "$item_damagemultipliertotal",
+                "$item_damagemultiplierhp",
+                "$item_parryadrenaline",
+                "$item_fulladrenaline",
             };
 
             foreach (string token in tokens)
@@ -142,9 +149,16 @@ namespace MyLittleUI
             tokens.Add("$item_food_health");
             tokens.Add("$item_food_stamina");
             tokens.Add("$item_food_eitr");
-            tokens.Add("$item_food_duration");
+            
+            tokens.Add("");
+
             tokens.Add("$item_food_regen");
             tokens.Add("$se_staminaregen");
+            tokens.Add("$se_eitrregen");
+
+            tokens.Add("");
+
+            tokens.Add("$item_food_duration");
 
             tokens.Add("");
 
@@ -164,6 +178,9 @@ namespace MyLittleUI
             tokens.Add("$item_eitruse");
             tokens.Add("$item_healthuse");
             tokens.Add("$item_staminahold");
+            tokens.Add("$item_damagemultipliertotal");
+            tokens.Add("$item_damagemultiplierhp");
+            tokens.Add("$item_chancetoapplyse");
 
             tokens.Add("");
 
@@ -172,6 +189,7 @@ namespace MyLittleUI
             tokens.Add("$item_blockforce");
             tokens.Add("$item_deflection");
             tokens.Add("$item_parrybonus");
+            tokens.Add("$item_parryadrenaline");
 
             tokens.Add(projectileTooltipGroup);
             
@@ -323,7 +341,7 @@ namespace MyLittleUI
             if (!InventoryGui.instance || InventoryGui.instance.m_recipeDecription == null)
                 return;
 
-            InventoryGui.instance.m_recipeDecription.fontSizeMin = itemTooltipRecipeFontSize.Value;
+            InventoryGui.instance.m_recipeDecription.fontSizeMin = Math.Min(itemTooltipRecipeFontSize.Value, InventoryGui.instance.m_recipeDecription.fontSizeMin);
         }
 
         [HarmonyPatch(typeof(InventoryGui), nameof(InventoryGui.Awake))]

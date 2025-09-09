@@ -108,7 +108,13 @@ namespace MyLittleUI
             if (a == HitData.DamageModifier.VeryWeak && b == HitData.DamageModifier.Weak)
                 return false;
 
-            if ((a == HitData.DamageModifier.Resistant || a == HitData.DamageModifier.VeryResistant || a == HitData.DamageModifier.Immune) && (b == HitData.DamageModifier.Weak || b == HitData.DamageModifier.VeryWeak))
+            if ((a == HitData.DamageModifier.VeryResistant || a == HitData.DamageModifier.Resistant) && b == HitData.DamageModifier.SlightlyResistant)
+                return false;
+                
+            if ((a == HitData.DamageModifier.VeryWeak || a == HitData.DamageModifier.Weak) && b == HitData.DamageModifier.SlightlyWeak)
+                return false;
+                
+            if ((a == HitData.DamageModifier.Resistant || a == HitData.DamageModifier.VeryResistant || a == HitData.DamageModifier.SlightlyResistant || a == HitData.DamageModifier.Immune) && (b == HitData.DamageModifier.Weak || b == HitData.DamageModifier.VeryWeak || b == HitData.DamageModifier.SlightlyWeak))
                 return false;
 
             return true;

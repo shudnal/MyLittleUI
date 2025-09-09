@@ -1,3 +1,7 @@
+# 1.1.36
+* Call To Arms patch
+* mead icon for tankards
+
 # 1.1.35
 * ServerSync updated
 * new clock format - game and real time

@@ -25,7 +25,7 @@ namespace MyLittleUI
     {
         public const string pluginID = "shudnal.MyLittleUI";
         public const string pluginName = "My Little UI";
-        public const string pluginVersion = "1.1.35";
+        public const string pluginVersion = "1.1.36";
 
         private readonly Harmony harmony = new Harmony(pluginID);
 
@@ -103,6 +103,7 @@ namespace MyLittleUI
         public static ConfigEntry<Vector2> ammoIconSize;
         public static ConfigEntry<bool> baitIconEnabled;
         public static ConfigEntry<bool> baitCountEnabled;
+        public static ConfigEntry<bool> meadIconEnabled;
 
         public static ConfigEntry<bool> showAvailableItemsAmount;
         public static ConfigEntry<Color> availableItemsAmountColor;
@@ -475,8 +476,9 @@ namespace MyLittleUI
             ammoIconPosition = config("Item - Ammo icon and count", "Ammo icon Position", defaultValue: new Vector2(0f, -40f), "Position of ammo icon for weapon in hotbar");
             ammoIconSize = config("Item - Ammo icon and count", "Ammo icon Size", defaultValue: new Vector2(-10f, -10f), "Ammo icon for weapon in hotbar");
 
-            baitIconEnabled = config("Item - Ammo icon and count", "Bait icon Enabled", defaultValue: true, "Show amount of available ammo and ammo icon for weapon in hotbar [Synced with Server]", synchronizedSetting: true);
+            baitIconEnabled = config("Item - Ammo icon and count", "Bait icon Enabled", defaultValue: true, "Show amount of available bait and bait icon for weapon in hotbar [Synced with Server]", synchronizedSetting: true);
             baitCountEnabled = config("Item - Ammo icon and count", "Bait ammo Enabled", defaultValue: true, "Show amount of available ammo and ammo icon for weapon in hotbar [Synced with Server]", synchronizedSetting: true);
+            meadIconEnabled = config("Item - Ammo icon and count", "Mead icon Enabled", defaultValue: true, "Show mead icon for weapon in hotbar [Synced with Server]", synchronizedSetting: true);
 
             ammoCountEnabled.SettingChanged += (sender, args) => AmmoCountIcon.UpdateVisibility();
             ammoCountColor.SettingChanged += (sender, args) => AmmoCountIcon.UpdateVisibility();
@@ -488,6 +490,7 @@ namespace MyLittleUI
             ammoIconSize.SettingChanged += (sender, args) => AmmoCountIcon.UpdateVisibility();
             baitIconEnabled.SettingChanged += (sender, args) => AmmoCountIcon.UpdateVisibility();
             baitCountEnabled.SettingChanged += (sender, args) => AmmoCountIcon.UpdateVisibility();
+            meadIconEnabled.SettingChanged += (sender, args) => AmmoCountIcon.UpdateVisibility();
 
             showAvailableItemsAmount = config("Item - Available resources amount", "Enabled", defaultValue: true, "Show amount of available resources for crafting in requirements list (player inventory only) [Synced with Server]", synchronizedSetting: true);
             availableItemsAmountColor = config("Item - Available resources amount", "Color", defaultValue: new Color(0.68f, 0.85f, 0.90f), "Color of amount of available resources.");
@@ -515,7 +518,7 @@ namespace MyLittleUI
 
             itemTooltip = config("Item - Tooltip", "Enabled", defaultValue: true, "Updated item tooltip. Hold Alt to see original tooltip");
             itemTooltipColored = config("Item - Tooltip", "Colored numbers", defaultValue: true, "Orange and yellow value numbers in tooltip, light blue if disabled");
-            itemTooltipRecipeFontSize = config("Item - Tooltip", "Recipe description min font size", defaultValue: 10f, "Make description font smaller to fit more lines");
+            itemTooltipRecipeFontSize = config("Item - Tooltip", "Recipe description min font size", defaultValue: 9f, "Make description font smaller to fit more lines");
 
             itemTooltipRecipeFontSize.SettingChanged += (sender, args) => ItemTooltip.UpdateRecipeDescriptionFontSize();
 
@@ -1488,10 +1491,7 @@ namespace MyLittleUI
                     }
 
                     if (hoverCharacterLovePoints.Value && procreation.m_requiredLovePoints > 0)
-                    {
-                        int lovePoints = ___m_nview.GetZDO().GetInt(ZDOVars.s_lovePoints);
-                        __result += $"\n♥: {lovePoints}/{procreation.m_requiredLovePoints}";
-                    }
+                        __result += $"\n♥: {procreation.GetLovePoints()}/{procreation.m_requiredLovePoints}";
                 }
             }
         }
