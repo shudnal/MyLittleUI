@@ -1,3 +1,8 @@
+# 1.1.37
+* fixed issue with hidden item stacks
+* tameable love points will be visualized as a bar of hearts
+* love points will not be shown if not tamed
+
 # 1.1.36
 * Call To Arms patch
 * mead icon for tankards

@@ -25,7 +25,7 @@ namespace MyLittleUI
     {
         public const string pluginID = "shudnal.MyLittleUI";
         public const string pluginName = "My Little UI";
-        public const string pluginVersion = "1.1.36";
+        public const string pluginVersion = "1.1.37";
 
         private readonly Harmony harmony = new Harmony(pluginID);
 
@@ -760,7 +760,9 @@ namespace MyLittleUI
             return ts.ToString(ts.Hours > 0 ? @"h\:mm\:ss" : @"m\:ss");
         }
 
-        private static string FromPercent(double percent) => "<sup><alpha=#ff>▀▀▀▀▀▀▀▀▀▀<alpha=#ff></sup>".Insert(Mathf.Clamp(Mathf.RoundToInt((float)percent * 10), 0, 10) + 16, "<alpha=#33>");
+        private static string FromPercent(double percent) => GetBar(Mathf.RoundToInt((float)percent * 10), 10);
+        
+        private static string GetBar(int amount, int total, char symbol = '▀') => $"<sup><alpha=#ff>{new string(symbol, total)}<alpha=#ff></sup>".Insert(Mathf.Clamp(amount, 0, total) + 16, "<alpha=#33>");
 
         [HarmonyPatch(typeof(Fermenter), nameof(Fermenter.GetHoverText))]
         private class Fermenter_GetHoverText_Duration
@@ -1389,7 +1391,7 @@ namespace MyLittleUI
 
                 if (!__instance.m_character.IsTamed())
                 {
-                    if (__instance.m_tamingTime != 0 || !hoverTameTimeToTame.Value)
+                    if (__instance.m_tamingTime != 0 && hoverTameTimeToTame.Value)
                     {
                         float timeLeftToTame = __instance.GetRemainingTime();
                         if (timeLeftToTame != __instance.m_tamingTime)
@@ -1490,8 +1492,8 @@ namespace MyLittleUI
                         }
                     }
 
-                    if (hoverCharacterLovePoints.Value && procreation.m_requiredLovePoints > 0)
-                        __result += $"\n♥: {procreation.GetLovePoints()}/{procreation.m_requiredLovePoints}";
+                    if (hoverCharacterLovePoints.Value && procreation.m_requiredLovePoints > 0 && procreation.m_tameable?.IsTamed() == true)
+                        __result += "\n" + GetBar(procreation.GetLovePoints(), procreation.m_requiredLovePoints, '♥');
                 }
             }
         }

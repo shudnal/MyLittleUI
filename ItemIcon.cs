@@ -162,7 +162,7 @@ namespace MyLittleUI
         }
 
         [HarmonyPatch(typeof(InventoryGrid), nameof(InventoryGrid.UpdateGui))]
-        private class InventoryGrid_UpdateGui_DurabilityAndScale
+        private static class InventoryGrid_UpdateGui_DurabilityAndScale
         {
             private static readonly HashSet<ItemDrop.ItemData> filterItemQuality = new HashSet<ItemDrop.ItemData>();
             private static readonly HashSet<ItemDrop.ItemData> hideItemQuality = new HashSet<ItemDrop.ItemData>();
@@ -244,8 +244,8 @@ namespace MyLittleUI
                         else if (!IgnoreItemQuality(__instance, item))
                             UpdateItemQuality(element.m_quality, item.m_quality);
 
-                        if (inventoryHideLongStack.Value && element.m_amount.text.Length > 7)
-                            element.m_amount.text = element.m_amount.text.Substring(0, element.m_amount.text.IndexOf('/'));
+                        if (inventoryHideLongStack.Value && element.m_amount.text.Length > 7 && element.m_amount.text.IndexOf('/') is int length && length > 0)
+                            element.m_amount.text = element.m_amount.text.Substring(0, length);
                     }
                 }
             }
