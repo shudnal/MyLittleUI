@@ -20,12 +20,14 @@ namespace MyLittleUI
     [BepInDependency("Azumatt.AzuExtendedPlayerInventory", BepInDependency.DependencyFlags.SoftDependency)]
     [BepInDependency("shudnal.ExtraSlots", BepInDependency.DependencyFlags.SoftDependency)]
     [BepInDependency("randyknapp.mods.equipmentandquickslots", BepInDependency.DependencyFlags.SoftDependency)]
+    [BepInDependency("ZenDragon.ZenUI", BepInDependency.DependencyFlags.SoftDependency)]
+    [BepInDependency("Azumatt.AzuAntiArthriticCrafting", BepInDependency.DependencyFlags.SoftDependency)]
     [BepInIncompatibility("randyknapp.mods.auga")]
     public class MyLittleUI : BaseUnityPlugin
     {
         public const string pluginID = "shudnal.MyLittleUI";
         public const string pluginName = "My Little UI";
-        public const string pluginVersion = "1.1.37";
+        public const string pluginVersion = "1.1.39";
 
         private readonly Harmony harmony = new Harmony(pluginID);
 
@@ -110,6 +112,7 @@ namespace MyLittleUI
         public static ConfigEntry<bool> showMulticraftButtons;
 
         public static ConfigEntry<bool> craftingFilterEnabled;
+        public static ConfigEntry<bool> craftingSortingEnabled;
 
         public static ConfigEntry<bool> durabilityEnabled;
         public static ConfigEntry<Color> durabilityFine;
@@ -247,6 +250,8 @@ namespace MyLittleUI
         public static Assembly epicLootAssembly;
 
         public static readonly int layerUI = LayerMask.NameToLayer("UI");
+
+        public static readonly bool ForceDisableCraftingWindow = Chainloader.PluginInfos.ContainsKey("ZenDragon.ZenUI") || Chainloader.PluginInfos.ContainsKey("Azumatt.AzuAntiArthriticCrafting");
 
         public enum StationHover
         {
@@ -499,8 +504,11 @@ namespace MyLittleUI
             showMulticraftButtons.SettingChanged += (sender, args) => MultiCraft.UpdateMulticraftPanel();
 
             craftingFilterEnabled = config("Item - Crafting - Filter", "Enabled", defaultValue: true, "Enable filtering of craft list. [Synced with Server]", synchronizedSetting: true);
+            craftingSortingEnabled = config("Item - Crafting - Filter", "Enable sorting", defaultValue: true, "Enable sorting of craft list. [Synced with Server]", synchronizedSetting: true);
 
             craftingFilterEnabled.SettingChanged += (s, e) => CraftFilter.UpdateVisibility();
+
+            craftingSortingEnabled.SettingChanged += (s, e) => CraftSort.UpdateVisibility();
 
             durabilityEnabled = config("Item - Durability", "0 - Enabled", defaultValue: true, "Enable color of durability. [Synced with Server]", synchronizedSetting: true);
             durabilityFine = config("Item - Durability", "1 - Fine", defaultValue: new Color(0.11765f, 0.72941f, 0.03529f, 1f), "Color of durability > 75%.");
@@ -1553,10 +1561,7 @@ namespace MyLittleUI
         {
             public static void Postfix(Transform elementRoot, Piece.Requirement req, Player player, bool __result)
             {
-                if (!modEnabled.Value)
-                    return;
-
-                if (!showAvailableItemsAmount.Value)
+                if (!modEnabled.Value || !showAvailableItemsAmount.Value || ForceDisableCraftingWindow)
                     return;
 
                 if (!__result)

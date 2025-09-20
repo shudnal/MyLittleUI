@@ -28,8 +28,13 @@ namespace MyLittleUI
         private static readonly StringBuilder sb = new StringBuilder();
         private static readonly StringBuilder sbItem = new StringBuilder();
 
+        public static bool IsCraftingFilterEnabled => modEnabled.Value && craftingFilterEnabled.Value && !ForceDisableCraftingWindow;
+
         private static void InitFilterField()
         {
+            if (ForceDisableCraftingWindow)
+                return;
+
             RectTransform recipeList = InventoryGui.instance.m_recipeListScroll.transform.parent as RectTransform;
 
             // Add filter field on the bottom of crafting list
@@ -77,13 +82,19 @@ namespace MyLittleUI
 
         public static void UpdateVisibility()
         {
-            playerFilter?.gameObject?.SetActive(modEnabled.Value && craftingFilterEnabled.Value);
+            if (ForceDisableCraftingWindow)
+                return;
 
-            RectTransform recipeList = InventoryGui.instance.m_recipeListScroll.transform.parent as RectTransform;
-            if (listAnchorMin.x == -1f)
-                listAnchorMin = recipeList.anchorMin;
+            playerFilter?.gameObject?.SetActive(IsCraftingFilterEnabled);
 
-            recipeList.anchorMin = playerFilter.isActiveAndEnabled ? listAnchorMin + new Vector2(0f, 0.05f) : listAnchorMin;
+            if (InventoryGui.instance.m_recipeListScroll)
+            {
+                RectTransform recipeList = InventoryGui.instance.m_recipeListScroll.transform.parent as RectTransform;
+                if (listAnchorMin.x == -1f)
+                    listAnchorMin = recipeList.anchorMin;
+
+                recipeList.anchorMin = playerFilter?.isActiveAndEnabled == true ? listAnchorMin + new Vector2(0f, 0.05f) : listAnchorMin;
+            }
         }
 
         public static void UpdateFilterString() 
@@ -188,7 +199,7 @@ namespace MyLittleUI
         {
             public static void Postfix(ref bool __result)
             {
-                __result = __result || modEnabled.Value && craftingFilterEnabled.Value && playerFilter.isFocused;
+                __result = __result || IsCraftingFilterEnabled && playerFilter.isFocused;
             }
         }
 
@@ -198,7 +209,7 @@ namespace MyLittleUI
             [HarmonyPriority(Priority.Last)]
             public static void Postfix(ref List<Recipe> available)
             {
-                if (!modEnabled.Value || !craftingFilterEnabled.Value)
+                if (!IsCraftingFilterEnabled)
                     return;
 
                 if (!applyFilter)
@@ -223,7 +234,7 @@ namespace MyLittleUI
         {
             public static void Postfix()
             {
-                if (!modEnabled.Value || !craftingFilterEnabled.Value)
+                if (!IsCraftingFilterEnabled)
                     return;
 
                 bool flag = ZInput.InputLayout == InputLayout.Alternative1;

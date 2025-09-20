@@ -1,3 +1,9 @@
+# 1.1.39
+* 
+
+# 1.1.38
+* better compatibility with AAA_Crafting and ZenUI (multicraft and filter will be disabled)
+
 # 1.1.37
 * fixed issue with hidden item stacks
 * tameable love points will be visualized as a bar of hearts

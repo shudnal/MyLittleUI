@@ -2,13 +2,13 @@
 using HarmonyLib;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Text;
 using System.Text.RegularExpressions;
 using TMPro;
 using UnityEngine;
-using static MyLittleUI.MyLittleUI;
 using UnityEngine.UI;
-using System.Diagnostics;
+using static MyLittleUI.MyLittleUI;
 
 namespace MyLittleUI
 {
@@ -37,10 +37,7 @@ namespace MyLittleUI
         public static int lastScrollTriggerFrame;
         public const int minScrollDeltaFrames = 2;
 
-        private static bool IsMulticraftEnabled()
-        {
-            return modEnabled.Value && showMulticraftButtons.Value;
-        }
+        public static bool IsMulticraftEnabled => modEnabled.Value && showMulticraftButtons.Value && !ForceDisableCraftingWindow;
 
         private static int GetMaximumAmount(Recipe recipe, Player player)
         {
@@ -206,9 +203,12 @@ namespace MyLittleUI
             if (!InventoryGui.instance)
                 return;
 
-            showPanel = IsMulticraftEnabled() && InventoryGui.instance.m_selectedRecipe.Recipe != null 
-                                              && InventoryGui.instance.m_selectedRecipe.ItemData == null 
-                                              && (InventoryGui.instance.m_selectedRecipe.CanCraft || Player.m_localPlayer.NoCostCheat());
+            if (ForceDisableCraftingWindow)
+                return;
+
+            showPanel = IsMulticraftEnabled && InventoryGui.instance.m_selectedRecipe.Recipe != null 
+                                            && InventoryGui.instance.m_selectedRecipe.ItemData == null 
+                                            && (InventoryGui.instance.m_selectedRecipe.CanCraft || Player.m_localPlayer.NoCostCheat());
 
             panel?.gameObject.SetActive(showPanel && InventoryGui.instance.m_craftButton.isActiveAndEnabled);
 
@@ -255,6 +255,9 @@ namespace MyLittleUI
             [HarmonyAfter("Azumatt.AzuCraftyBoxes", "aedenthorn.CraftFromContainers", "org.bepinex.plugins.valheim_plus")]
             public static void Postfix(InventoryGui __instance)
             {
+                if (ForceDisableCraftingWindow)
+                    return;
+
                 UpdateMulticraftPanel();
 
                 textCrafting.SetText(Localization.instance.Localize("$inventory_craftingprog"));
@@ -388,6 +391,9 @@ namespace MyLittleUI
         {
             public static void Postfix(InventoryGui __instance)
             {
+                if (ForceDisableCraftingWindow)
+                    return;
+
                 craftButton = __instance.m_craftButton?.GetComponent<RectTransform>();
 
                 CreateMulticraftPanel();
