@@ -37,7 +37,7 @@ namespace MyLittleUI
         public static int lastScrollTriggerFrame;
         public const int minScrollDeltaFrames = 2;
 
-        public static bool IsMulticraftEnabled => modEnabled.Value && showMulticraftButtons.Value && !ForceDisableCraftingWindow;
+        public static bool IsMulticraftEnabled => modEnabled.Value && showMulticraftButtons.Value && !AAA_Crafting;
 
         private static int GetMaximumAmount(Recipe recipe, Player player)
         {
@@ -203,7 +203,7 @@ namespace MyLittleUI
             if (!InventoryGui.instance)
                 return;
 
-            if (ForceDisableCraftingWindow)
+            if (AAA_Crafting)
                 return;
 
             showPanel = IsMulticraftEnabled && InventoryGui.instance.m_selectedRecipe.Recipe != null 
@@ -255,7 +255,7 @@ namespace MyLittleUI
             [HarmonyAfter("Azumatt.AzuCraftyBoxes", "aedenthorn.CraftFromContainers", "org.bepinex.plugins.valheim_plus")]
             public static void Postfix(InventoryGui __instance)
             {
-                if (ForceDisableCraftingWindow)
+                if (AAA_Crafting)
                     return;
 
                 UpdateMulticraftPanel();
@@ -391,7 +391,7 @@ namespace MyLittleUI
         {
             public static void Postfix(InventoryGui __instance)
             {
-                if (ForceDisableCraftingWindow)
+                if (AAA_Crafting)
                     return;
 
                 craftButton = __instance.m_craftButton?.GetComponent<RectTransform>();

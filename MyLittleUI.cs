@@ -251,7 +251,8 @@ namespace MyLittleUI
 
         public static readonly int layerUI = LayerMask.NameToLayer("UI");
 
-        public static readonly bool ForceDisableCraftingWindow = Chainloader.PluginInfos.ContainsKey("ZenDragon.ZenUI") || Chainloader.PluginInfos.ContainsKey("Azumatt.AzuAntiArthriticCrafting");
+        public static readonly bool AAA_Crafting = Chainloader.PluginInfos.ContainsKey("Azumatt.AzuAntiArthriticCrafting");
+        public static readonly bool ZenUI = Chainloader.PluginInfos.ContainsKey("ZenDragon.ZenUI");
 
         public enum StationHover
         {
@@ -1561,7 +1562,7 @@ namespace MyLittleUI
         {
             public static void Postfix(Transform elementRoot, Piece.Requirement req, Player player, bool __result)
             {
-                if (!modEnabled.Value || !showAvailableItemsAmount.Value || ForceDisableCraftingWindow)
+                if (!modEnabled.Value || !showAvailableItemsAmount.Value)
                     return;
 
                 if (!__result)

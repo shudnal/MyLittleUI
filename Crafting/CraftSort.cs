@@ -1,10 +1,12 @@
 ﻿using HarmonyLib;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
+using static InventoryGui;
 using static MyLittleUI.MyLittleUI;
-
+using static Skills;
 
 namespace MyLittleUI
 {
@@ -21,6 +23,7 @@ namespace MyLittleUI
             public Sprite icon;
             public string name;
             public Color imageColor;
+            public bool unique = true;
 
             public RectTransform element;
             public Button button;
@@ -29,9 +32,8 @@ namespace MyLittleUI
 
             public Transform panel;
 
-            public Comparison<InventoryGui.RecipeDataPair> sort;
+            public Comparison<RecipeDataPair> sort;
             public Func<ItemDrop.ItemData, bool> filter;
-            public Func<ItemDrop.ItemData, bool> check;
 
             public FilteringState()
             {
@@ -51,18 +53,51 @@ namespace MyLittleUI
                 if (image)
                 {
                     image.overrideSprite = icon;
-                    image.color = imageColor;
+                    image.color = imageColor != Color.clear ? imageColor : Color.white;
                     image.transform.localScale *= 0.9f;
                 }
                 button = element.GetComponent<Button>();
                 active = element.Find("active")?.gameObject;
+
+                button.onClick.AddListener(OnClick);
 
                 UpdatePosition();
             }
 
             public void UpdatePosition()
             {
-                element.anchoredPosition = new Vector2(12f + (position % 3) * (32f + 2f), -8f + (position / 3) * (32f + 2f));
+                element.anchoredPosition = new Vector2(12f + (position % 3) * (32f + 2f), -8f - (position / 3) * (32f + 2f));
+            }
+
+            public void UpdateActive()
+            {
+                active.SetActive(enabled);
+            }
+
+            public void ClearFiltering()
+            {
+                selectable = false;
+                enabled = false;
+                position = 0;
+            }
+
+            public bool CheckSelectable(ItemDrop.ItemData item)
+            {
+                if (selectable)
+                    return selectable;
+
+                return selectable = filter(item);
+            }
+
+            public void OnClick()
+            {
+                enabled = !enabled;
+                UpdateActive();
+                
+                if (unique)
+                    filteringStates.DoIf(fs => fs != this, fs => { fs.enabled = false; fs.UpdateActive(); });
+
+                InventoryGui.instance.UpdateCraftingPanel(focusView: true);
             }
         }
 
@@ -76,13 +111,16 @@ namespace MyLittleUI
 
         public static Sprite foodSprite;
 
-        public static bool IsCraftingFilterEnabled => modEnabled.Value && craftingSortingEnabled.Value && !ForceDisableCraftingWindow;
+        public static bool IsCraftingFilterEnabled => modEnabled.Value && craftingSortingEnabled.Value && !AAA_Crafting && !ZenUI;
 
         public static void UpdateVisibility()
         {
+            if (AAA_Crafting || ZenUI)
+                return;
+
             bool isVisible = InventoryGui.instance?.m_animator.GetBool("visible") == true;
 
-            sortPanel.gameObject.SetActive(isVisible);
+            sortPanel?.gameObject.SetActive(isVisible);
 
         }
 
@@ -123,11 +161,12 @@ namespace MyLittleUI
             elementPrefab.sizeDelta = Vector2.one * 32f;
             elementPrefab.gameObject.SetActive(false);
             elementPrefab.GetComponent<UITooltip>().m_tooltipPrefab = InventoryGui.instance.m_repairButton.GetComponent<UITooltip>().m_tooltipPrefab;
+            elementPrefab.GetComponent<Button>().onClick.RemoveAllListeners();
         }
 
         internal static void InitSortingPanel()
         {
-            if (ForceDisableCraftingWindow)
+            if (AAA_Crafting || ZenUI)
                 return;
 
             sortPanel = UnityEngine.Object.Instantiate(InventoryGui.instance.m_repairPanel as RectTransform, InventoryGui.instance.m_repairPanel.transform.parent);
@@ -136,6 +175,7 @@ namespace MyLittleUI
 
             sortPanel.anchoredPosition = new Vector2(42f, -250f);
             sortPanel.sizeDelta = new Vector2(166f, 48f);
+            //sortPanel.offsetMin = new Vector2(124f, -650f);
 
             sortPanel.gameObject.SetActive(false);
 
@@ -144,60 +184,24 @@ namespace MyLittleUI
             selectedFrame = UnityEngine.Object.Instantiate(InventoryGui.instance.m_repairPanelSelection as RectTransform, InventoryGui.instance.m_repairPanelSelection.transform.parent);
             selectedFrame.name = "selected (MLUI_SortingFood)"; // TODO
 
-            new FilteringState()
-            {
-                panel = sortPanel,
-                name = "food1",
-                category = "$hud_food",
-                tooltip = "$item_food_health",
-                icon = foodSprite,
-                imageColor = InventoryGui.instance.m_playerGrid.m_foodHealthColor,
-                position = 0,
-                
-                sort = delegate (InventoryGui.RecipeDataPair a, InventoryGui.RecipeDataPair b)
-                {
-                    return b.ItemData.m_shared.m_food.CompareTo(a.ItemData.m_shared.m_food);
-                },
-                filter = (ItemDrop.ItemData item) => item.m_shared.m_food > 0,
-                check = (ItemDrop.ItemData item) => item.m_shared.m_food != 0,
-            };
+            int position = 0;
 
-            new FilteringState()
-            {
-                panel = sortPanel,
-                name = "food2",
-                category = "$hud_food",
-                tooltip = "$item_food_stamina",
-                icon = foodSprite,
-                imageColor = InventoryGui.instance.m_playerGrid.m_foodStaminaColor,
-                position = 1,
+            InitFoodCategory(ref position);
 
-                sort = delegate (InventoryGui.RecipeDataPair a, InventoryGui.RecipeDataPair b)
-                {
-                    return b.ItemData.m_shared.m_foodStamina.CompareTo(a.ItemData.m_shared.m_foodStamina);
-                },
-                filter = (ItemDrop.ItemData item) => item.m_shared.m_foodStamina > 0,
-                check = (ItemDrop.ItemData item) => item.m_shared.m_foodStamina != 0,
-            };
+            InitArmorCategory(ref position);
 
-            new FilteringState()
-            {
-                panel = sortPanel,
-                name = "food3",
-                category = "$hud_food",
-                tooltip = "$item_food_eitr",
-                icon = foodSprite,
-                imageColor = InventoryGui.instance.m_playerGrid.m_foodEitrColor,
-                position = 2,
+            InitSkillsCategory(ref position);
 
-                sort = delegate (InventoryGui.RecipeDataPair a, InventoryGui.RecipeDataPair b)
-                {
-                    return b.ItemData.m_shared.m_foodEitr.CompareTo(a.ItemData.m_shared.m_foodEitr);
-                },
-                filter = (ItemDrop.ItemData item) => item.m_shared.m_foodEitr > 0,
-                check = (ItemDrop.ItemData item) => item.m_shared.m_foodEitr != 0,
-            };
-            
+            InitBowsCategory(ref position);
+
+            InitCrossbowsCategory(ref position);
+
+            InitMagicCategory(ref position);
+
+            InitFishingCategory(ref position);
+
+            InitToolsCategory(ref position);
+
             filteringStates.ForEach(fs => fs.CreateElement());
 
             /*RectTransform recipeList = InventoryGui.instance.m_recipeListScroll.transform.parent as RectTransform;
@@ -226,20 +230,463 @@ namespace MyLittleUI
             // плащ, утилиты, тринки
         }
 
+        private static void InitSkillsCategory(ref int position)
+        {
+            Skills skills = Player.m_localPlayer.GetSkills();
+
+            AddMelee(skills, SkillType.Swords, ref position);
+            AddMelee(skills, SkillType.Knives, ref position);
+            AddMelee(skills, SkillType.Clubs, ref position);
+            AddMelee(skills, SkillType.Polearms, ref position);
+            AddMelee(skills, SkillType.Spears, ref position);
+            AddMelee(skills, SkillType.Axes, ref position);
+            AddMelee(skills, SkillType.Unarmed, ref position);
+            AddMelee(skills, SkillType.Pickaxes, ref position);
+
+            new FilteringState()
+            {
+                panel = sortPanel,
+                name = "skill_shields",
+                category = "Melee",
+                tooltip = "$skill_shields",
+                icon = skills.GetSkillDef(SkillType.Blocking).m_icon,
+                position = position++,
+
+                sort = delegate (RecipeDataPair a, RecipeDataPair b)
+                {
+                    return b.Recipe.m_item.m_itemData.GetBaseBlockPower().CompareTo(a.Recipe.m_item.m_itemData.GetBaseBlockPower());
+                },
+                filter = item => item.m_shared.m_skillType == SkillType.Blocking,
+            };
+        }
+
+        private static void AddMelee(Skills skills, SkillType skill, ref int position)
+        {
+            new FilteringState()
+            {
+                panel = sortPanel,
+                name = $"skill_{skill.ToString().ToLower()}",
+                category = "Melee",
+                tooltip = $"$skill_{skill.ToString().ToLower()}",
+                icon = skills.GetSkillDef(skill).m_icon,
+                position = position++,
+
+                sort = delegate (RecipeDataPair a, RecipeDataPair b)
+                {
+                    return b.Recipe.m_item.m_itemData.m_shared.m_damages.GetTotalDamage().CompareTo(a.Recipe.m_item.m_itemData.m_shared.m_damages.GetTotalDamage());
+                },
+                filter = item => item.m_shared.m_skillType == skill && item.m_shared.m_attack.m_attackAnimation != "" && item.m_shared.m_damages.GetTotalDamage() > 0,
+            };
+        }
+
+        private static void InitFoodCategory(ref int position)
+        {
+            new FilteringState()
+            {
+                panel = sortPanel,
+                name = "food",
+                category = "$hud_food",
+                tooltip = "$item_food_health",
+                icon = foodSprite,
+                imageColor = InventoryGui.instance.m_playerGrid.m_foodHealthColor,
+                position = position++,
+                unique = true,
+
+                sort = delegate (RecipeDataPair a, RecipeDataPair b)
+                {
+                    float foodB = b.Recipe.m_item.m_itemData.m_shared.m_appendToolTip?.m_itemData.m_shared.m_food ?? b.Recipe.m_item.m_itemData.m_shared.m_food;
+                    float foodA = a.Recipe.m_item.m_itemData.m_shared.m_appendToolTip?.m_itemData.m_shared.m_food ?? a.Recipe.m_item.m_itemData.m_shared.m_food;
+
+                    return foodB.CompareTo(foodA);
+                },
+                filter = item => (item.m_shared.m_appendToolTip?.m_itemData.m_shared.m_food ?? item.m_shared.m_food) > 0,
+            };
+
+            new FilteringState()
+            {
+                panel = sortPanel,
+                name = "food_stamina",
+                category = "$hud_food",
+                tooltip = "$item_food_stamina",
+                icon = foodSprite,
+                imageColor = InventoryGui.instance.m_playerGrid.m_foodStaminaColor,
+                position = position++,
+                unique = true,
+
+                sort = delegate (RecipeDataPair a, RecipeDataPair b)
+                {
+                    float foodB = b.Recipe.m_item.m_itemData.m_shared.m_appendToolTip?.m_itemData.m_shared.m_foodStamina ?? b.Recipe.m_item.m_itemData.m_shared.m_foodStamina;
+                    float foodA = a.Recipe.m_item.m_itemData.m_shared.m_appendToolTip?.m_itemData.m_shared.m_foodStamina ?? a.Recipe.m_item.m_itemData.m_shared.m_foodStamina;
+
+                    return foodB.CompareTo(foodA);
+                },
+                filter = item => (item.m_shared.m_appendToolTip?.m_itemData.m_shared.m_foodStamina ?? item.m_shared.m_foodStamina) > 0,
+            };
+
+            new FilteringState()
+            {
+                panel = sortPanel,
+                name = "food_eitr",
+                category = "$hud_food",
+                tooltip = "$item_food_eitr",
+                icon = foodSprite,
+                imageColor = InventoryGui.instance.m_playerGrid.m_foodEitrColor,
+                position = position++,
+                unique = true,
+
+                sort = delegate (RecipeDataPair a, RecipeDataPair b)
+                {
+                    float foodB = b.Recipe.m_item.m_itemData.m_shared.m_appendToolTip?.m_itemData.m_shared.m_foodEitr ?? b.Recipe.m_item.m_itemData.m_shared.m_foodEitr;
+                    float foodA = a.Recipe.m_item.m_itemData.m_shared.m_appendToolTip?.m_itemData.m_shared.m_foodEitr ?? a.Recipe.m_item.m_itemData.m_shared.m_foodEitr;
+
+                    return foodB.CompareTo(foodA);
+                },
+                filter = item => (item.m_shared.m_appendToolTip?.m_itemData.m_shared.m_foodEitr ?? item.m_shared.m_foodEitr) > 0,
+            };
+        }
+
+        private static void InitBowsCategory(ref int position)
+        {
+            new FilteringState()
+            {
+                panel = sortPanel,
+                name = "skill_bows",
+                category = "Bows",
+                tooltip = "$skill_bows",
+                icon = Player.m_localPlayer.GetSkills().GetSkillDef(SkillType.Bows).m_icon,
+                position = position++,
+
+                sort = delegate (RecipeDataPair a, RecipeDataPair b)
+                {
+                    return b.Recipe.m_item.m_itemData.m_shared.m_damages.GetTotalDamage().CompareTo(a.Recipe.m_item.m_itemData.m_shared.m_damages.GetTotalDamage());
+                },
+                filter = item => item.m_shared.m_skillType == SkillType.Bows && item.m_shared.m_attack.m_attackAnimation != "" && item.m_shared.m_damages.GetTotalDamage() > 0,
+            };
+
+            new FilteringState()
+            {
+                panel = sortPanel,
+                name = "ammo_arrows",
+                category = "Bows",
+                tooltip = "$ammo_arrows",
+                icon = ObjectDB.instance.GetItemPrefab("ArrowIron").GetComponent<ItemDrop>().m_itemData.GetIcon(),
+                position = position++,
+
+                sort = delegate (RecipeDataPair a, RecipeDataPair b)
+                {
+                    return b.Recipe.m_item.m_itemData.m_shared.m_damages.GetTotalDamage().CompareTo(a.Recipe.m_item.m_itemData.m_shared.m_damages.GetTotalDamage());
+                },
+                filter = item => item.m_shared.m_skillType == SkillType.Bows && item.m_shared.m_attack.m_attackAnimation == "" && item.m_shared.m_ammoType == "$ammo_arrows" && item.m_shared.m_damages.GetTotalDamage() > 0,
+            };
+        }
+
+        private static void InitCrossbowsCategory(ref int position)
+        {
+            new FilteringState()
+            {
+                panel = sortPanel,
+                name = "skill_crossbows",
+                category = "Crossbows",
+                tooltip = "$skill_crossbows",
+                icon = Player.m_localPlayer.GetSkills().GetSkillDef(SkillType.Crossbows).m_icon,
+                position = position++,
+
+                sort = delegate (RecipeDataPair a, RecipeDataPair b)
+                {
+                    return b.Recipe.m_item.m_itemData.m_shared.m_damages.GetTotalDamage().CompareTo(a.Recipe.m_item.m_itemData.m_shared.m_damages.GetTotalDamage());
+                },
+                filter = item => item.m_shared.m_skillType == SkillType.Crossbows && item.m_shared.m_attack.m_attackAnimation != "" && item.m_shared.m_damages.GetTotalDamage() > 0,
+            };
+
+            new FilteringState()
+            {
+                panel = sortPanel,
+                name = "ammo_arrows",
+                category = "Crossbows",
+                tooltip = "$ammo_bolts",
+                icon = ObjectDB.instance.GetItemPrefab("BoltIron").GetComponent<ItemDrop>().m_itemData.GetIcon(),
+                position = position++,
+
+                sort = delegate (RecipeDataPair a, RecipeDataPair b)
+                {
+                    return b.Recipe.m_item.m_itemData.m_shared.m_damages.GetTotalDamage().CompareTo(a.Recipe.m_item.m_itemData.m_shared.m_damages.GetTotalDamage());
+                },
+                filter = item => item.m_shared.m_skillType == SkillType.Crossbows && item.m_shared.m_attack.m_attackAnimation == "" && item.m_shared.m_ammoType == "$ammo_bolts" && item.m_shared.m_damages.GetTotalDamage() > 0,
+            };
+        }
+
+        private static void InitMagicCategory(ref int position)
+        {
+            new FilteringState()
+            {
+                panel = sortPanel,
+                name = "skill_elementalmagic",
+                category = "Magic",
+                tooltip = "$skill_elementalmagic",
+                icon = Player.m_localPlayer.GetSkills().GetSkillDef(SkillType.ElementalMagic).m_icon,
+                position = position++,
+
+                sort = delegate (RecipeDataPair a, RecipeDataPair b)
+                {
+                    return b.Recipe.m_item.m_itemData.m_shared.m_damages.GetTotalDamage().CompareTo(a.Recipe.m_item.m_itemData.m_shared.m_damages.GetTotalDamage());
+                },
+                filter = item => item.m_shared.m_skillType == SkillType.ElementalMagic && item.m_shared.m_attack.m_attackAnimation != "" && item.m_shared.m_damages.GetTotalDamage() > 0,
+            };
+
+            new FilteringState()
+            {
+                panel = sortPanel,
+                name = "skill_bloodmagic",
+                category = "Magic",
+                tooltip = "$skill_bloodmagic",
+                icon = Player.m_localPlayer.GetSkills().GetSkillDef(SkillType.BloodMagic).m_icon,
+                position = position++,
+
+                sort = delegate (RecipeDataPair a, RecipeDataPair b)
+                {
+                    return b.Recipe.m_item.m_itemData.m_shared.m_attack.m_drawEitrDrain.CompareTo(a.Recipe.m_item.m_itemData.m_shared.m_attack.m_drawEitrDrain);
+                },
+                filter = item => item.m_shared.m_skillType == SkillType.BloodMagic && item.m_shared.m_attack.m_attackAnimation != "",
+            };
+        }
+
+        private static void InitArmorCategory(ref int position)
+        {
+            new FilteringState()
+            {
+                panel = sortPanel,
+                name = "armor_helmet",
+                category = "Armor",
+                tooltip = "$radial_armor_utility",
+                icon = ObjectDB.instance.GetItemPrefab("HelmetBronze").GetComponent<ItemDrop>().m_itemData.GetIcon(),
+                position = position++,
+
+                sort = delegate (RecipeDataPair a, RecipeDataPair b)
+                {
+                    return b.Recipe.m_item.m_itemData.GetArmor().CompareTo(a.Recipe.m_item.m_itemData.GetArmor());
+                },
+                filter = item => item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Helmet || item.m_shared.m_attachOverride == ItemDrop.ItemData.ItemType.Helmet,
+            };
+
+            new FilteringState()
+            {
+                panel = sortPanel,
+                name = "armor_chest",
+                category = "Armor",
+                tooltip = "$radial_armor_utility",
+                icon = ObjectDB.instance.GetItemPrefab("ArmorIronChest").GetComponent<ItemDrop>().m_itemData.GetIcon(),
+                position = position++,
+
+                sort = delegate (RecipeDataPair a, RecipeDataPair b)
+                {
+                    return b.Recipe.m_item.m_itemData.GetArmor().CompareTo(a.Recipe.m_item.m_itemData.GetArmor());
+                },
+                filter = item => item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Chest || item.m_shared.m_attachOverride == ItemDrop.ItemData.ItemType.Chest,
+            };
+
+            new FilteringState()
+            {
+                panel = sortPanel,
+                name = "armor_legs",
+                category = "Armor",
+                tooltip = "$radial_armor_utility",
+                icon = ObjectDB.instance.GetItemPrefab("ArmorIronLegs").GetComponent<ItemDrop>().m_itemData.GetIcon(),
+                position = position++,
+
+                sort = delegate (RecipeDataPair a, RecipeDataPair b)
+                {
+                    return b.Recipe.m_item.m_itemData.GetArmor().CompareTo(a.Recipe.m_item.m_itemData.GetArmor());
+                },
+                filter = item => item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Legs || item.m_shared.m_attachOverride == ItemDrop.ItemData.ItemType.Legs,
+            };
+
+            new FilteringState()
+            {
+                panel = sortPanel,
+                name = "armor_cape",
+                category = "Armor",
+                tooltip = "$radial_armor_utility",
+                icon = ObjectDB.instance.GetItemPrefab("CapeDeerHide").GetComponent<ItemDrop>().m_itemData.GetIcon(),
+                position = position++,
+
+                sort = delegate (RecipeDataPair a, RecipeDataPair b)
+                {
+                    return b.Recipe.m_item.m_itemData.GetMaxDurability().CompareTo(a.Recipe.m_item.m_itemData.GetMaxDurability());
+                },
+                filter = item => item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Shoulder || item.m_shared.m_attachOverride == ItemDrop.ItemData.ItemType.Shoulder,
+            };
+
+            new FilteringState()
+            {
+                panel = sortPanel,
+                name = "armor_utility",
+                category = "Armor",
+                tooltip = "$radial_armor_utility",
+                icon = ObjectDB.instance.GetItemPrefab("Demister").GetComponent<ItemDrop>().m_itemData.GetIcon(),
+                position = position++,
+
+                sort = delegate (RecipeDataPair a, RecipeDataPair b)
+                {
+                    return b.Recipe.m_item.m_itemData.GetArmor().CompareTo(a.Recipe.m_item.m_itemData.GetArmor());
+                },
+                filter = item => item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Utility || item.m_shared.m_attachOverride == ItemDrop.ItemData.ItemType.Utility,
+            };
+
+            new FilteringState()
+            {
+                panel = sortPanel,
+                name = "armor_trinket",
+                category = "Armor",
+                tooltip = "$radial_armor_utility",
+                icon = ObjectDB.instance.GetItemPrefab("TrinketBronzeHealth").GetComponent<ItemDrop>().m_itemData.GetIcon(),
+                position = position++,
+
+                sort = delegate (RecipeDataPair a, RecipeDataPair b)
+                {
+                    return b.Recipe.m_item.m_itemData.m_shared.m_maxAdrenaline.CompareTo(a.Recipe.m_item.m_itemData.m_shared.m_maxAdrenaline);
+                },
+                filter = item => item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Trinket || item.m_shared.m_attachOverride == ItemDrop.ItemData.ItemType.Trinket,
+            };
+        }
+
+        private static void InitFishingCategory(ref int position)
+        {
+            new FilteringState()
+            {
+                panel = sortPanel,
+                name = "skill_fishing",
+                category = "Fishing",
+                tooltip = "$skill_fishing",
+                icon = ObjectDB.instance.GetItemPrefab("FishingRod").GetComponent<ItemDrop>().m_itemData.GetIcon(),
+                position = position++,
+
+                sort = delegate (RecipeDataPair a, RecipeDataPair b)
+                {
+                    return a.Recipe.m_listSortWeight.CompareTo(b.Recipe.m_listSortWeight);
+                },
+                filter = item => item.m_shared.m_skillType == SkillType.Fishing || item.m_shared.m_name == "$item_helmet_fishinghat" || item.m_shared.m_ammoType == "$item_fishingbait",
+            };
+        }
+        
+        private static void InitToolsCategory(ref int position)
+        {
+            new FilteringState()
+            {
+                panel = sortPanel,
+                name = "tools_crafting",
+                category = "Tools",
+                tooltip = "$radial_weapons_tools",
+                icon = Player.m_localPlayer.GetSkills().GetSkillDef(SkillType.Crafting).m_icon,
+                position = position++,
+
+                sort = delegate (RecipeDataPair a, RecipeDataPair b)
+                {
+                    return a.Recipe.m_listSortWeight.CompareTo(b.Recipe.m_listSortWeight);
+                },
+                filter = item => item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Tool || item.m_shared.m_attack.m_attackAnimation == "throw_bomb",
+            };
+
+            new FilteringState()
+            {
+                panel = sortPanel,
+                name = "tools_consumables",
+                category = "Tools",
+                tooltip = "$radial_consumables",
+                icon = ObjectDB.instance.GetItemPrefab("MeadBaseTasty").GetComponent<ItemDrop>().m_itemData.GetIcon(),
+                position = position++,
+
+                sort = delegate (RecipeDataPair a, RecipeDataPair b)
+                {
+                    return a.Recipe.m_listSortWeight.CompareTo(b.Recipe.m_listSortWeight);
+                },
+                filter = item => item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Consumable && item.m_shared.m_consumeStatusEffect != null,
+            };
+
+            new FilteringState()
+            {
+                panel = sortPanel,
+                name = "tools_material",
+                category = "Tools",
+                tooltip = "$skill_crafting",
+                icon = ObjectDB.instance.GetItemPrefab("Bronze").GetComponent<ItemDrop>().m_itemData.GetIcon(),
+                position = position++,
+
+                sort = delegate (RecipeDataPair a, RecipeDataPair b)
+                {
+                    return a.Recipe.m_listSortWeight.CompareTo(b.Recipe.m_listSortWeight);
+                },
+                filter = item => item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Material && item.m_shared.m_appendToolTip == null && item.m_shared.m_consumeStatusEffect == null,
+            };
+
+            new FilteringState()
+            {
+                panel = sortPanel,
+                name = "tools_misc",
+                category = "Tools",
+                tooltip = "$hud_misc",
+                icon = ObjectDB.instance.GetItemPrefab("BoneFragments").GetComponent<ItemDrop>().m_itemData.GetIcon(),
+                position = position++,
+
+                sort = delegate (RecipeDataPair a, RecipeDataPair b)
+                {
+                    return a.Recipe.m_listSortWeight.CompareTo(b.Recipe.m_listSortWeight);
+                },
+                filter = item => item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Misc || item.m_shared.m_attachOverride == ItemDrop.ItemData.ItemType.Misc || (int)item.m_shared.m_itemType > 25,
+            };
+        }
+
         internal static void FilterRecipes(List<Recipe> recipes)
         {
+            foreach (Recipe recipe in recipes)
+                foreach (var state in filteringStates)
+                    if (!state.selectable && state.filter(recipe.m_item.m_itemData))
+                        state.selectable = true;
 
+            if (filteringStates.Any(fs => fs.enabled))
+                recipes.RemoveAll(recipe =>
+                {
+                    bool pass = false;
+                    foreach (var state in filteringStates)
+                    {
+                        if (state.enabled && state.filter(recipe.m_item.m_itemData))
+                        {
+                            pass = true;
+                            break;
+                        }
+                    }
+                    return !pass;
+                });
         }
 
-        internal static void SortRecipes(List<Recipe> recipes)
+        internal static void SortRecipes(List<RecipeDataPair> m_availableRecipes, float m_recipeListSpace)
         {
+            var activeSorters = filteringStates
+                .Where(fs => fs.enabled && fs.sort != null)
+                .ToList();
 
+            if (activeSorters.Count == 0)
+                return;
+
+            m_availableRecipes.Sort((a, b) =>
+            {
+                foreach (var sorter in activeSorters)
+                {
+                    int result = sorter.sort(a, b);
+                    if (result != 0)
+                        return result;
+                }
+                return 0;
+            });
+
+            for (int j = 0; j < m_availableRecipes.Count; j++)
+                (m_availableRecipes[j].InterfaceElement.transform as RectTransform).anchoredPosition = new Vector2(0f, j * (0f - m_recipeListSpace));
         }
 
-        [HarmonyPatch(typeof(InventoryGui), nameof(InventoryGui.Awake))]
-        public static class StoreGui_Awake_InitializePanel
+        internal static void ClearStates() => filteringStates.Do(state => state.ClearFiltering());
+
+        [HarmonyPatch(typeof(Game), nameof(Game.SpawnPlayer))]
+        public static class Game_SpawnPlayer_InitializePanel
         {
-            [HarmonyPriority(Priority.First)]
             public static void Postfix()
             {
                 InitSortingPanel();
@@ -250,11 +697,16 @@ namespace MyLittleUI
         [HarmonyPatch(typeof(InventoryGui), nameof(InventoryGui.Update))]
         public static class InventoryGui_Update_SortingPanelsVisibility
         {
-            [HarmonyPriority(Priority.First)]
             public static void Postfix()
             {
                 UpdateVisibility();
             }
+        }
+
+        [HarmonyPatch(typeof(InventoryGui), nameof(InventoryGui.Show))]
+        public static class InventoryGui_Show_ClearState
+        {
+            public static void Postfix() => ClearStates();
         }
 
         [HarmonyPatch(typeof(InventoryGui), nameof(InventoryGui.UpdateRecipeList))]
@@ -263,8 +715,8 @@ namespace MyLittleUI
             [HarmonyPriority(Priority.First)]
             public static void Prefix(List<Recipe> recipes) => FilterRecipes(recipes);
             
-            [HarmonyPriority(Priority.First)]
-            public static void Postfix(List<Recipe> recipes) => SortRecipes(recipes);
+            [HarmonyPriority(Priority.Last)]
+            public static void Postfix(InventoryGui __instance) => SortRecipes(__instance.m_availableRecipes, __instance.m_recipeListSpace);
         }
     }
 }

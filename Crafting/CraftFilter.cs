@@ -28,11 +28,11 @@ namespace MyLittleUI
         private static readonly StringBuilder sb = new StringBuilder();
         private static readonly StringBuilder sbItem = new StringBuilder();
 
-        public static bool IsCraftingFilterEnabled => modEnabled.Value && craftingFilterEnabled.Value && !ForceDisableCraftingWindow;
+        public static bool IsCraftingFilterEnabled => modEnabled.Value && craftingFilterEnabled.Value && !AAA_Crafting && !ZenUI;
 
         private static void InitFilterField()
         {
-            if (ForceDisableCraftingWindow)
+            if (AAA_Crafting || ZenUI)
                 return;
 
             RectTransform recipeList = InventoryGui.instance.m_recipeListScroll.transform.parent as RectTransform;
@@ -82,7 +82,7 @@ namespace MyLittleUI
 
         public static void UpdateVisibility()
         {
-            if (ForceDisableCraftingWindow)
+            if (AAA_Crafting || ZenUI)
                 return;
 
             playerFilter?.gameObject?.SetActive(IsCraftingFilterEnabled);
