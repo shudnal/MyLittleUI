@@ -1,6 +1,7 @@
 ﻿using HarmonyLib;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
@@ -48,7 +49,7 @@ namespace MyLittleUI
                 element = UnityEngine.Object.Instantiate(elementPrefab, panel);
                 element.name = name;
                 element.gameObject.SetActive(true);
-                element.GetComponent<UITooltip>().m_text = tooltip;
+                element.GetComponent<UITooltip>().m_text = CultureInfo.CurrentCulture.TextInfo.ToTitleCase(Localization.instance.Localize(tooltip));
                 image = element.Find("icon").GetComponent<Image>();
                 if (image)
                 {
@@ -61,27 +62,38 @@ namespace MyLittleUI
 
                 button.onClick.AddListener(OnClick);
 
-                UpdatePosition();
+                UpdateElementPosition();
             }
 
-            public void UpdatePosition()
+            public void UpdateElementPosition()
             {
                 element.anchoredPosition = new Vector2(12f + (position % 3) * (32f + 2f), -8f - (position / 3) * (32f + 2f));
             }
 
-            public void UpdateActive()
+            public void UpdatePosition(ref int currentPosition)
             {
-                active.SetActive(enabled);
+                position = currentPosition;
+                if (selectable)
+                    currentPosition++;
+
+                UpdateElementPosition();
             }
+
+            public void UpdateEnabled() => active.SetActive(enabled);
+
+            public void UpdateSelectable() => element.gameObject.SetActive(selectable);
 
             public void ClearFiltering()
             {
                 selectable = false;
                 enabled = false;
                 position = 0;
+
+                UpdateEnabled();
+                UpdateSelectable();
             }
 
-            public bool CheckSelectable(ItemDrop.ItemData item)
+            public bool IsSelectable(ItemDrop.ItemData item)
             {
                 if (selectable)
                     return selectable;
@@ -92,16 +104,17 @@ namespace MyLittleUI
             public void OnClick()
             {
                 enabled = !enabled;
-                UpdateActive();
+                UpdateEnabled();
                 
                 if (unique)
-                    filteringStates.DoIf(fs => fs != this, fs => { fs.enabled = false; fs.UpdateActive(); });
+                    filteringStates.DoIf(fs => fs != this, fs => { fs.enabled = false; fs.UpdateEnabled(); });
 
                 InventoryGui.instance.UpdateCraftingPanel(focusView: true);
             }
         }
 
         public static readonly List<FilteringState> filteringStates = new List<FilteringState>();
+        public static readonly List<FilteringState> tempEnabledStates = new List<FilteringState>();
 
         public static GameObject parentObject;
 
@@ -121,7 +134,6 @@ namespace MyLittleUI
             bool isVisible = InventoryGui.instance?.m_animator.GetBool("visible") == true;
 
             sortPanel?.gameObject.SetActive(isVisible);
-
         }
 
         internal static void InitElementPrefab(Transform parent)
@@ -203,31 +215,6 @@ namespace MyLittleUI
             InitToolsCategory(ref position);
 
             filteringStates.ForEach(fs => fs.CreateElement());
-
-            /*RectTransform recipeList = InventoryGui.instance.m_recipeListScroll.transform.parent as RectTransform;
-
-            // Add filter field on the bottom of crafting list
-            GameObject filterField = UnityEngine.Object.Instantiate(TextInput.instance.m_inputField.gameObject, recipeList.parent);
-            filterField.name = "MLUI_FilterSorting";
-            filterField.transform.SetSiblingIndex(recipeList.GetSiblingIndex() + 1);
-
-            InventoryGui.instance.m_playerGrid.m_elementPrefab*/
-
-
-            //GUIFramework.GuiToggle
-            //Texture tex;
-            //UnityEngine.Object.FindObjectsByType<UnityEngine.UI.Image>(UnityEngine.FindObjectsInactive.Include, UnityEngine.FindObjectsSortMode.InstanceID).Where(img => img.mainTexture == tex && img.sprite.name == "selection_frame").Do(img => ZLog.Log($"{img.name} {img.sprite.textureRect} {Utils.GetPath(img.transform)}"))
-
-            // Используем Hotkeyelement
-            // формируем группы с фильтрами-сортировкой
-            // нажатие левой - фильтр (желтый фон), нажатие правой - сортировка и фильтр (синий фон), геймпад - повторное нажатие
-            // нажатие на заголовок группы - активирует по всем
-            // три колонки
-            // еда
-            // оружие по скилам
-            // боеприпасы: стрелы, болты, бомбы, наживки
-            // шлем тело ноги
-            // плащ, утилиты, тринки
         }
 
         private static void InitSkillsCategory(ref int position)
@@ -637,18 +624,28 @@ namespace MyLittleUI
 
         internal static void FilterRecipes(List<Recipe> recipes)
         {
-            foreach (Recipe recipe in recipes)
-                foreach (var state in filteringStates)
-                    if (!state.selectable && state.filter(recipe.m_item.m_itemData))
-                        state.selectable = true;
+            tempEnabledStates.Clear();
 
-            if (filteringStates.Any(fs => fs.enabled))
+            int position = 0;
+            foreach (var state in filteringStates)
+            {
+                state.selectable = recipes.Any(recipe => state.IsSelectable(recipe.m_item.m_itemData));
+                state.enabled = state.enabled && state.selectable;
+                state.UpdateSelectable();
+
+                if (state.enabled)
+                    tempEnabledStates.Add(state);
+
+                state.UpdatePosition(ref position);
+            }
+
+            if (tempEnabledStates.Count > 0)
                 recipes.RemoveAll(recipe =>
                 {
                     bool pass = false;
-                    foreach (var state in filteringStates)
+                    foreach (var state in tempEnabledStates)
                     {
-                        if (state.enabled && state.filter(recipe.m_item.m_itemData))
+                        if (state.filter(recipe.m_item.m_itemData))
                         {
                             pass = true;
                             break;
@@ -660,16 +657,12 @@ namespace MyLittleUI
 
         internal static void SortRecipes(List<RecipeDataPair> m_availableRecipes, float m_recipeListSpace)
         {
-            var activeSorters = filteringStates
-                .Where(fs => fs.enabled && fs.sort != null)
-                .ToList();
-
-            if (activeSorters.Count == 0)
+            if (tempEnabledStates.Count == 0)
                 return;
 
             m_availableRecipes.Sort((a, b) =>
             {
-                foreach (var sorter in activeSorters)
+                foreach (var sorter in tempEnabledStates)
                 {
                     int result = sorter.sort(a, b);
                     if (result != 0)
@@ -706,7 +699,7 @@ namespace MyLittleUI
         [HarmonyPatch(typeof(InventoryGui), nameof(InventoryGui.Show))]
         public static class InventoryGui_Show_ClearState
         {
-            public static void Postfix() => ClearStates();
+            public static void Prefix() => ClearStates();
         }
 
         [HarmonyPatch(typeof(InventoryGui), nameof(InventoryGui.UpdateRecipeList))]
