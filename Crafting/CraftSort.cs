@@ -17,6 +17,7 @@ namespace MyLittleUI
         {
             public string name;
             public RectTransform panel;
+            public RectTransform selectedFrame;
             public List<FilteringState> filters;
             public bool enabled;
             public int enabledFilters;
@@ -29,6 +30,9 @@ namespace MyLittleUI
                 
                 panel = UnityEngine.Object.Instantiate(InventoryGui.instance.m_repairPanel as RectTransform, sortPanel);
                 panel.name = name;
+
+                selectedFrame = UnityEngine.Object.Instantiate(InventoryGui.instance.m_repairPanelSelection as RectTransform, InventoryGui.instance.m_repairPanelSelection.transform.parent);
+                selectedFrame.name = $"selected (MLUI_Sorting_{name})";
 
                 filters = new List<FilteringState>();
 
@@ -51,6 +55,9 @@ namespace MyLittleUI
                 panel.sizeDelta = new Vector2(120f - x, size);
                 height += size;
                 panel.anchoredPosition = new Vector2(0f, -height);
+
+                selectedFrame.sizeDelta = panel.sizeDelta + new Vector2(4f, 4f);
+                selectedFrame.anchoredPosition = panel.anchoredPosition - new Vector2(panel.sizeDelta.x + 2f, 200f + 2f);
             }
 
             public void UpdateVisibility() => panel.gameObject.SetActive(enabled);
@@ -163,7 +170,6 @@ namespace MyLittleUI
         public static GameObject parentObject;
 
         public static RectTransform sortPanel;
-        public static RectTransform selectedFrame = null;
         public static RectTransform elementPrefab;
 
         public static Sprite foodSprite;
@@ -231,15 +237,10 @@ namespace MyLittleUI
 
             sortPanel.anchoredPosition = new Vector2(0f, -200f);
             sortPanel.sizeDelta = new Vector2(0f, 0f);
-            //sortPanel.sizeDelta = new Vector2(124f, 48f);
-            //sortPanel.offsetMin = new Vector2(124f, -650f);
 
             sortPanel.gameObject.SetActive(false);
 
             InitElementPrefab(sortPanel);
-
-            selectedFrame = UnityEngine.Object.Instantiate(InventoryGui.instance.m_repairPanelSelection as RectTransform, InventoryGui.instance.m_repairPanelSelection.transform.parent);
-            selectedFrame.name = "selected (MLUI_SortingFood)"; // TODO
 
             InitFoodCategory();
 
