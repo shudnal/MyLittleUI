@@ -199,7 +199,7 @@ namespace MyLittleUI
 
         public static void UpdateVisibility()
         {
-            if (AAA_Crafting || ZenUI)
+            if (!IsCraftingFilterEnabled)
                 return;
 
             sortPanel?.gameObject.SetActive(InventoryGui.IsVisible());
@@ -247,7 +247,7 @@ namespace MyLittleUI
 
         internal static void InitSortingPanel()
         {
-            if (AAA_Crafting || ZenUI)
+            if (!IsCraftingFilterEnabled)
                 return;
 
             sortPanel = UnityEngine.Object.Instantiate(InventoryGui.instance.m_repairPanel as RectTransform, InventoryGui.instance.m_repairPanel.transform.parent);
@@ -787,6 +787,9 @@ namespace MyLittleUI
 
             public static bool Prefix()
             {
+                if (!IsCraftingFilterEnabled)
+                    return true;
+
                 if (ZInput.GetButtonDown("JoyLStickDown") || ZInput.GetButtonDown("JoyLStickUp") || ZInput.GetButtonDown("JoyLStickRight"))
                 {
                     filteringStates.Do(fs => fs.SetSelected(false));

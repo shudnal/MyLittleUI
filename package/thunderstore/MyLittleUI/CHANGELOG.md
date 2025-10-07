@@ -1,5 +1,6 @@
-# 1.1.39
-* 
+# 1.2.0
+* fast filtering and sorting panel in Crafting window
+* incompatibility with AAA_Crafting and ZenUI partially reverted
 
 # 1.1.38
 * better compatibility with AAA_Crafting and ZenUI (multicraft and filter will be disabled)
