@@ -5,7 +5,6 @@ using System.Globalization;
 using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
-using static InventoryGui;
 using static MyLittleUI.MyLittleUI;
 using static Skills;
 
@@ -60,7 +59,11 @@ namespace MyLittleUI
                 selectedFrame.anchoredPosition = panel.anchoredPosition - new Vector2(panel.sizeDelta.x + 2f, 200f + 2f);
             }
 
-            public void UpdateVisibility() => panel.gameObject.SetActive(enabled);
+            public void UpdateVisibility()
+            {
+                panel.gameObject.SetActive(enabled);
+                selectedFrame.gameObject.SetActive(enabled);
+            }
         }
 
         public class FilteringState
@@ -68,6 +71,8 @@ namespace MyLittleUI
             public int position;
             public bool selectable;
             public bool enabled;
+            public bool selected;
+            public bool lastSelected;
 
             public string category;
             public string tooltip;
@@ -80,10 +85,11 @@ namespace MyLittleUI
             public Button button;
             public Image image;
             public GameObject active;
+            public GameObject select;
 
-            public Transform panel;
+            public FilteringPanel panel;
 
-            public Comparison<RecipeDataPair> sort;
+            public Comparison<InventoryGui.RecipeDataPair> sort;
             public Func<ItemDrop.ItemData, bool> filter;
 
             public FilteringState()
@@ -96,7 +102,7 @@ namespace MyLittleUI
                 if (element)
                     return;
 
-                element = UnityEngine.Object.Instantiate(elementPrefab, panel);
+                element = UnityEngine.Object.Instantiate(elementPrefab, panel.panel);
                 element.name = name;
                 element.gameObject.SetActive(true);
                 element.GetComponent<UITooltip>().m_text = CultureInfo.CurrentCulture.TextInfo.ToTitleCase(Localization.instance.Localize(tooltip));
@@ -109,6 +115,7 @@ namespace MyLittleUI
                 }
                 button = element.GetComponent<Button>();
                 active = element.Find("active")?.gameObject;
+                select = element.Find("selected")?.gameObject;
 
                 button.onClick.AddListener(OnClick);
 
@@ -133,14 +140,28 @@ namespace MyLittleUI
 
             public void UpdateSelectable() => element.gameObject.SetActive(selectable);
 
+            public void UpdateSelect() => select.SetActive(selected);
+
+            public void SetSelected(bool selected)
+            {
+                this.selected = selected;
+                if (selected)
+                {
+                    lastSelected = true;
+                    filteringStates.DoIf(fs => fs != this, fs => fs.lastSelected = false);
+                }
+            }
+
             public void ClearFiltering()
             {
                 selectable = false;
                 enabled = false;
+                selected = false;
                 position = 0;
 
                 UpdateEnabled();
                 UpdateSelectable();
+                UpdateSelect();
             }
 
             public bool IsSelectable(ItemDrop.ItemData item)
@@ -181,9 +202,7 @@ namespace MyLittleUI
             if (AAA_Crafting || ZenUI)
                 return;
 
-            bool isVisible = InventoryGui.instance?.m_animator.GetBool("visible") == true;
-
-            sortPanel?.gameObject.SetActive(isVisible);
+            sortPanel?.gameObject.SetActive(InventoryGui.IsVisible());
         }
 
         internal static void InitElementPrefab(Transform parent)
@@ -265,7 +284,7 @@ namespace MyLittleUI
 
             panel.AddFilter(new FilteringState()
             {
-                panel = panel.panel,
+                panel = panel,
                 name = "food",
                 category = "$hud_food",
                 tooltip = "$item_food_health",
@@ -273,7 +292,7 @@ namespace MyLittleUI
                 imageColor = InventoryGui.instance.m_playerGrid.m_foodHealthColor,
                 unique = true,
 
-                sort = delegate (RecipeDataPair a, RecipeDataPair b)
+                sort = delegate (InventoryGui.RecipeDataPair a, InventoryGui.RecipeDataPair b)
                 {
                     float foodB = b.Recipe.m_item.m_itemData.m_shared.m_appendToolTip?.m_itemData.m_shared.m_food ?? b.Recipe.m_item.m_itemData.m_shared.m_food;
                     float foodA = a.Recipe.m_item.m_itemData.m_shared.m_appendToolTip?.m_itemData.m_shared.m_food ?? a.Recipe.m_item.m_itemData.m_shared.m_food;
@@ -285,7 +304,7 @@ namespace MyLittleUI
 
             panel.AddFilter(new FilteringState()
             {
-                panel = panel.panel,
+                panel = panel,
                 name = "food_stamina",
                 category = "$hud_food",
                 tooltip = "$item_food_stamina",
@@ -293,7 +312,7 @@ namespace MyLittleUI
                 imageColor = InventoryGui.instance.m_playerGrid.m_foodStaminaColor,
                 unique = true,
 
-                sort = delegate (RecipeDataPair a, RecipeDataPair b)
+                sort = delegate (InventoryGui.RecipeDataPair a, InventoryGui.RecipeDataPair b)
                 {
                     float foodB = b.Recipe.m_item.m_itemData.m_shared.m_appendToolTip?.m_itemData.m_shared.m_foodStamina ?? b.Recipe.m_item.m_itemData.m_shared.m_foodStamina;
                     float foodA = a.Recipe.m_item.m_itemData.m_shared.m_appendToolTip?.m_itemData.m_shared.m_foodStamina ?? a.Recipe.m_item.m_itemData.m_shared.m_foodStamina;
@@ -305,7 +324,7 @@ namespace MyLittleUI
 
             panel.AddFilter(new FilteringState()
             {
-                panel = panel.panel,
+                panel = panel,
                 name = "food_eitr",
                 category = "$hud_food",
                 tooltip = "$item_food_eitr",
@@ -313,7 +332,7 @@ namespace MyLittleUI
                 imageColor = InventoryGui.instance.m_playerGrid.m_foodEitrColor,
                 unique = true,
 
-                sort = delegate (RecipeDataPair a, RecipeDataPair b)
+                sort = delegate (InventoryGui.RecipeDataPair a, InventoryGui.RecipeDataPair b)
                 {
                     float foodB = b.Recipe.m_item.m_itemData.m_shared.m_appendToolTip?.m_itemData.m_shared.m_foodEitr ?? b.Recipe.m_item.m_itemData.m_shared.m_foodEitr;
                     float foodA = a.Recipe.m_item.m_itemData.m_shared.m_appendToolTip?.m_itemData.m_shared.m_foodEitr ?? a.Recipe.m_item.m_itemData.m_shared.m_foodEitr;
@@ -336,13 +355,13 @@ namespace MyLittleUI
 
             panel.AddFilter(new FilteringState()
             {
-                panel = panel.panel,
+                panel = panel,
                 name = "armor_helmet",
                 category = "Armor",
                 tooltip = "$radial_armor_utility",
                 icon = ObjectDB.instance.GetItemPrefab("HelmetBronze").GetComponent<ItemDrop>().m_itemData.GetIcon(),
 
-                sort = delegate (RecipeDataPair a, RecipeDataPair b)
+                sort = delegate (InventoryGui.RecipeDataPair a, InventoryGui.RecipeDataPair b)
                 {
                     return b.Recipe.m_item.m_itemData.GetArmor().CompareTo(a.Recipe.m_item.m_itemData.GetArmor());
                 },
@@ -351,13 +370,13 @@ namespace MyLittleUI
 
             panel.AddFilter(new FilteringState()
             {
-                panel = panel.panel,
+                panel = panel,
                 name = "armor_chest",
                 category = "Armor",
                 tooltip = "$radial_armor_utility",
                 icon = ObjectDB.instance.GetItemPrefab("ArmorIronChest").GetComponent<ItemDrop>().m_itemData.GetIcon(),
 
-                sort = delegate (RecipeDataPair a, RecipeDataPair b)
+                sort = delegate (InventoryGui.RecipeDataPair a, InventoryGui.RecipeDataPair b)
                 {
                     return b.Recipe.m_item.m_itemData.GetArmor().CompareTo(a.Recipe.m_item.m_itemData.GetArmor());
                 },
@@ -366,13 +385,13 @@ namespace MyLittleUI
 
             panel.AddFilter(new FilteringState()
             {
-                panel = panel.panel,
+                panel = panel,
                 name = "armor_legs",
                 category = "Armor",
                 tooltip = "$radial_armor_utility",
                 icon = ObjectDB.instance.GetItemPrefab("ArmorIronLegs").GetComponent<ItemDrop>().m_itemData.GetIcon(),
 
-                sort = delegate (RecipeDataPair a, RecipeDataPair b)
+                sort = delegate (InventoryGui.RecipeDataPair a, InventoryGui.RecipeDataPair b)
                 {
                     return b.Recipe.m_item.m_itemData.GetArmor().CompareTo(a.Recipe.m_item.m_itemData.GetArmor());
                 },
@@ -381,13 +400,13 @@ namespace MyLittleUI
 
             panel.AddFilter(new FilteringState()
             {
-                panel = panel.panel,
+                panel = panel,
                 name = "armor_cape",
                 category = "Armor",
                 tooltip = "$radial_armor_utility",
                 icon = ObjectDB.instance.GetItemPrefab("CapeDeerHide").GetComponent<ItemDrop>().m_itemData.GetIcon(),
 
-                sort = delegate (RecipeDataPair a, RecipeDataPair b)
+                sort = delegate (InventoryGui.RecipeDataPair a, InventoryGui.RecipeDataPair b)
                 {
                     return b.Recipe.m_item.m_itemData.GetMaxDurability().CompareTo(a.Recipe.m_item.m_itemData.GetMaxDurability());
                 },
@@ -396,13 +415,13 @@ namespace MyLittleUI
 
             panel.AddFilter(new FilteringState()
             {
-                panel = panel.panel,
+                panel = panel,
                 name = "armor_utility",
                 category = "Armor",
                 tooltip = "$radial_armor_utility",
                 icon = ObjectDB.instance.GetItemPrefab("Demister").GetComponent<ItemDrop>().m_itemData.GetIcon(),
 
-                sort = delegate (RecipeDataPair a, RecipeDataPair b)
+                sort = delegate (InventoryGui.RecipeDataPair a, InventoryGui.RecipeDataPair b)
                 {
                     return b.Recipe.m_item.m_itemData.GetArmor().CompareTo(a.Recipe.m_item.m_itemData.GetArmor());
                 },
@@ -411,13 +430,13 @@ namespace MyLittleUI
 
             panel.AddFilter(new FilteringState()
             {
-                panel = panel.panel,
+                panel = panel,
                 name = "armor_trinket",
                 category = "Armor",
                 tooltip = "$radial_armor_utility",
                 icon = ObjectDB.instance.GetItemPrefab("TrinketBronzeHealth").GetComponent<ItemDrop>().m_itemData.GetIcon(),
 
-                sort = delegate (RecipeDataPair a, RecipeDataPair b)
+                sort = delegate (InventoryGui.RecipeDataPair a, InventoryGui.RecipeDataPair b)
                 {
                     return b.Recipe.m_item.m_itemData.m_shared.m_maxAdrenaline.CompareTo(a.Recipe.m_item.m_itemData.m_shared.m_maxAdrenaline);
                 },
@@ -448,13 +467,13 @@ namespace MyLittleUI
 
             panel.AddFilter(new FilteringState()
             {
-                panel = panel.panel,
+                panel = panel,
                 name = "skill_shields",
                 category = "Melee",
                 tooltip = "$skill_shields",
                 icon = skills.GetSkillDef(SkillType.Blocking).m_icon,
 
-                sort = delegate (RecipeDataPair a, RecipeDataPair b)
+                sort = delegate (InventoryGui.RecipeDataPair a, InventoryGui.RecipeDataPair b)
                 {
                     return b.Recipe.m_item.m_itemData.GetBaseBlockPower().CompareTo(a.Recipe.m_item.m_itemData.GetBaseBlockPower());
                 },
@@ -471,13 +490,13 @@ namespace MyLittleUI
             {
                 panel.AddFilter(new FilteringState()
                 {
-                    panel = panel.panel,
+                    panel = panel,
                     name = $"skill_{skill.ToString().ToLower()}",
                     category = "Melee",
                     tooltip = $"$skill_{skill.ToString().ToLower()}",
                     icon = skills.GetSkillDef(skill).m_icon,
 
-                    sort = delegate (RecipeDataPair a, RecipeDataPair b)
+                    sort = delegate (InventoryGui.RecipeDataPair a, InventoryGui.RecipeDataPair b)
                     {
                         return b.Recipe.m_item.m_itemData.m_shared.m_damages.GetTotalDamage().CompareTo(a.Recipe.m_item.m_itemData.m_shared.m_damages.GetTotalDamage());
                     },
@@ -492,13 +511,13 @@ namespace MyLittleUI
 
             panel.AddFilter(new FilteringState()
             {
-                panel = panel.panel,
+                panel = panel,
                 name = "skill_bows",
                 category = "Bows",
                 tooltip = "$skill_bows",
                 icon = Player.m_localPlayer.GetSkills().GetSkillDef(SkillType.Bows).m_icon,
 
-                sort = delegate (RecipeDataPair a, RecipeDataPair b)
+                sort = delegate (InventoryGui.RecipeDataPair a, InventoryGui.RecipeDataPair b)
                 {
                     return b.Recipe.m_item.m_itemData.m_shared.m_damages.GetTotalDamage().CompareTo(a.Recipe.m_item.m_itemData.m_shared.m_damages.GetTotalDamage());
                 },
@@ -507,13 +526,13 @@ namespace MyLittleUI
 
             panel.AddFilter(new FilteringState()
             {
-                panel = panel.panel,
+                panel = panel,
                 name = "ammo_arrows",
                 category = "Bows",
                 tooltip = "$ammo_arrows",
                 icon = ObjectDB.instance.GetItemPrefab("ArrowIron").GetComponent<ItemDrop>().m_itemData.GetIcon(),
 
-                sort = delegate (RecipeDataPair a, RecipeDataPair b)
+                sort = delegate (InventoryGui.RecipeDataPair a, InventoryGui.RecipeDataPair b)
                 {
                     return b.Recipe.m_item.m_itemData.m_shared.m_damages.GetTotalDamage().CompareTo(a.Recipe.m_item.m_itemData.m_shared.m_damages.GetTotalDamage());
                 },
@@ -527,13 +546,13 @@ namespace MyLittleUI
 
             panel.AddFilter(new FilteringState()
             {
-                panel = panel.panel,
+                panel = panel,
                 name = "skill_crossbows",
                 category = "Crossbows",
                 tooltip = "$skill_crossbows",
                 icon = Player.m_localPlayer.GetSkills().GetSkillDef(SkillType.Crossbows).m_icon,
 
-                sort = delegate (RecipeDataPair a, RecipeDataPair b)
+                sort = delegate (InventoryGui.RecipeDataPair a, InventoryGui.RecipeDataPair b)
                 {
                     return b.Recipe.m_item.m_itemData.m_shared.m_damages.GetTotalDamage().CompareTo(a.Recipe.m_item.m_itemData.m_shared.m_damages.GetTotalDamage());
                 },
@@ -542,13 +561,13 @@ namespace MyLittleUI
 
             panel.AddFilter(new FilteringState()
             {
-                panel = panel.panel,
+                panel = panel,
                 name = "ammo_arrows",
                 category = "Crossbows",
                 tooltip = "$ammo_bolts",
                 icon = ObjectDB.instance.GetItemPrefab("BoltIron").GetComponent<ItemDrop>().m_itemData.GetIcon(),
 
-                sort = delegate (RecipeDataPair a, RecipeDataPair b)
+                sort = delegate (InventoryGui.RecipeDataPair a, InventoryGui.RecipeDataPair b)
                 {
                     return b.Recipe.m_item.m_itemData.m_shared.m_damages.GetTotalDamage().CompareTo(a.Recipe.m_item.m_itemData.m_shared.m_damages.GetTotalDamage());
                 },
@@ -562,13 +581,13 @@ namespace MyLittleUI
 
             panel.AddFilter(new FilteringState()
             {
-                panel = panel.panel,
+                panel = panel,
                 name = "skill_elementalmagic",
                 category = "Magic",
                 tooltip = "$skill_elementalmagic",
                 icon = Player.m_localPlayer.GetSkills().GetSkillDef(SkillType.ElementalMagic).m_icon,
 
-                sort = delegate (RecipeDataPair a, RecipeDataPair b)
+                sort = delegate (InventoryGui.RecipeDataPair a, InventoryGui.RecipeDataPair b)
                 {
                     return b.Recipe.m_item.m_itemData.m_shared.m_damages.GetTotalDamage().CompareTo(a.Recipe.m_item.m_itemData.m_shared.m_damages.GetTotalDamage());
                 },
@@ -577,13 +596,13 @@ namespace MyLittleUI
 
             panel.AddFilter(new FilteringState()
             {
-                panel = panel.panel,
+                panel = panel,
                 name = "skill_bloodmagic",
                 category = "Magic",
                 tooltip = "$skill_bloodmagic",
                 icon = Player.m_localPlayer.GetSkills().GetSkillDef(SkillType.BloodMagic).m_icon,
 
-                sort = delegate (RecipeDataPair a, RecipeDataPair b)
+                sort = delegate (InventoryGui.RecipeDataPair a, InventoryGui.RecipeDataPair b)
                 {
                     return b.Recipe.m_item.m_itemData.m_shared.m_attack.m_drawEitrDrain.CompareTo(a.Recipe.m_item.m_itemData.m_shared.m_attack.m_drawEitrDrain);
                 },
@@ -597,13 +616,13 @@ namespace MyLittleUI
 
             panel.AddFilter(new FilteringState()
             {
-                panel = panel.panel,
+                panel = panel,
                 name = "tools_crafting",
                 category = "Tools",
                 tooltip = "$radial_weapons_tools",
                 icon = Player.m_localPlayer.GetSkills().GetSkillDef(SkillType.Crafting).m_icon,
 
-                sort = delegate (RecipeDataPair a, RecipeDataPair b)
+                sort = delegate (InventoryGui.RecipeDataPair a, InventoryGui.RecipeDataPair b)
                 {
                     return a.Recipe.m_listSortWeight.CompareTo(b.Recipe.m_listSortWeight);
                 },
@@ -612,13 +631,13 @@ namespace MyLittleUI
 
             panel.AddFilter(new FilteringState()
             {
-                panel = panel.panel,
+                panel = panel,
                 name = "tools_consumables",
                 category = "Tools",
                 tooltip = "$radial_consumables",
                 icon = ObjectDB.instance.GetItemPrefab("MeadBaseTasty").GetComponent<ItemDrop>().m_itemData.GetIcon(),
 
-                sort = delegate (RecipeDataPair a, RecipeDataPair b)
+                sort = delegate (InventoryGui.RecipeDataPair a, InventoryGui.RecipeDataPair b)
                 {
                     return a.Recipe.m_listSortWeight.CompareTo(b.Recipe.m_listSortWeight);
                 },
@@ -627,13 +646,13 @@ namespace MyLittleUI
 
             panel.AddFilter(new FilteringState()
             {
-                panel = panel.panel,
+                panel = panel,
                 name = "tools_material",
                 category = "Tools",
                 tooltip = "$skill_crafting",
                 icon = ObjectDB.instance.GetItemPrefab("Bronze").GetComponent<ItemDrop>().m_itemData.GetIcon(),
 
-                sort = delegate (RecipeDataPair a, RecipeDataPair b)
+                sort = delegate (InventoryGui.RecipeDataPair a, InventoryGui.RecipeDataPair b)
                 {
                     return a.Recipe.m_listSortWeight.CompareTo(b.Recipe.m_listSortWeight);
                 },
@@ -642,13 +661,13 @@ namespace MyLittleUI
 
             panel.AddFilter(new FilteringState()
             {
-                panel = panel.panel,
+                panel = panel,
                 name = "skill_fishing",
                 category = "Tools",
                 tooltip = "$skill_fishing",
                 icon = ObjectDB.instance.GetItemPrefab("FishingRod").GetComponent<ItemDrop>().m_itemData.GetIcon(),
 
-                sort = delegate (RecipeDataPair a, RecipeDataPair b)
+                sort = delegate (InventoryGui.RecipeDataPair a, InventoryGui.RecipeDataPair b)
                 {
                     return a.Recipe.m_listSortWeight.CompareTo(b.Recipe.m_listSortWeight);
                 },
@@ -657,13 +676,13 @@ namespace MyLittleUI
 
             panel.AddFilter(new FilteringState()
             {
-                panel = panel.panel,
+                panel = panel,
                 name = "tools_misc",
                 category = "Tools",
                 tooltip = "$hud_misc",
                 icon = ObjectDB.instance.GetItemPrefab("BoneFragments").GetComponent<ItemDrop>().m_itemData.GetIcon(),
 
-                sort = delegate (RecipeDataPair a, RecipeDataPair b)
+                sort = delegate (InventoryGui.RecipeDataPair a, InventoryGui.RecipeDataPair b)
                 {
                     return a.Recipe.m_listSortWeight.CompareTo(b.Recipe.m_listSortWeight);
                 },
@@ -722,7 +741,7 @@ namespace MyLittleUI
                 });
         }
 
-        internal static void SortRecipes(List<RecipeDataPair> m_availableRecipes, float m_recipeListSpace)
+        internal static void SortRecipes(List<InventoryGui.RecipeDataPair> m_availableRecipes, float m_recipeListSpace)
         {
             if (tempEnabledStates.Count == 0)
                 return;
@@ -777,6 +796,223 @@ namespace MyLittleUI
             
             [HarmonyPriority(Priority.Last)]
             public static void Postfix(InventoryGui __instance) => SortRecipes(__instance.m_availableRecipes, __instance.m_recipeListSpace);
+        }
+
+        [HarmonyPatch(typeof(InventoryGui), nameof(InventoryGui.UpdateRecipeGamepadInput))]
+        public static class InventoryGui_UpdateRecipeGamepadInput_GamepadControls
+        {
+            public static FilteringState GetSelectedFilter() => filteringStates.FirstOrDefault(fs => fs.selectable && fs.selected);
+
+            public static bool Prefix()
+            {
+                if (ZInput.GetButtonDown("JoyLStickDown") || ZInput.GetButtonDown("JoyLStickUp") || ZInput.GetButtonDown("JoyLStickRight"))
+                {
+                    filteringStates.Do(fs => fs.SetSelected(false));
+                    return true;
+                }
+
+                if (ZInput.GetButtonDown("JoyLStickLeft"))
+                {
+                    if (filteringStates.FirstOrDefault(fs => fs.selectable && fs.enabled) is FilteringState enabledFilter)
+                    {
+                        enabledFilter.SetSelected(true);
+                        return false;
+                    }
+                    else if (panels.Count > 0)
+                    {
+                        var selectedFilter = GetSelectedFilter();
+                        selectedFilter = filteringStates.FirstOrDefault(fs => fs.selectable && fs.lastSelected) ?? filteringStates.FirstOrDefault(fs => fs.selectable);
+                        if (selectedFilter != null)
+                        {
+                            selectedFilter.SetSelected(true);
+                            return false;
+                        }
+                    }
+                }
+                else if (ZInput.GetButtonDown("JoyDPadLeft"))
+                {
+                    var selectedFilter = GetSelectedFilter();
+                    if (selectedFilter != null)
+                    {
+                        for (var i = selectedFilter.panel.filters.IndexOf(selectedFilter) - 1; i >= 0; i--)
+                            if (selectedFilter.panel.filters[i].selectable)
+                            {
+                                selectedFilter.SetSelected(false);
+                                selectedFilter.panel.filters[i].SetSelected(true);
+                                return false;
+                            }
+
+                        int panelIndex = panels.IndexOf(selectedFilter.panel);
+                        for (int j = panelIndex - 1; j >= 0; j--)
+                        {
+                            var filter = panels[j].filters.LastOrDefault(fs => fs.selectable);
+                            if (filter != null)
+                            {
+                                selectedFilter.SetSelected(false);
+                                filter.SetSelected(true);
+                                return false;
+                            }
+                        }
+
+                        if (filteringStates.LastOrDefault(fs => fs.selectable) is FilteringState lastFilter)
+                        {
+                            selectedFilter.SetSelected(false);
+                            lastFilter.SetSelected(true);
+                            return false;
+                        }
+                    }
+                    else if (filteringStates.FirstOrDefault(fs => fs.selectable && fs.enabled) is FilteringState enabledFilter)
+                    {
+                        enabledFilter.SetSelected(true);
+                        return false;
+                    }
+                    else if (panels.Count > 0)
+                    {
+                        selectedFilter = filteringStates.FirstOrDefault(fs => fs.selectable && fs.lastSelected) ?? filteringStates.FirstOrDefault(fs => fs.selectable);
+                        if (selectedFilter != null)
+                        {
+                            selectedFilter.SetSelected(true);
+                            return false;
+                        }
+                    }
+                }
+                else if (ZInput.GetButtonDown("JoyDPadRight"))
+                {
+                    var selectedFilter = GetSelectedFilter();
+                    if (selectedFilter != null)
+                    {
+                        for (var i = selectedFilter.panel.filters.IndexOf(selectedFilter) + 1; i < selectedFilter.panel.filters.Count; i++)
+                            if (selectedFilter.panel.filters[i].selectable)
+                            {
+                                selectedFilter.SetSelected(false);
+                                selectedFilter.panel.filters[i].SetSelected(true);
+                                return false;
+                            }
+
+                        int panelIndex = panels.IndexOf(selectedFilter.panel);
+                        for (int j = panelIndex + 1; j < panels.Count; j++)
+                        {
+                            var filter = panels[j].filters.FirstOrDefault(fs => fs.selectable);
+                            if (filter != null)
+                            {
+                                selectedFilter.SetSelected(false);
+                                filter.SetSelected(true);
+                                return false;
+                            }
+                        }
+
+                        if (filteringStates.FirstOrDefault(fs => fs.selectable) is FilteringState firstFilter)
+                        {
+                            selectedFilter.SetSelected(false);
+                            firstFilter.SetSelected(true);
+                            return false;
+                        }
+                    }
+                }
+                else if (ZInput.GetButtonDown("JoyDPadUp"))
+                {
+                    var selectedFilter = GetSelectedFilter();
+                    if (selectedFilter != null)
+                    {
+                        int skipped = 0;
+                        for (int i = selectedFilter.panel.filters.IndexOf(selectedFilter); i >= 0; i--)
+                            if (selectedFilter.panel.filters[i].selectable)
+                            {
+                                if (skipped >= 3)
+                                {
+                                    selectedFilter.SetSelected(false);
+                                    selectedFilter.panel.filters[i].SetSelected(true);
+                                    return false;
+                                }
+                                skipped++;
+                            }
+
+                        int panelIndex = panels.IndexOf(selectedFilter.panel);
+                        for (int i = panelIndex - 1; i >= 0; i--)
+                        {
+                            var list = selectedFilter.panel.filters.Where(fs => fs.selectable).ToList();
+                            int column = list.IndexOf(selectedFilter) % 3;
+                            if (list.Count == 2)
+                                column++;
+                            else if (list.Count == 1)
+                                column += 2;
+
+                            list = panels[i].filters.Where(fs => fs.selectable).ToList();
+                            if (list.Count == 2)
+                                column = Math.Max(0, column - 1);
+                            else if (list.Count == 1)
+                                column = Math.Max(0, column - 2);
+
+                            var filter = list.LastOrDefault(fs => list.IndexOf(fs) % 3 == column) ?? panels[i].filters.LastOrDefault(fs => fs.selectable);
+
+                            if (filter != null)
+                            {
+                                selectedFilter.SetSelected(false);
+                                filter.SetSelected(true);
+                                return false;
+                            }
+                        }
+                    }
+                }
+                else if (ZInput.GetButtonDown("JoyDPadDown"))
+                {
+                    var selectedFilter = GetSelectedFilter();
+                    if (selectedFilter != null)
+                    {
+                        int skipped = 0;
+                        for (int i = selectedFilter.panel.filters.IndexOf(selectedFilter); i < selectedFilter.panel.filters.Count; i++)
+                            if (selectedFilter.panel.filters[i].selectable)
+                            {
+                                if (skipped >= 3)
+                                {
+                                    selectedFilter.SetSelected(false);
+                                    selectedFilter.panel.filters[i].SetSelected(true);
+                                    return false;
+                                }
+                                skipped++;
+                            }
+
+                        int panelIndex = panels.IndexOf(selectedFilter.panel);
+                        for (int i = panelIndex + 1; i < panels.Count; i++)
+                        {
+                            var list = selectedFilter.panel.filters.Where(fs => fs.selectable).ToList();
+                            int column = list.IndexOf(selectedFilter) % 3;
+                            if (list.Count == 2)
+                                column++;
+                            else if (list.Count == 1)
+                                column += 2;
+
+                            list = panels[i].filters.Where(fs => fs.selectable).ToList();
+                            if (list.Count == 2)
+                                column = Math.Max(0, column - 1);
+                            else if (list.Count == 1)
+                                column = Math.Max(0, column - 2);
+
+                            var filter = list.FirstOrDefault(fs => list.IndexOf(fs) % 3 == column) ?? panels[i].filters.FirstOrDefault(fs => fs.selectable);
+                            if (filter != null)
+                            {
+                                selectedFilter.SetSelected(false);
+                                filter.SetSelected(true);
+                                return false;
+                            }
+                        }
+                    }
+                }
+                else if (ZInput.GetButtonDown("JoyRStick"))
+                {
+                    filteringStates.DoIf(fs => fs.selected, fs => fs.OnClick());
+                    return false;
+                }
+                else if (ZInput.GetButtonDown("JoyJump"))
+                {
+                    filteringStates.DoIf(fs => fs.selected, fs => fs.OnClick());
+                    return false;
+                }
+
+                return true;
+            }
+
+            public static void Postfix() => filteringStates.Do(fs => { fs.UpdateSelect(); });
         }
     }
 }
