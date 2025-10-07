@@ -341,12 +341,6 @@ namespace MyLittleUI
                 },
                 filter = item => (item.m_shared.m_appendToolTip?.m_itemData.m_shared.m_foodEitr ?? item.m_shared.m_foodEitr) > 0,
             });
-
-            /*int size = 32 * 1 + 8 * 2 + height;
-
-            panel.panel.sizeDelta = new Vector2(124f, size);
-            height += size;
-            panel.panel.anchoredPosition = new Vector2(0f, -height);*/
         }
 
         private static void InitArmorCategory()
@@ -442,12 +436,6 @@ namespace MyLittleUI
                 },
                 filter = item => item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Trinket || item.m_shared.m_attachOverride == ItemDrop.ItemData.ItemType.Trinket,
             });
-
-            /*int size = 32 * 2 + 8 * 2 + 2;
-
-            panel.panel.sizeDelta = new Vector2(124f, size);
-            height += size;
-            panel.panel.anchoredPosition = new Vector2(0f, -height);*/
         }
 
         private static void InitSkillsCategory()
@@ -479,12 +467,6 @@ namespace MyLittleUI
                 },
                 filter = item => item.m_shared.m_skillType == SkillType.Blocking,
             });
-
-            /*int size = 32 * 3 + 8 * 2 + 2 + 2;
-
-            panel.panel.sizeDelta = new Vector2(124f, size);
-            height += size;
-            panel.panel.anchoredPosition = new Vector2(0f, -height);*/
 
             void AddMelee(Skills skills, SkillType skill)
             {
