@@ -195,7 +195,7 @@ namespace MyLittleUI
 
         public static Sprite foodSprite;
 
-        public static bool IsCraftingFilterEnabled => modEnabled.Value && craftingSortingEnabled.Value && !AAA_Crafting && !ZenUI;
+        public static bool IsCraftingFilterEnabled => modEnabled.Value && craftingSortingEnabled.Value && !AAA_Crafting;
 
         public static void UpdateVisibility()
         {
@@ -723,12 +723,12 @@ namespace MyLittleUI
                 });
         }
 
-        internal static void SortRecipes(List<InventoryGui.RecipeDataPair> m_availableRecipes, float m_recipeListSpace)
+        internal static void SortRecipes()
         {
             if (tempEnabledStates.Count == 0)
                 return;
 
-            m_availableRecipes.Sort((a, b) =>
+            InventoryGui.instance.m_availableRecipes.Sort((a, b) =>
             {
                 foreach (var sorter in tempEnabledStates)
                 {
@@ -739,8 +739,14 @@ namespace MyLittleUI
                 return 0;
             });
 
-            for (int j = 0; j < m_availableRecipes.Count; j++)
-                (m_availableRecipes[j].InterfaceElement.transform as RectTransform).anchoredPosition = new Vector2(0f, j * (0f - m_recipeListSpace));
+            SortAvailableRecipes();
+        }
+
+        public static void SortAvailableRecipes()
+        {
+            for (int j = 0; j < InventoryGui.instance.m_availableRecipes.Count; j++)
+                if (InventoryGui.instance.m_availableRecipes[j].InterfaceElement?.transform is RectTransform rectTransform)
+                    rectTransform.anchoredPosition = new Vector2(0f, j * (0f - InventoryGui.instance.m_recipeListSpace));
         }
 
         internal static void ClearStates() => filteringStates.Do(state => state.ClearFiltering());
@@ -776,31 +782,40 @@ namespace MyLittleUI
             [HarmonyPriority(Priority.First)]
             public static void Prefix(List<Recipe> recipes) => FilterRecipes(recipes);
             
-            [HarmonyPriority(Priority.Last)]
-            public static void Postfix(InventoryGui __instance) => SortRecipes(__instance.m_availableRecipes, __instance.m_recipeListSpace);
+            [HarmonyPriority(Priority.First)]
+            public static void Postfix() => SortRecipes();
         }
 
-        [HarmonyPatch(typeof(InventoryGui), nameof(InventoryGui.UpdateRecipeGamepadInput))]
-        public static class InventoryGui_UpdateRecipeGamepadInput_GamepadControls
+        [HarmonyPatch(typeof(InventoryGui), nameof(InventoryGui.Update))]
+        public static class InventoryGui_Update_GamepadControls
         {
             public static FilteringState GetSelectedFilter() => filteringStates.FirstOrDefault(fs => fs.selectable && fs.selected);
 
-            public static bool Prefix()
+            [HarmonyPriority(Priority.First)]
+            public static bool Prefix(InventoryGui __instance)
             {
                 if (!IsCraftingFilterEnabled)
                     return true;
 
-                if (ZInput.GetButtonDown("JoyLStickDown") || ZInput.GetButtonDown("JoyLStickUp") || ZInput.GetButtonDown("JoyLStickRight"))
+                if (!InventoryGui.IsVisible())
+                    return true;
+
+                if (!__instance.m_inventoryGroup.IsActive || __instance.m_activeGroup != 3)
+                    return true;
+
+                if (ZInput.GetButtonDown("JoyLStickDown") || ZInput.GetButtonDown("JoyLStickUp") || (ZenUI ? ZInput.GetButtonDown("JoyRStickRight") : ZInput.GetButtonDown("JoyLStickRight")))
                 {
                     filteringStates.Do(fs => fs.SetSelected(false));
                     return true;
                 }
 
-                if (ZInput.GetButtonDown("JoyLStickLeft"))
+                string activateButton = ZenUI ? "JoyRStickLeft" : "JoyLStickLeft";
+                if (ZInput.GetButtonDown(activateButton))
                 {
                     if (filteringStates.FirstOrDefault(fs => fs.selectable && fs.enabled) is FilteringState enabledFilter)
                     {
                         enabledFilter.SetSelected(true);
+                        ZInput.ResetButtonStatus(activateButton);
                         return false;
                     }
                     else if (panels.Count > 0)
@@ -810,6 +825,7 @@ namespace MyLittleUI
                         if (selectedFilter != null)
                         {
                             selectedFilter.SetSelected(true);
+                            ZInput.ResetButtonStatus(activateButton);
                             return false;
                         }
                     }
@@ -824,6 +840,7 @@ namespace MyLittleUI
                             {
                                 selectedFilter.SetSelected(false);
                                 selectedFilter.panel.filters[i].SetSelected(true);
+                                ZInput.ResetButtonStatus("JoyDPadLeft");
                                 return false;
                             }
 
@@ -835,6 +852,7 @@ namespace MyLittleUI
                             {
                                 selectedFilter.SetSelected(false);
                                 filter.SetSelected(true);
+                                ZInput.ResetButtonStatus("JoyDPadLeft");
                                 return false;
                             }
                         }
@@ -843,12 +861,14 @@ namespace MyLittleUI
                         {
                             selectedFilter.SetSelected(false);
                             lastFilter.SetSelected(true);
+                            ZInput.ResetButtonStatus("JoyDPadLeft");
                             return false;
                         }
                     }
                     else if (filteringStates.FirstOrDefault(fs => fs.selectable && fs.enabled) is FilteringState enabledFilter)
                     {
                         enabledFilter.SetSelected(true);
+                        ZInput.ResetButtonStatus("JoyDPadLeft");
                         return false;
                     }
                     else if (panels.Count > 0)
@@ -857,6 +877,7 @@ namespace MyLittleUI
                         if (selectedFilter != null)
                         {
                             selectedFilter.SetSelected(true);
+                            ZInput.ResetButtonStatus("JoyDPadLeft");
                             return false;
                         }
                     }
@@ -871,6 +892,7 @@ namespace MyLittleUI
                             {
                                 selectedFilter.SetSelected(false);
                                 selectedFilter.panel.filters[i].SetSelected(true);
+                                ZInput.ResetButtonStatus("JoyDPadRight");
                                 return false;
                             }
 
@@ -882,6 +904,7 @@ namespace MyLittleUI
                             {
                                 selectedFilter.SetSelected(false);
                                 filter.SetSelected(true);
+                                ZInput.ResetButtonStatus("JoyDPadRight");
                                 return false;
                             }
                         }
@@ -890,6 +913,7 @@ namespace MyLittleUI
                         {
                             selectedFilter.SetSelected(false);
                             firstFilter.SetSelected(true);
+                            ZInput.ResetButtonStatus("JoyDPadRight");
                             return false;
                         }
                     }
@@ -907,12 +931,16 @@ namespace MyLittleUI
                                 {
                                     selectedFilter.SetSelected(false);
                                     selectedFilter.panel.filters[i].SetSelected(true);
+                                    ZInput.ResetButtonStatus("JoyDPadUp");
                                     return false;
                                 }
                                 skipped++;
                             }
 
                         int panelIndex = panels.IndexOf(selectedFilter.panel);
+                        if (panelIndex == 0)
+                            panelIndex = panels.Count;
+
                         for (int i = panelIndex - 1; i >= 0; i--)
                         {
                             var list = selectedFilter.panel.filters.Where(fs => fs.selectable).ToList();
@@ -934,6 +962,7 @@ namespace MyLittleUI
                             {
                                 selectedFilter.SetSelected(false);
                                 filter.SetSelected(true);
+                                ZInput.ResetButtonStatus("JoyDPadUp");
                                 return false;
                             }
                         }
@@ -952,12 +981,16 @@ namespace MyLittleUI
                                 {
                                     selectedFilter.SetSelected(false);
                                     selectedFilter.panel.filters[i].SetSelected(true);
+                                    ZInput.ResetButtonStatus("JoyDPadDown");
                                     return false;
                                 }
                                 skipped++;
                             }
 
                         int panelIndex = panels.IndexOf(selectedFilter.panel);
+                        if (panelIndex == panels.Count - 1)
+                            panelIndex = -1;
+
                         for (int i = panelIndex + 1; i < panels.Count; i++)
                         {
                             var list = selectedFilter.panel.filters.Where(fs => fs.selectable).ToList();
@@ -978,6 +1011,7 @@ namespace MyLittleUI
                             {
                                 selectedFilter.SetSelected(false);
                                 filter.SetSelected(true);
+                                ZInput.ResetButtonStatus("JoyDPadDown");
                                 return false;
                             }
                         }
