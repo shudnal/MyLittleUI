@@ -792,21 +792,21 @@ namespace MyLittleUI
             public static FilteringState GetSelectedFilter() => filteringStates.FirstOrDefault(fs => fs.selectable && fs.selected);
 
             [HarmonyPriority(Priority.First)]
-            public static bool Prefix(InventoryGui __instance)
+            public static void Prefix(InventoryGui __instance)
             {
                 if (!IsCraftingFilterEnabled)
-                    return true;
+                    return;
 
                 if (!InventoryGui.IsVisible())
-                    return true;
+                    return;
 
                 if (!__instance.m_inventoryGroup.IsActive || __instance.m_activeGroup != 3)
-                    return true;
+                    return;
 
                 if (ZInput.GetButtonDown("JoyLStickDown") || ZInput.GetButtonDown("JoyLStickUp") || (ZenUI ? ZInput.GetButtonDown("JoyRStickRight") : ZInput.GetButtonDown("JoyLStickRight")))
                 {
                     filteringStates.Do(fs => fs.SetSelected(false));
-                    return true;
+                    return;
                 }
 
                 string activateButton = ZenUI ? "JoyRStickLeft" : "JoyLStickLeft";
@@ -816,7 +816,6 @@ namespace MyLittleUI
                     {
                         enabledFilter.SetSelected(true);
                         ZInput.ResetButtonStatus(activateButton);
-                        return false;
                     }
                     else if (panels.Count > 0)
                     {
@@ -826,7 +825,6 @@ namespace MyLittleUI
                         {
                             selectedFilter.SetSelected(true);
                             ZInput.ResetButtonStatus(activateButton);
-                            return false;
                         }
                     }
                 }
@@ -841,7 +839,7 @@ namespace MyLittleUI
                                 selectedFilter.SetSelected(false);
                                 selectedFilter.panel.filters[i].SetSelected(true);
                                 ZInput.ResetButtonStatus("JoyDPadLeft");
-                                return false;
+                                return;
                             }
 
                         int panelIndex = panels.IndexOf(selectedFilter.panel);
@@ -853,7 +851,7 @@ namespace MyLittleUI
                                 selectedFilter.SetSelected(false);
                                 filter.SetSelected(true);
                                 ZInput.ResetButtonStatus("JoyDPadLeft");
-                                return false;
+                                return;
                             }
                         }
 
@@ -862,14 +860,12 @@ namespace MyLittleUI
                             selectedFilter.SetSelected(false);
                             lastFilter.SetSelected(true);
                             ZInput.ResetButtonStatus("JoyDPadLeft");
-                            return false;
                         }
                     }
                     else if (filteringStates.FirstOrDefault(fs => fs.selectable && fs.enabled) is FilteringState enabledFilter)
                     {
                         enabledFilter.SetSelected(true);
                         ZInput.ResetButtonStatus("JoyDPadLeft");
-                        return false;
                     }
                     else if (panels.Count > 0)
                     {
@@ -878,7 +874,6 @@ namespace MyLittleUI
                         {
                             selectedFilter.SetSelected(true);
                             ZInput.ResetButtonStatus("JoyDPadLeft");
-                            return false;
                         }
                     }
                 }
@@ -893,7 +888,7 @@ namespace MyLittleUI
                                 selectedFilter.SetSelected(false);
                                 selectedFilter.panel.filters[i].SetSelected(true);
                                 ZInput.ResetButtonStatus("JoyDPadRight");
-                                return false;
+                                return;
                             }
 
                         int panelIndex = panels.IndexOf(selectedFilter.panel);
@@ -905,7 +900,7 @@ namespace MyLittleUI
                                 selectedFilter.SetSelected(false);
                                 filter.SetSelected(true);
                                 ZInput.ResetButtonStatus("JoyDPadRight");
-                                return false;
+                                return;
                             }
                         }
 
@@ -914,7 +909,6 @@ namespace MyLittleUI
                             selectedFilter.SetSelected(false);
                             firstFilter.SetSelected(true);
                             ZInput.ResetButtonStatus("JoyDPadRight");
-                            return false;
                         }
                     }
                 }
@@ -932,7 +926,7 @@ namespace MyLittleUI
                                     selectedFilter.SetSelected(false);
                                     selectedFilter.panel.filters[i].SetSelected(true);
                                     ZInput.ResetButtonStatus("JoyDPadUp");
-                                    return false;
+                                    return;
                                 }
                                 skipped++;
                             }
@@ -963,7 +957,6 @@ namespace MyLittleUI
                                 selectedFilter.SetSelected(false);
                                 filter.SetSelected(true);
                                 ZInput.ResetButtonStatus("JoyDPadUp");
-                                return false;
                             }
                         }
                     }
@@ -982,7 +975,7 @@ namespace MyLittleUI
                                     selectedFilter.SetSelected(false);
                                     selectedFilter.panel.filters[i].SetSelected(true);
                                     ZInput.ResetButtonStatus("JoyDPadDown");
-                                    return false;
+                                    return;
                                 }
                                 skipped++;
                             }
@@ -1012,23 +1005,29 @@ namespace MyLittleUI
                                 selectedFilter.SetSelected(false);
                                 filter.SetSelected(true);
                                 ZInput.ResetButtonStatus("JoyDPadDown");
-                                return false;
                             }
                         }
                     }
                 }
                 else if (ZInput.GetButtonDown("JoyRStick"))
                 {
-                    filteringStates.DoIf(fs => fs.selected, fs => fs.OnClick());
-                    return false;
+                    var selectedFilter = GetSelectedFilter();
+                    if (selectedFilter != null)
+                    {
+                        selectedFilter.OnClick();
+                        ZInput.ResetButtonStatus("JoyRStick");
+                    }
+
                 }
                 else if (ZInput.GetButtonDown("JoyJump"))
                 {
-                    filteringStates.DoIf(fs => fs.selected, fs => fs.OnClick());
-                    return false;
+                    var selectedFilter = GetSelectedFilter();
+                    if (selectedFilter != null)
+                    {
+                        selectedFilter.OnClick();
+                        ZInput.ResetButtonStatus("JoyJump");
+                    }
                 }
-
-                return true;
             }
 
             public static void Postfix() => filteringStates.Do(fs => { fs.UpdateSelect(); });
