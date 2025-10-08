@@ -195,7 +195,7 @@ namespace MyLittleUI
 
         public static Sprite foodSprite;
 
-        public static bool IsCraftingFilterEnabled => modEnabled.Value && craftingSortingEnabled.Value && !AAA_Crafting;
+        public static bool IsCraftingFilterEnabled => modEnabled.Value && craftingSortingEnabled.Value;
 
         public static void UpdateVisibility()
         {
@@ -744,9 +744,9 @@ namespace MyLittleUI
 
         public static void SortAvailableRecipes()
         {
-            for (int j = 0; j < InventoryGui.instance.m_availableRecipes.Count; j++)
-                if (InventoryGui.instance.m_availableRecipes[j].InterfaceElement?.transform is RectTransform rectTransform)
-                    rectTransform.anchoredPosition = new Vector2(0f, j * (0f - InventoryGui.instance.m_recipeListSpace));
+            for (int i = 0; i < InventoryGui.instance.m_availableRecipes.Count; i++)
+                if (InventoryGui.instance.m_availableRecipes[i].InterfaceElement?.transform is RectTransform rectTransform)
+                    rectTransform.anchoredPosition = new Vector2(0f, i * (0f - InventoryGui.instance.m_recipeListSpace));
         }
 
         internal static void ClearStates() => filteringStates.Do(state => state.ClearFiltering());
@@ -780,9 +780,11 @@ namespace MyLittleUI
         public static class InventoryGui_UpdateRecipeList_SortingPanelsVisibility
         {
             [HarmonyPriority(Priority.First)]
+            [HarmonyAfter("ZenDragon.ZenUI")]
             public static void Prefix(List<Recipe> recipes) => FilterRecipes(recipes);
             
             [HarmonyPriority(Priority.First)]
+            [HarmonyAfter("ZenDragon.ZenUI")]
             public static void Postfix() => SortRecipes();
         }
 
@@ -803,19 +805,20 @@ namespace MyLittleUI
                 if (!__instance.m_inventoryGroup.IsActive || __instance.m_activeGroup != 3)
                     return;
 
-                if (ZInput.GetButtonDown("JoyLStickDown") || ZInput.GetButtonDown("JoyLStickUp") || (ZenUI ? ZInput.GetButtonDown("JoyRStickRight") : ZInput.GetButtonDown("JoyLStickRight")))
+                if (ZInput.GetButtonDown("JoyLStickDown") || ZInput.GetButtonDown("JoyLStickUp") || ((ZenUI || AAA_Crafting) ? ZInput.GetButtonDown("JoyRStickRight") : ZInput.GetButtonDown("JoyLStickRight")))
                 {
                     filteringStates.Do(fs => fs.SetSelected(false));
                     return;
                 }
 
-                string activateButton = ZenUI ? "JoyRStickLeft" : "JoyLStickLeft";
+                string activateButton = ZenUI || AAA_Crafting ? "JoyRStickLeft" : "JoyLStickLeft";
                 if (ZInput.GetButtonDown(activateButton))
                 {
                     if (filteringStates.FirstOrDefault(fs => fs.selectable && fs.enabled) is FilteringState enabledFilter)
                     {
                         enabledFilter.SetSelected(true);
                         ZInput.ResetButtonStatus(activateButton);
+                        return;
                     }
                     else if (panels.Count > 0)
                     {
@@ -825,6 +828,7 @@ namespace MyLittleUI
                         {
                             selectedFilter.SetSelected(true);
                             ZInput.ResetButtonStatus(activateButton);
+                            return;
                         }
                     }
                 }
@@ -860,20 +864,23 @@ namespace MyLittleUI
                             selectedFilter.SetSelected(false);
                             lastFilter.SetSelected(true);
                             ZInput.ResetButtonStatus("JoyDPadLeft");
+                            return;
                         }
                     }
-                    else if (filteringStates.FirstOrDefault(fs => fs.selectable && fs.enabled) is FilteringState enabledFilter)
+                    else if (!AAA_Crafting && filteringStates.FirstOrDefault(fs => fs.selectable && fs.enabled) is FilteringState enabledFilter)
                     {
                         enabledFilter.SetSelected(true);
                         ZInput.ResetButtonStatus("JoyDPadLeft");
+                        return;
                     }
-                    else if (panels.Count > 0)
+                    else if (!AAA_Crafting && panels.Count > 0)
                     {
                         selectedFilter = filteringStates.FirstOrDefault(fs => fs.selectable && fs.lastSelected) ?? filteringStates.FirstOrDefault(fs => fs.selectable);
                         if (selectedFilter != null)
                         {
                             selectedFilter.SetSelected(true);
                             ZInput.ResetButtonStatus("JoyDPadLeft");
+                            return;
                         }
                     }
                 }
@@ -909,6 +916,8 @@ namespace MyLittleUI
                             selectedFilter.SetSelected(false);
                             firstFilter.SetSelected(true);
                             ZInput.ResetButtonStatus("JoyDPadRight");
+                            return;
+
                         }
                     }
                 }
@@ -957,6 +966,8 @@ namespace MyLittleUI
                                 selectedFilter.SetSelected(false);
                                 filter.SetSelected(true);
                                 ZInput.ResetButtonStatus("JoyDPadUp");
+                                return;
+
                             }
                         }
                     }
@@ -1005,6 +1016,7 @@ namespace MyLittleUI
                                 selectedFilter.SetSelected(false);
                                 filter.SetSelected(true);
                                 ZInput.ResetButtonStatus("JoyDPadDown");
+                                return;
                             }
                         }
                     }
@@ -1016,6 +1028,7 @@ namespace MyLittleUI
                     {
                         selectedFilter.OnClick();
                         ZInput.ResetButtonStatus("JoyRStick");
+                        return;
                     }
 
                 }
@@ -1026,6 +1039,7 @@ namespace MyLittleUI
                     {
                         selectedFilter.OnClick();
                         ZInput.ResetButtonStatus("JoyJump");
+                        return;
                     }
                 }
             }
