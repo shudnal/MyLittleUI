@@ -3,7 +3,6 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
-using System.Reflection.Emit;
 using UnityEngine;
 using UnityEngine.UI;
 using static MyLittleUI.MyLittleUI;
@@ -70,6 +69,14 @@ namespace MyLittleUI
             {
                 panel?.gameObject.SetActive(enabled);
                 selectedFrame?.gameObject.SetActive(enabled);
+            }
+
+            public void ClearPanel()
+            {
+                enabled = false;
+                enabledFilters = 0;
+                filters.Do(state => state.ClearFiltering());
+                UpdateVisibility();
             }
         }
 
@@ -188,9 +195,10 @@ namespace MyLittleUI
             }
         }
 
+        public static readonly List<FilteringPanel> panels = new List<FilteringPanel>();
         public static readonly List<FilteringState> filteringStates = new List<FilteringState>();
         public static readonly List<FilteringState> tempEnabledStates = new List<FilteringState>();
-        public static readonly List<FilteringPanel> panels = new List<FilteringPanel>();
+        public static readonly List<string> tempUnfitItems = new List<string>();
 
         public static RectTransform sortPanel;
         public static RectTransform elementPrefab;
@@ -628,7 +636,7 @@ namespace MyLittleUI
                 {
                     return a.Recipe.m_listSortWeight.CompareTo(b.Recipe.m_listSortWeight);
                 },
-                filter = item => item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Consumable && item.m_shared.m_consumeStatusEffect != null,
+                filter = item => item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Consumable && item.m_shared.m_consumeStatusEffect != null || item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Material && item.m_shared.m_consumeStatusEffect != null,
             });
 
             panel.AddFilter(new FilteringState()
@@ -643,7 +651,7 @@ namespace MyLittleUI
                 {
                     return a.Recipe.m_listSortWeight.CompareTo(b.Recipe.m_listSortWeight);
                 },
-                filter = item => item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Material && item.m_shared.m_appendToolTip == null && item.m_shared.m_consumeStatusEffect == null && !item.m_shared.m_name.StartsWith("$jc_"),
+                filter = item => (item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Material && item.m_shared.m_appendToolTip == null && item.m_shared.m_consumeStatusEffect == null && !item.m_shared.m_name.StartsWith("$jc_")) || item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.AmmoNonEquipable,
             });
 
             panel.AddFilter(new FilteringState()
@@ -673,7 +681,7 @@ namespace MyLittleUI
                 {
                     return a.Recipe.m_listSortWeight.CompareTo(b.Recipe.m_listSortWeight);
                 },
-                filter = item => (item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Misc || item.m_shared.m_attachOverride == ItemDrop.ItemData.ItemType.Misc || (int)item.m_shared.m_itemType > 25) && !item.m_shared.m_name.StartsWith("$jc_"),
+                filter = item => tempUnfitItems.Contains(item.m_shared.m_name) || (item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Misc || item.m_shared.m_attachOverride == ItemDrop.ItemData.ItemType.Misc || (int)item.m_shared.m_itemType > 25) && !item.m_shared.m_name.StartsWith("$jc_"),
             });
 
             if (Jewelcrafting)
@@ -693,7 +701,7 @@ namespace MyLittleUI
                 });
         }
 
-        internal static void FilterRecipes(List<Recipe> recipes, bool inCraftTab)
+        internal static void FilterRecipes(List<Recipe> recipes, bool inCraftTab, bool inUpradeTab)
         {
             tempEnabledStates.Clear();
 
@@ -707,9 +715,14 @@ namespace MyLittleUI
                 if (IsCraftingFilterEnabled)
                     foreach (var state in panel.filters)
                     {
-                        state.selectable = recipes.Any(recipe => state.IsSelectable(recipe.m_item.m_itemData) && 
-                                                                (inCraftTab || recipe.m_item.m_itemData.m_shared.m_maxQuality > 1 &&
-                                                                Player.m_localPlayer.GetInventory().GetItem(recipe.m_item.m_itemData.m_shared.m_name) != null));
+                        if (inCraftTab)
+                            state.selectable = recipes.Any(recipe => state.IsSelectable(recipe.m_item.m_itemData));
+                        else if (inUpradeTab)
+                            state.selectable = recipes.Any(recipe => state.IsSelectable(recipe.m_item.m_itemData) &&
+                                                                        recipe.m_item.m_itemData.m_shared.m_maxQuality > 1 &&
+                                                                        Player.m_localPlayer.GetInventory().GetItem(recipe.m_item.m_itemData.m_shared.m_name) != null);
+                        else
+                            state.selectable = false;
 
                         state.enabled = state.enabled && state.selectable;
                         state.UpdateSelectable();
@@ -731,6 +744,9 @@ namespace MyLittleUI
 
                 panel.UpdateVisibility();
             }
+
+            tempUnfitItems.Clear();
+            tempUnfitItems.AddRange(recipes.Where(rec => !filteringStates.Any(fs => fs.IsSelectable(rec.m_item.m_itemData))).Select(rec => rec.m_item.m_itemData.m_shared.m_name));
 
             if (tempEnabledStates.Count > 0)
                 recipes.RemoveAll(recipe =>
@@ -774,8 +790,7 @@ namespace MyLittleUI
                     rectTransform.anchoredPosition = new Vector2(0f, i * (0f - InventoryGui.instance.m_recipeListSpace));
         }
 
-        internal static void ClearStates() => filteringStates.Do(state => state.ClearFiltering());
-
+        internal static void ClearPanels() => panels.Do(panel => panel.ClearPanel());
 
         public static void CheckPanels()
         {
@@ -798,7 +813,7 @@ namespace MyLittleUI
         [HarmonyPatch(typeof(InventoryGui), nameof(InventoryGui.Show))]
         public static class InventoryGui_Show_ClearFiltersState
         {
-            public static void Prefix() => ClearStates();
+            public static void Prefix() => ClearPanels();
         }
 
         [HarmonyPatch(typeof(InventoryGui), nameof(InventoryGui.OnDestroy))]
@@ -815,12 +830,24 @@ namespace MyLittleUI
             }
         }
 
+        [HarmonyPatch(typeof(InventoryGui), nameof(InventoryGui.UpdateCraftingPanel))]
+        [HarmonyPatch(typeof(InventoryGui), nameof(InventoryGui.Update))]
+        public static class InventoryGui_UpdateCraftingPanel_HideWithOtherMods
+        {
+            [HarmonyPriority(Priority.Last)]
+            public static void Postfix(InventoryGui __instance)
+            {
+                if (!__instance.InCraftTab() && !__instance.InUpradeTab())
+                    ClearPanels();
+            }
+        }
+
         [HarmonyPatch(typeof(InventoryGui), nameof(InventoryGui.UpdateRecipeList))]
         public static class InventoryGui_UpdateRecipeList_FilteringAndSorting
         {
             [HarmonyPriority(Priority.First)]
             [HarmonyAfter("ZenDragon.ZenUI")]
-            public static void Prefix(InventoryGui __instance, List<Recipe> recipes) => FilterRecipes(recipes, __instance.InCraftTab());
+            public static void Prefix(InventoryGui __instance, List<Recipe> recipes) => FilterRecipes(recipes, __instance.InCraftTab(), __instance.InUpradeTab());
 
             [HarmonyPriority(Priority.First)]
             [HarmonyAfter("ZenDragon.ZenUI")]
@@ -844,7 +871,7 @@ namespace MyLittleUI
                 if (!__instance.m_inventoryGroup.IsActive || __instance.m_activeGroup != 3)
                     return;
 
-                if (ZInput.GetButtonDown("JoyLStickDown") || ZInput.GetButtonDown("JoyLStickUp") || ((ZenUI || AAA_Crafting) ? ZInput.GetButtonDown("JoyRStickRight") : ZInput.GetButtonDown("JoyLStickRight")))
+                if (!ZInput.IsGamepadActive() || ZInput.GetButtonDown("JoyLStickDown") || ZInput.GetButtonDown("JoyLStickUp") || ((ZenUI || AAA_Crafting) ? ZInput.GetButtonDown("JoyRStickRight") : ZInput.GetButtonDown("JoyLStickRight")))
                 {
                     filteringStates.Do(fs => fs.SetSelected(false));
                     return;
