@@ -22,6 +22,7 @@ namespace MyLittleUI
     [BepInDependency("randyknapp.mods.equipmentandquickslots", BepInDependency.DependencyFlags.SoftDependency)]
     [BepInDependency("ZenDragon.ZenUI", BepInDependency.DependencyFlags.SoftDependency)]
     [BepInDependency("Azumatt.AzuAntiArthriticCrafting", BepInDependency.DependencyFlags.SoftDependency)]
+    [BepInDependency("org.bepinex.plugins.jewelcrafting", BepInDependency.DependencyFlags.SoftDependency)]
     [BepInIncompatibility("randyknapp.mods.auga")]
     public class MyLittleUI : BaseUnityPlugin
     {
@@ -253,6 +254,7 @@ namespace MyLittleUI
 
         public static readonly bool AAA_Crafting = Chainloader.PluginInfos.ContainsKey("Azumatt.AzuAntiArthriticCrafting");
         public static readonly bool ZenUI = Chainloader.PluginInfos.ContainsKey("ZenDragon.ZenUI");
+        public static readonly bool Jewelcrafting = Chainloader.PluginInfos.ContainsKey("org.bepinex.plugins.jewelcrafting");
 
         public enum StationHover
         {
@@ -505,11 +507,11 @@ namespace MyLittleUI
             showMulticraftButtons.SettingChanged += (sender, args) => MultiCraft.UpdateMulticraftPanel();
 
             craftingFilterEnabled = config("Item - Crafting - Filter", "Enabled", defaultValue: true, "Enable filtering of craft list. [Synced with Server]", synchronizedSetting: true);
-            craftingSortingEnabled = config("Item - Crafting - Filter", "Enable sorting", defaultValue: true, "Enable sorting of craft list. [Synced with Server]", synchronizedSetting: true);
+            craftingSortingEnabled = config("Item - Crafting - Filter", "Enable sorting panels", defaultValue: true, "Enable sorting and filtering of craft list. [Synced with Server]", synchronizedSetting: true);
 
             craftingFilterEnabled.SettingChanged += (s, e) => CraftFilter.UpdateVisibility();
 
-            craftingSortingEnabled.SettingChanged += (s, e) => CraftSort.UpdateVisibility();
+            craftingSortingEnabled.SettingChanged += (s, e) => CraftSort.CheckPanels();
 
             durabilityEnabled = config("Item - Durability", "0 - Enabled", defaultValue: true, "Enable color of durability. [Synced with Server]", synchronizedSetting: true);
             durabilityFine = config("Item - Durability", "1 - Fine", defaultValue: new Color(0.11765f, 0.72941f, 0.03529f, 1f), "Color of durability > 75%.");

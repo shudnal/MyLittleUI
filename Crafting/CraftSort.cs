@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Reflection.Emit;
 using UnityEngine;
 using UnityEngine.UI;
 using static MyLittleUI.MyLittleUI;
@@ -28,10 +29,13 @@ namespace MyLittleUI
                 this.name = name;
                 
                 panel = UnityEngine.Object.Instantiate(InventoryGui.instance.m_repairPanel as RectTransform, sortPanel);
-                panel.name = name;
+                panel.name = $"MLUI_SortingPanel_{name}";
 
-                selectedFrame = UnityEngine.Object.Instantiate(InventoryGui.instance.m_repairPanelSelection as RectTransform, InventoryGui.instance.m_repairPanelSelection.transform.parent);
-                selectedFrame.name = $"selected (MLUI_Sorting_{name})";
+                if (InventoryGui.instance.m_repairPanelSelection)
+                {
+                    selectedFrame = UnityEngine.Object.Instantiate(InventoryGui.instance.m_repairPanelSelection as RectTransform, InventoryGui.instance.m_repairPanelSelection.transform.parent);
+                    selectedFrame.name = $"selected ({panel.name})";
+                }
 
                 filters = new List<FilteringState>();
 
@@ -55,14 +59,17 @@ namespace MyLittleUI
                 height += size;
                 panel.anchoredPosition = new Vector2(0f, -height);
 
-                selectedFrame.sizeDelta = panel.sizeDelta + new Vector2(4f, 4f);
-                selectedFrame.anchoredPosition = panel.anchoredPosition - new Vector2(panel.sizeDelta.x + 2f, 200f + 2f);
+                if (selectedFrame)
+                {
+                    selectedFrame.sizeDelta = panel.sizeDelta + new Vector2(4f, 4f);
+                    selectedFrame.anchoredPosition = panel.anchoredPosition - new Vector2(panel.sizeDelta.x + 2f, 200f + 2f);
+                }
             }
 
             public void UpdateVisibility()
             {
-                panel.gameObject.SetActive(enabled);
-                selectedFrame.gameObject.SetActive(enabled);
+                panel?.gameObject.SetActive(enabled);
+                selectedFrame?.gameObject.SetActive(enabled);
             }
         }
 
@@ -166,10 +173,7 @@ namespace MyLittleUI
 
             public bool IsSelectable(ItemDrop.ItemData item)
             {
-                if (selectable)
-                    return selectable;
-
-                return selectable = filter(item);
+                return filter != null && filter(item);
             }
 
             public void OnClick()
@@ -188,8 +192,6 @@ namespace MyLittleUI
         public static readonly List<FilteringState> tempEnabledStates = new List<FilteringState>();
         public static readonly List<FilteringPanel> panels = new List<FilteringPanel>();
 
-        public static GameObject parentObject;
-
         public static RectTransform sortPanel;
         public static RectTransform elementPrefab;
 
@@ -199,10 +201,7 @@ namespace MyLittleUI
 
         public static void UpdateVisibility()
         {
-            if (!IsCraftingFilterEnabled)
-                return;
-
-            sortPanel?.gameObject.SetActive(InventoryGui.IsVisible());
+            sortPanel?.gameObject.SetActive(IsCraftingFilterEnabled);
         }
 
         internal static void InitElementPrefab(Transform parent)
@@ -238,7 +237,7 @@ namespace MyLittleUI
                 }
             }
 
-            elementPrefab.name = "sortingElement";
+            elementPrefab.name = "filterElement";
             elementPrefab.sizeDelta = Vector2.one * 32f;
             elementPrefab.gameObject.SetActive(false);
             elementPrefab.GetComponent<UITooltip>().m_tooltipPrefab = InventoryGui.instance.m_repairButton.GetComponent<UITooltip>().m_tooltipPrefab;
@@ -247,7 +246,10 @@ namespace MyLittleUI
 
         internal static void InitSortingPanel()
         {
-            if (!IsCraftingFilterEnabled)
+            if (!IsCraftingFilterEnabled || !InventoryGui.instance || sortPanel)
+                return;
+
+            if (!InventoryGui.instance.m_repairPanel || !InventoryGui.instance.m_repairButton || !InventoryGui.instance.m_playerGrid.m_elementPrefab)
                 return;
 
             sortPanel = UnityEngine.Object.Instantiate(InventoryGui.instance.m_repairPanel as RectTransform, InventoryGui.instance.m_repairPanel.transform.parent);
@@ -258,6 +260,9 @@ namespace MyLittleUI
             sortPanel.sizeDelta = new Vector2(0f, 0f);
 
             sortPanel.gameObject.SetActive(false);
+
+            panels.Clear();
+            filteringStates.Clear();
 
             InitElementPrefab(sortPanel);
 
@@ -608,7 +613,7 @@ namespace MyLittleUI
                 {
                     return a.Recipe.m_listSortWeight.CompareTo(b.Recipe.m_listSortWeight);
                 },
-                filter = item => item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Tool || item.m_shared.m_attack.m_attackAnimation == "throw_bomb",
+                filter = item => item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Tool || item.m_shared.m_attack.m_attackAnimation == "throw_bomb" || item.m_shared.m_skillType == SkillType.Farming || item.m_shared.m_ammoType == "mead",
             });
 
             panel.AddFilter(new FilteringState()
@@ -638,7 +643,7 @@ namespace MyLittleUI
                 {
                     return a.Recipe.m_listSortWeight.CompareTo(b.Recipe.m_listSortWeight);
                 },
-                filter = item => item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Material && item.m_shared.m_appendToolTip == null && item.m_shared.m_consumeStatusEffect == null,
+                filter = item => item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Material && item.m_shared.m_appendToolTip == null && item.m_shared.m_consumeStatusEffect == null && !item.m_shared.m_name.StartsWith("$jc_"),
             });
 
             panel.AddFilter(new FilteringState()
@@ -668,11 +673,27 @@ namespace MyLittleUI
                 {
                     return a.Recipe.m_listSortWeight.CompareTo(b.Recipe.m_listSortWeight);
                 },
-                filter = item => item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Misc || item.m_shared.m_attachOverride == ItemDrop.ItemData.ItemType.Misc || (int)item.m_shared.m_itemType > 25,
+                filter = item => (item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Misc || item.m_shared.m_attachOverride == ItemDrop.ItemData.ItemType.Misc || (int)item.m_shared.m_itemType > 25) && !item.m_shared.m_name.StartsWith("$jc_"),
             });
+
+            if (Jewelcrafting)
+                panel.AddFilter(new FilteringState()
+                {
+                    panel = panel,
+                    name = "tools_jewelcrafting",
+                    category = "Tools",
+                    tooltip = "$jc_jewelcrafting_skill_name",
+                    icon = Player.m_localPlayer.GetSkills().m_skills.FirstOrDefault(skl => skl.m_description == "$skilldesc_Jewelcrafting").m_icon ?? ObjectDB.instance.GetItemPrefab("GemstoneRed").GetComponent<ItemDrop>().m_itemData.GetIcon(),
+
+                    sort = delegate (InventoryGui.RecipeDataPair a, InventoryGui.RecipeDataPair b)
+                    {
+                        return Localization.instance.Localize(a.Recipe.m_item.m_itemData.m_shared.m_name).CompareTo(Localization.instance.Localize(b.Recipe.m_item.m_itemData.m_shared.m_name));
+                    },
+                    filter = item => item.m_shared.m_itemType != ItemDrop.ItemData.ItemType.Utility && item.m_shared.m_name.StartsWith("$jc_"),
+                });
         }
 
-        internal static void FilterRecipes(List<Recipe> recipes)
+        internal static void FilterRecipes(List<Recipe> recipes, bool inCraftTab)
         {
             tempEnabledStates.Clear();
 
@@ -683,23 +704,27 @@ namespace MyLittleUI
                 panel.enabled = false;
                 panel.enabledFilters = 0;
 
-                foreach (var state in panel.filters)
-                {
-                    state.selectable = recipes.Any(recipe => state.IsSelectable(recipe.m_item.m_itemData));
-                    state.enabled = state.enabled && state.selectable;
-                    state.UpdateSelectable();
-
-                    if (state.enabled)
-                        tempEnabledStates.Add(state);
-
-                    state.UpdatePosition(ref position);
-
-                    if (state.selectable)
+                if (IsCraftingFilterEnabled)
+                    foreach (var state in panel.filters)
                     {
-                        panel.enabledFilters++;
-                        panel.enabled = true;
+                        state.selectable = recipes.Any(recipe => state.IsSelectable(recipe.m_item.m_itemData) && 
+                                                                (inCraftTab || recipe.m_item.m_itemData.m_shared.m_maxQuality > 1 &&
+                                                                Player.m_localPlayer.GetInventory().GetItem(recipe.m_item.m_itemData.m_shared.m_name) != null));
+
+                        state.enabled = state.enabled && state.selectable;
+                        state.UpdateSelectable();
+
+                        if (state.enabled)
+                            tempEnabledStates.Add(state);
+
+                        state.UpdatePosition(ref position);
+
+                        if (state.selectable)
+                        {
+                            panel.enabledFilters++;
+                            panel.enabled = true;
+                        }
                     }
-                }
 
                 if (panel.enabled)
                     panel.UpdatePosition(ref height);
@@ -751,38 +776,52 @@ namespace MyLittleUI
 
         internal static void ClearStates() => filteringStates.Do(state => state.ClearFiltering());
 
+
+        public static void CheckPanels()
+        {
+            InitSortingPanel();
+            UpdateVisibility();
+        }
+
         [HarmonyPatch(typeof(Game), nameof(Game.SpawnPlayer))]
         public static class Game_SpawnPlayer_InitializePanel
         {
-            public static void Postfix()
-            {
-                InitSortingPanel();
-                UpdateVisibility();
-            }
+            public static void Postfix() => CheckPanels();
         }
 
         [HarmonyPatch(typeof(InventoryGui), nameof(InventoryGui.Update))]
-        public static class InventoryGui_Update_SortingPanelsVisibility
+        public static class InventoryGui_Update_SortingPanelVisibility
         {
-            public static void Postfix()
-            {
-                UpdateVisibility();
-            }
+            public static void Postfix() => UpdateVisibility();
         }
 
         [HarmonyPatch(typeof(InventoryGui), nameof(InventoryGui.Show))]
-        public static class InventoryGui_Show_ClearState
+        public static class InventoryGui_Show_ClearFiltersState
         {
             public static void Prefix() => ClearStates();
         }
 
+        [HarmonyPatch(typeof(InventoryGui), nameof(InventoryGui.OnDestroy))]
+        public static class InventoryGui_OnDestroy_ClearData
+        {
+            public static void Prefix()
+            {
+                filteringStates.Clear();
+                tempEnabledStates.Clear();
+                panels.Clear();
+                sortPanel = null;
+                elementPrefab = null;
+                foodSprite = null;
+            }
+        }
+
         [HarmonyPatch(typeof(InventoryGui), nameof(InventoryGui.UpdateRecipeList))]
-        public static class InventoryGui_UpdateRecipeList_SortingPanelsVisibility
+        public static class InventoryGui_UpdateRecipeList_FilteringAndSorting
         {
             [HarmonyPriority(Priority.First)]
             [HarmonyAfter("ZenDragon.ZenUI")]
-            public static void Prefix(List<Recipe> recipes) => FilterRecipes(recipes);
-            
+            public static void Prefix(InventoryGui __instance, List<Recipe> recipes) => FilterRecipes(recipes, __instance.InCraftTab());
+
             [HarmonyPriority(Priority.First)]
             [HarmonyAfter("ZenDragon.ZenUI")]
             public static void Postfix() => SortRecipes();
@@ -941,25 +980,24 @@ namespace MyLittleUI
                             }
 
                         int panelIndex = panels.IndexOf(selectedFilter.panel);
-                        if (panelIndex == 0)
-                            panelIndex = panels.Count;
 
-                        for (int i = panelIndex - 1; i >= 0; i--)
+                        var list = selectedFilter.panel.filters.Where(fs => fs.selectable).ToList();
+                        int column = list.IndexOf(selectedFilter) % 3;
+                        if (list.Count == 2)
+                            column++;
+                        else if (list.Count == 1)
+                            column += 2;
+
+                        for (int i = panelIndex + panels.Count - 1; i > panelIndex; i--)
                         {
-                            var list = selectedFilter.panel.filters.Where(fs => fs.selectable).ToList();
-                            int column = list.IndexOf(selectedFilter) % 3;
-                            if (list.Count == 2)
-                                column++;
-                            else if (list.Count == 1)
-                                column += 2;
-
-                            list = panels[i].filters.Where(fs => fs.selectable).ToList();
+                            var panel = panels[i % panels.Count];
+                            list = panel.filters.Where(fs => fs.selectable).ToList();
                             if (list.Count == 2)
                                 column = Math.Max(0, column - 1);
                             else if (list.Count == 1)
                                 column = Math.Max(0, column - 2);
 
-                            var filter = list.LastOrDefault(fs => list.IndexOf(fs) % 3 == column) ?? panels[i].filters.LastOrDefault(fs => fs.selectable);
+                            var filter = list.LastOrDefault(fs => list.IndexOf(fs) % 3 == column) ?? panel.filters.LastOrDefault(fs => fs.selectable);
 
                             if (filter != null)
                             {
@@ -967,7 +1005,6 @@ namespace MyLittleUI
                                 filter.SetSelected(true);
                                 ZInput.ResetButtonStatus("JoyDPadUp");
                                 return;
-
                             }
                         }
                     }
@@ -992,25 +1029,24 @@ namespace MyLittleUI
                             }
 
                         int panelIndex = panels.IndexOf(selectedFilter.panel);
-                        if (panelIndex == panels.Count - 1)
-                            panelIndex = -1;
 
-                        for (int i = panelIndex + 1; i < panels.Count; i++)
+                        var list = selectedFilter.panel.filters.Where(fs => fs.selectable).ToList();
+                        int column = list.IndexOf(selectedFilter) % 3;
+                        if (list.Count == 2)
+                            column++;
+                        else if (list.Count == 1)
+                            column += 2;
+
+                        for (int i = panelIndex + 1; i < panels.Count + panelIndex; i++)
                         {
-                            var list = selectedFilter.panel.filters.Where(fs => fs.selectable).ToList();
-                            int column = list.IndexOf(selectedFilter) % 3;
-                            if (list.Count == 2)
-                                column++;
-                            else if (list.Count == 1)
-                                column += 2;
-
-                            list = panels[i].filters.Where(fs => fs.selectable).ToList();
+                            var panel = panels[i % panels.Count];
+                            list = panel.filters.Where(fs => fs.selectable).ToList();
                             if (list.Count == 2)
                                 column = Math.Max(0, column - 1);
                             else if (list.Count == 1)
                                 column = Math.Max(0, column - 2);
 
-                            var filter = list.FirstOrDefault(fs => list.IndexOf(fs) % 3 == column) ?? panels[i].filters.FirstOrDefault(fs => fs.selectable);
+                            var filter = list.FirstOrDefault(fs => list.IndexOf(fs) % 3 == column) ?? panel.filters.FirstOrDefault(fs => fs.selectable);
                             if (filter != null)
                             {
                                 selectedFilter.SetSelected(false);
