@@ -1,3 +1,6 @@
+# 1.2.2
+* better compatibility with Jewelcrafting
+
 # 1.2.1
 * fix for filtering/sorting panel
 

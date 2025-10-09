@@ -635,7 +635,7 @@ namespace MyLittleUI
                     name = "tools_jewelcrafting",
                     category = "Tools",
                     tooltip = "$jc_jewelcrafting_skill_name",
-                    icon = Player.m_localPlayer.GetSkills().m_skills.FirstOrDefault(skl => skl.m_description == "$skilldesc_Jewelcrafting").m_icon ?? ObjectDB.instance.GetItemPrefab("GemstoneRed").GetComponent<ItemDrop>().m_itemData.GetIcon(),
+                    icon = GetJewelcraftingIcon() ?? ObjectDB.instance.GetItemPrefab("GemstoneRed")?.GetComponent<ItemDrop>()?.m_itemData?.GetIcon(),
 
                     sort = ByName,
                     filter = item => item.m_shared.m_itemType != ItemDrop.ItemData.ItemType.Utility && item.m_shared.m_name.StartsWith("$jc_"),

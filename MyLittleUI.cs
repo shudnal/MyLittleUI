@@ -1,17 +1,17 @@
-﻿using System;
+﻿using BepInEx;
+using BepInEx.Bootstrap;
+using BepInEx.Configuration;
+using HarmonyLib;
+using ServerSync;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text;
-using BepInEx;
-using BepInEx.Configuration;
-using HarmonyLib;
 using TMPro;
 using UnityEngine;
-using ServerSync;
 using UnityEngine.InputSystem;
-using BepInEx.Bootstrap;
 
 namespace MyLittleUI
 {
@@ -28,7 +28,7 @@ namespace MyLittleUI
     {
         public const string pluginID = "shudnal.MyLittleUI";
         public const string pluginName = "My Little UI";
-        public const string pluginVersion = "1.2.1";
+        public const string pluginVersion = "1.2.2";
 
         private readonly Harmony harmony = new Harmony(pluginID);
 
@@ -255,6 +255,26 @@ namespace MyLittleUI
         public static readonly bool AAA_Crafting = Chainloader.PluginInfos.ContainsKey("Azumatt.AzuAntiArthriticCrafting");
         public static readonly bool ZenUI = Chainloader.PluginInfos.ContainsKey("ZenDragon.ZenUI");
         public static readonly bool Jewelcrafting = Chainloader.PluginInfos.ContainsKey("org.bepinex.plugins.jewelcrafting");
+
+        public static Sprite GetJewelcraftingIcon()
+        {
+            if (!Chainloader.PluginInfos.TryGetValue("org.bepinex.plugins.jewelcrafting", out PluginInfo plugin))
+                return null;
+
+            var jewelcraftingSkill = AccessTools.Field(Assembly.GetAssembly(plugin.Instance.GetType()).GetType("Jewelcrafting.Jewelcrafting"), "jewelcrafting").GetValue(null);
+            if (jewelcraftingSkill == null)
+                return null;
+
+            var skillDefProp = AccessTools.Field(jewelcraftingSkill.GetType(), "skillDef");
+            if (skillDefProp == null)
+                return null;
+
+            var skillDefValue = (Skills.SkillDef)skillDefProp.GetValue(jewelcraftingSkill);
+            if (skillDefValue == null)
+                return null;
+
+            return skillDefValue.m_icon;
+        }
 
         public enum StationHover
         {
