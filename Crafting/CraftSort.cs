@@ -138,7 +138,8 @@ namespace MyLittleUI
 
             public void UpdateElementPosition()
             {
-                element.anchoredPosition = new Vector2(8f + (position % 3) * (32f + 2f), -6f - (position / 3) * (32f + 2f));
+                if (element)
+                    element.anchoredPosition = new Vector2(8f + (position % 3) * (32f + 2f), -6f - (position / 3) * (32f + 2f));
             }
 
             public void UpdatePosition(ref int currentPosition)
@@ -150,11 +151,11 @@ namespace MyLittleUI
                 UpdateElementPosition();
             }
 
-            public void UpdateEnabled() => active.SetActive(enabled);
+            public void UpdateEnabled() => active?.SetActive(enabled);
 
-            public void UpdateSelectable() => element.gameObject.SetActive(selectable);
+            public void UpdateSelectable() => element?.gameObject?.SetActive(selectable);
 
-            public void UpdateSelect() => select.SetActive(selected);
+            public void UpdateSelect() => select?.SetActive(selected);
 
             public void SetSelected(bool selected)
             {

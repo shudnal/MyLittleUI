@@ -1,3 +1,6 @@
+# 1.2.1
+* fix for filtering/sorting panel
+
 # 1.2.0
 * panels for fast filtering and sorting in Crafting window
 * incompatibility with AAA_Crafting (available items amount) and ZenUI (multicraft and available items amount) reverted
