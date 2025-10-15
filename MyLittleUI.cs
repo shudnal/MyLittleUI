@@ -28,7 +28,7 @@ namespace MyLittleUI
     {
         public const string pluginID = "shudnal.MyLittleUI";
         public const string pluginName = "My Little UI";
-        public const string pluginVersion = "1.2.2";
+        public const string pluginVersion = "1.2.3";
 
         private readonly Harmony harmony = new Harmony(pluginID);
 
@@ -1420,7 +1420,7 @@ namespace MyLittleUI
                 if (!___m_nview.IsValid())
                     return;
 
-                if (!__instance.m_character.IsTamed())
+                if (!__instance.IsTamed())
                 {
                     if (__instance.m_tamingTime != 0 && hoverTameTimeToTame.Value)
                     {

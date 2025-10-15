@@ -1,3 +1,6 @@
+# 1.2.3
+* No more error when hovering Rocky
+
 # 1.2.2
 * better compatibility with Jewelcrafting
 

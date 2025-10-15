@@ -343,7 +343,7 @@ namespace MyLittleUI
 
         internal static void UpdateInfoBlocksVisibility()
         {
-            parentObject?.SetActive(modEnabled.Value && Minimap.instance && Minimap.instance.m_mode != Minimap.MapMode.Large);
+            parentObject?.SetActive(modEnabled.Value && Minimap.instance && (Game.m_noMap ? Minimap.instance.m_mode != Minimap.MapMode.Large : Minimap.instance.m_mode == Minimap.MapMode.Small));
         }
 
         internal static void UpdateVisibility()
