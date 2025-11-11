@@ -120,10 +120,10 @@ namespace MyLittleUI
             return true;
         }
 
-        static string TooltipModifierColored(string tooltip, float value)
+        static string TooltipModifierColored(string tooltip, float value, bool flat)
         {
             string color = value >= 0 ? "#00FF00" : "#FF0000";
-            return $"{tooltip}: <color={color}>{value:P0}</color>\n";
+            return flat ? $"{tooltip}: <color={color}>{value}</color>\n" : $"{tooltip}: <color={color}>{value:P0}</color>\n";
         }
 
         private static string TooltipEffects(Player player, TextsDialog textsDialog)
@@ -131,7 +131,7 @@ namespace MyLittleUI
             sb.Clear();
             for (int i = 0; i < player.m_equipmentModifierValues.Length; i++)
                 if (player.m_equipmentModifierValues[i] != 0f)
-                    sb.Append(TooltipModifierColored(Player.s_equipmentModifierTooltips[i], player.m_equipmentModifierValues[i]));
+                    sb.Append(TooltipModifierColored(Player.s_equipmentModifierTooltips[i], player.m_equipmentModifierValues[i], i >= 10));
 
             skills.Clear();
             mods.Clear();
@@ -162,6 +162,14 @@ namespace MyLittleUI
                     stats.m_speedModifier += se.m_speedModifier;
                     stats.m_maxMaxFallSpeed += se.m_maxMaxFallSpeed;
                     stats.m_fallDamageModifier += se.m_fallDamageModifier;
+
+                    stats.m_adrenalineModifier += se.m_adrenalineModifier;
+                    stats.m_staggerModifier += se.m_staggerModifier;
+                    stats.m_blockStaminaUseFlatValue += se.m_blockStaminaUseFlatValue;
+                    stats.m_timedBlockBonus += se.m_timedBlockBonus;
+                    stats.m_swimSpeedModifier += se.m_swimSpeedModifier;
+                    stats.m_addArmor += se.m_addArmor;
+                    stats.m_armorMultiplier += se.m_armorMultiplier;
 
                     if (skills.ContainsKey(se.m_skillLevel))
                         skills[se.m_skillLevel] += se.m_skillLevelModifier;
@@ -274,10 +282,9 @@ namespace MyLittleUI
             {
                 HitData.DamageTypes damage = weapon.GetDamage(weapon.m_quality, Game.m_worldLevel);
 
-                if (weapon.m_shared.m_skillType == Skills.SkillType.Bows && player.GetAmmoItem() != null)
-                {
+                if (player.GetAmmoItem() is ItemDrop.ItemData ammo && weapon.m_shared.m_skillType == ammo.m_shared.m_skillType 
+                        && (weapon.m_shared.m_skillType == Skills.SkillType.Bows || weapon.m_shared.m_skillType == Skills.SkillType.Crossbows))
                     damage.Add(player.GetAmmoItem().GetDamage());
-                }
 
                 sb.Append("\n");
                 ItemDrop.ItemData.AddHandedTip(weapon, sb);

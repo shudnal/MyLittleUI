@@ -1,3 +1,6 @@
+# 1.2.4
+* fixed incorrect adrenaline value in active effects list in weight hover
+
 # 1.2.3
 * No more error when hovering Rocky
 
