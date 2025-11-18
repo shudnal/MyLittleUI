@@ -1,3 +1,6 @@
+# 1.2.6
+* new configs section to alter inworld text visuals (Ping, Shout, Whisper and Talk)
+
 # 1.2.5
 * removed EpicLoot active effects from weight hover (new EpicLoot made it incompatible)
 

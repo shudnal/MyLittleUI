@@ -28,7 +28,7 @@ namespace MyLittleUI
     {
         public const string pluginID = "shudnal.MyLittleUI";
         public const string pluginName = "My Little UI";
-        public const string pluginVersion = "1.2.5";
+        public const string pluginVersion = "1.2.6";
 
         private readonly Harmony harmony = new Harmony(pluginID);
 
@@ -244,6 +244,15 @@ namespace MyLittleUI
 
         public static ConfigEntry<Color> weightFontColor;
         public static ConfigEntry<Color> slotsFontColor;
+
+        public static ConfigEntry<bool> inworldTextChanges;
+        public static ConfigEntry<Color> inworldDefaultColor;
+        public static ConfigEntry<Color> inworldWhisperColor;
+        public static ConfigEntry<Color> inworldShoutColor;
+        public static ConfigEntry<Color> inworldPingColor;
+        public static ConfigEntry<string> inworldPingText;
+        public static ConfigEntry<bool> inworldAddDarken;
+        public static ConfigEntry<float> inworldDarkenIntensity;
 
         private static readonly Dictionary<string, string> characterNames = new Dictionary<string, string>();
 
@@ -729,6 +738,15 @@ namespace MyLittleUI
 
             if (slotsPosition.Value == new Vector2(-898f, -209.9f))
                 slotsPosition.Value = (Vector2)slotsPosition.DefaultValue;
+            
+            inworldTextChanges = config("Chat - Inworld text", "Enabled", defaultValue: false, "Enable changes of inworld floating texts.");
+            inworldDefaultColor = config("Chat - Inworld text", "Default font color", defaultValue: Color.white, "Font color.");
+            inworldWhisperColor = config("Chat - Inworld text", "Whisper font color", defaultValue: new Color(1f, 1f, 1f, 0.75f), "Font color.");
+            inworldShoutColor = config("Chat - Inworld text", "Shout font color", defaultValue: Color.yellow, "Font color.");
+            inworldPingColor = config("Chat - Inworld text", "Ping font color", defaultValue: new Color(0.6f, 0.7f, 1f, 1f), "Font color.");
+            inworldPingText = config("Chat - Inworld text", "Ping text", defaultValue: "PING", "Ping text.");
+            inworldAddDarken = config("Chat - Inworld text", "Add a darker backking", defaultValue: true, "Add darker back to shouts and pings to make text more visible.");
+            inworldDarkenIntensity = config("Chat - Inworld text", "Darker backking intensity", defaultValue: 0.8f, "Transparency of darken element.");
         }
 
         ConfigEntry<T> config<T>(string group, string name, T defaultValue, ConfigDescription description, bool synchronizedSetting = false)
@@ -1647,5 +1665,48 @@ namespace MyLittleUI
         }
 
         public void UpdateCraftingPanel() => CraftFilter.UpdateCraftingPanel();
+
+
+        [HarmonyPatch(typeof(Chat), nameof(Chat.UpdateWorldTextField))]
+        public static class Chat_UpdateWorldTextField_ChangeWorldTextColor
+        {
+            public static void Postfix(Chat.WorldTextInstance wt)
+            {
+                if (!modEnabled.Value || !inworldTextChanges.Value)
+                    return;
+
+                if (wt.m_type == Talker.Type.Shout)
+                    wt.m_textMeshField.color = inworldShoutColor.Value;
+                else if (wt.m_type == Talker.Type.Ping)
+                {
+                    wt.m_textMeshField.text = wt.m_textMeshField.text.Replace("PING", Localization.instance.Localize(inworldPingText.Value));
+                    wt.m_textMeshField.color = inworldPingColor.Value;
+                }
+                else if (wt.m_type == Talker.Type.Whisper)
+                    wt.m_textMeshField.color = inworldWhisperColor.Value;
+                else
+                    wt.m_textMeshField.color = inworldDefaultColor.Value;
+
+                bool showDarken = inworldAddDarken.Value && (wt.m_type == Talker.Type.Shout || wt.m_type == Talker.Type.Ping);
+
+                if (!showDarken && wt.m_gui.transform.Find("Darken") is Transform darkenToRemove)
+                    DestroyImmediate(darkenToRemove.gameObject);
+                else if (showDarken && wt.m_gui.transform.Find("Darken") is null)
+                {
+                    RectTransform playerDarken = InventoryGui.instance?.m_player?.Find("Darken") as RectTransform;
+                    if (playerDarken == null)
+                        return;
+
+                    RectTransform darken = Instantiate(playerDarken, wt.m_gui.transform);
+                    darken.localPosition = wt.m_gui.transform.Find("Text").localPosition;
+                    darken.name = "Darken";
+                    darken.localScale *= 0.7f;
+                    darken.sizeDelta = new Vector2(200f, 40f);
+                    darken.SetAsFirstSibling();
+
+                    darken.GetComponent<UnityEngine.UI.Image>().color = new Color(1f, 1f, 1f, inworldDarkenIntensity.Value);
+                }
+            }
+        }
     }
 }
