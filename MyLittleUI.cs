@@ -28,7 +28,7 @@ namespace MyLittleUI
     {
         public const string pluginID = "shudnal.MyLittleUI";
         public const string pluginName = "My Little UI";
-        public const string pluginVersion = "1.2.4";
+        public const string pluginVersion = "1.2.5";
 
         private readonly Harmony harmony = new Harmony(pluginID);
 
@@ -153,7 +153,6 @@ namespace MyLittleUI
 
         public static ConfigEntry<bool> statsCharacterArmor;
         public static ConfigEntry<bool> statsCharacterEffects;
-        public static ConfigEntry<bool> statsCharacterEffectsMagic;
 
         public static ConfigEntry<bool> hoverFermenterEnabled;
         public static ConfigEntry<bool> hoverPlantEnabled;
@@ -591,7 +590,6 @@ namespace MyLittleUI
 
             statsCharacterArmor = config("Stats - Character", "Show character stats on armor hover", defaultValue: true, "Show character stats in armor tooltip");
             statsCharacterEffects = config("Stats - Character", "Show character active effects on weight hover", defaultValue: true, "Show character active effects in weight tooltip");
-            statsCharacterEffectsMagic = config("Stats - Character", "Show character active magic effects (EpicLoot) on weight hover", defaultValue: true, "Show character active magic effects in weight tooltip");
 
             statsCharacterArmor.SettingChanged += (sender, args) => InventoryCharacterStats.UpdateTooltipState();
             statsCharacterEffects.SettingChanged += (sender, args) => InventoryCharacterStats.UpdateTooltipState();

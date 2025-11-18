@@ -1,3 +1,6 @@
+# 1.2.5
+* removed EpicLoot active effects from weight hover (new EpicLoot made it incompatible)
+
 # 1.2.4
 * fixed incorrect adrenaline value in active effects list in weight hover
 

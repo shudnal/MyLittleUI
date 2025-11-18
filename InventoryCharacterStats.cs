@@ -1,6 +1,5 @@
 ﻿using BepInEx;
 using HarmonyLib;
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -237,37 +236,6 @@ namespace MyLittleUI
             foreach (KeyValuePair<Skills.SkillType, float> skill in skills)
                 if (skill.Value != 0)
                     sb.AppendFormat("\n{0} <color=orange>{1}</color>", "$skill_" + skill.Key.ToString().ToLower(), skill.Value.ToString("+0;-0"));
-
-            if (epicLootAssembly != null && statsCharacterEffectsMagic.Value)
-            {
-                var patchUpdateTextsList = epicLootAssembly.GetType("EpicLoot.TextsDialog_UpdateTextsList_Patch");
-                if (patchUpdateTextsList != null)
-                {
-                    var methodAddMagicEffectsPage = AccessTools.Method(patchUpdateTextsList, "AddMagicEffectsPage");
-                    if (methodAddMagicEffectsPage != null)
-                    {
-                        List<TextsDialog.TextInfo> texts = textsDialog.m_texts.ToList();
-                        textsDialog.m_texts.Clear();
-                        textsDialog.m_texts.Add(new TextsDialog.TextInfo("", ""));
-                        textsDialog.m_texts.Add(new TextsDialog.TextInfo("", ""));
-                        methodAddMagicEffectsPage.Invoke(methodAddMagicEffectsPage, new[] { (object)textsDialog, (object)player });
-                        TextsDialog.TextInfo text = textsDialog.m_texts[2];
-                        
-                        textsDialog.m_texts.Clear();
-                        textsDialog.m_texts.AddRange(texts);
-
-                        sb.Append("\n");
-                        sb.Append(text.m_topic);
-                        sb.Append("\n");
-                        sb.Append(String.Join("\n", text.m_text.Split(new char[] { '\n' }, StringSplitOptions.RemoveEmptyEntries).Where(line => LineIsValid(line))).Replace("<size=20>", "").Replace("</size>", ""));
-
-                        static bool LineIsValid(string line)
-                        {
-                            return line != "" && !line.StartsWith(" <") && !line.StartsWith("\n") && !line.IsNullOrWhiteSpace();
-                        }
-                    }
-                }
-            }
 
             return Localization.instance.Localize(sb.ToString()).Trim();
         }
