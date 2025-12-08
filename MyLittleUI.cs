@@ -28,7 +28,7 @@ namespace MyLittleUI
     {
         public const string pluginID = "shudnal.MyLittleUI";
         public const string pluginName = "My Little UI";
-        public const string pluginVersion = "1.2.6";
+        public const string pluginVersion = "1.2.7";
 
         private readonly Harmony harmony = new Harmony(pluginID);
 
@@ -114,6 +114,13 @@ namespace MyLittleUI
 
         public static ConfigEntry<bool> craftingFilterEnabled;
         public static ConfigEntry<bool> craftingSortingEnabled;
+
+        public static ConfigEntry<bool> craftingNewMarkEnabled;
+        public static ConfigEntry<bool> craftingNewMarkShowOnlyWithUnlocks;
+        public static ConfigEntry<string> craftingNewMarkText;
+        public static ConfigEntry<Color> craftingNewMarkColor;
+        public static ConfigEntry<float> craftingNewMarkFontSize;
+        public static ConfigEntry<FontStyles> craftingNewMarkFontStyle;
 
         public static ConfigEntry<bool> durabilityEnabled;
         public static ConfigEntry<Color> durabilityFine;
@@ -540,6 +547,21 @@ namespace MyLittleUI
             craftingFilterEnabled.SettingChanged += (s, e) => CraftFilter.UpdateVisibility();
 
             craftingSortingEnabled.SettingChanged += (s, e) => CraftSort.CheckPanels();
+
+            craftingNewMarkEnabled = config("Item - Crafting - New Mark", "Enabled", defaultValue: true, "Enable mark of new items in craft list. [Synced with Server]", synchronizedSetting: true);
+            craftingNewMarkShowOnlyWithUnlocks = config("Item - Crafting - New Mark", "Show only unlocks", defaultValue: true, "Show only items that, when crafted, will potentially unlock new recipes." +
+                                                                                                                              "\nThis means items that are used in other recipes." +
+                                                                                                                              "\nIf disabled, all items not yet known to the character will be shown. [Synced with Server]", synchronizedSetting: true);
+            craftingNewMarkText = config("Item - Crafting - New Mark", "Text", defaultValue: "?", "Text to show.");
+            craftingNewMarkColor = config("Item - Crafting - New Mark", "Color", defaultValue: new Color(1f, 0.64f, 0f), "Text color.");
+            craftingNewMarkFontSize = config("Item - Crafting - New Mark", "Font size", defaultValue: 16f, "Text size.");
+            craftingNewMarkFontStyle = config("Item - Crafting - New Mark", "Font style", defaultValue: FontStyles.Bold, "Text style.");
+
+            craftingNewMarkEnabled.SettingChanged += (sender, args) => InventoryGui.instance?.UpdateCraftingPanel();
+            craftingNewMarkShowOnlyWithUnlocks.SettingChanged += (sender, args) => InventoryGui.instance?.UpdateCraftingPanel();
+            craftingNewMarkText.SettingChanged += (sender, args) => InventoryGui.instance?.UpdateCraftingPanel();
+            craftingNewMarkFontSize.SettingChanged += (sender, args) => InventoryGui.instance?.UpdateCraftingPanel();
+            craftingNewMarkFontStyle.SettingChanged += (sender, args) => InventoryGui.instance?.UpdateCraftingPanel();
 
             durabilityEnabled = config("Item - Durability", "0 - Enabled", defaultValue: true, "Enable color of durability. [Synced with Server]", synchronizedSetting: true);
             durabilityFine = config("Item - Durability", "1 - Fine", defaultValue: new Color(0.11765f, 0.72941f, 0.03529f, 1f), "Color of durability > 75%.");

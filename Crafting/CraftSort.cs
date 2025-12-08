@@ -313,7 +313,8 @@ namespace MyLittleUI
 
                     return foodB.CompareTo(foodA);
                 },
-                filter = item => (item.m_shared.m_appendToolTip?.m_itemData.m_shared.m_food ?? item.m_shared.m_food) > 0,
+                filter = item => item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Consumable && item.m_shared.m_food > 0
+                                || item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Material && item.m_shared.m_appendToolTip != null && item.m_shared.m_appendToolTip.m_itemData.m_shared.m_food > 0
             });
 
             panel.AddFilter(new FilteringState()
@@ -333,7 +334,8 @@ namespace MyLittleUI
 
                     return foodB.CompareTo(foodA);
                 },
-                filter = item => (item.m_shared.m_appendToolTip?.m_itemData.m_shared.m_foodStamina ?? item.m_shared.m_foodStamina) > 0,
+                filter = item => item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Consumable && item.m_shared.m_foodStamina > 0
+                                || item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Material && item.m_shared.m_appendToolTip != null && item.m_shared.m_appendToolTip.m_itemData.m_shared.m_foodStamina > 0
             });
 
             panel.AddFilter(new FilteringState()
@@ -353,7 +355,8 @@ namespace MyLittleUI
 
                     return foodB.CompareTo(foodA);
                 },
-                filter = item => (item.m_shared.m_appendToolTip?.m_itemData.m_shared.m_foodEitr ?? item.m_shared.m_foodEitr) > 0,
+                filter = item => item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Consumable && item.m_shared.m_foodEitr > 0
+                                || item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Material && item.m_shared.m_appendToolTip != null && item.m_shared.m_appendToolTip.m_itemData.m_shared.m_foodEitr > 0
             });
         }
 
@@ -841,8 +844,18 @@ namespace MyLittleUI
         }
 
         [HarmonyPatch(typeof(InventoryGui), nameof(InventoryGui.UpdateCraftingPanel))]
-        [HarmonyPatch(typeof(InventoryGui), nameof(InventoryGui.Update))]
         public static class InventoryGui_UpdateCraftingPanel_HideWithOtherMods
+        {
+            [HarmonyPriority(Priority.Last)]
+            public static void Postfix(InventoryGui __instance)
+            {
+                if (!__instance.InCraftTab() && !__instance.InUpradeTab())
+                    ClearPanels();
+            }
+        }
+
+        [HarmonyPatch(typeof(InventoryGui), nameof(InventoryGui.Update))]
+        public static class InventoryGui_Update_HideWithOtherMods
         {
             [HarmonyPriority(Priority.Last)]
             public static void Postfix(InventoryGui __instance)

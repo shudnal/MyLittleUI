@@ -165,6 +165,8 @@ namespace MyLittleUI
                             name.SetText(Localization.instance.Localize(statusEffects[i].m_name));
 
                         name.verticalAlignment = timeHidden ? VerticalAlignmentOptions.Middle : VerticalAlignmentOptions.Top;
+                        name.textWrappingMode = timeHidden ? TextWrappingModes.Normal : TextWrappingModes.NoWrap;
+                        name.overflowMode = timeHidden ? TextOverflowModes.Overflow : TextOverflowModes.Ellipsis;
                         time.verticalAlignment = !timeHidden && string.IsNullOrWhiteSpace(name.text) ? VerticalAlignmentOptions.Middle : VerticalAlignmentOptions.Bottom;
                     }
                 }

@@ -1,3 +1,8 @@
+# 1.2.7
+* new feature: mark for yet uncrafted items that, when crafted, will potentially unlock new recipes or build pieces
+* if status effect has long name and no timer, its name will not be truncated
+* food filters will not include items with incorrectly set food values
+
 # 1.2.6
 * new configs section to alter inworld text visuals (Ping, Shout, Whisper and Talk)
 
