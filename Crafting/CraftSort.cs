@@ -505,7 +505,7 @@ namespace MyLittleUI
                 icon = ObjectDB.instance.GetItemPrefab("ArrowIron").GetComponent<ItemDrop>().m_itemData.GetIcon(),
 
                 sort = ByTotalDamage,
-                filter = item => item.m_shared.m_skillType == SkillType.Bows && item.m_shared.m_attack.m_attackAnimation == "" && item.m_shared.m_ammoType == "$ammo_arrows" && item.m_shared.m_damages.GetTotalDamage() > 0,
+                filter = item => item.m_shared.m_attack.m_attackAnimation == "" && item.m_shared.m_ammoType == "$ammo_arrows" && item.m_shared.m_damages.GetTotalDamage() > 0,
             });
         }
 
@@ -534,7 +534,7 @@ namespace MyLittleUI
                 icon = ObjectDB.instance.GetItemPrefab("BoltIron").GetComponent<ItemDrop>().m_itemData.GetIcon(),
 
                 sort = ByTotalDamage,
-                filter = item => item.m_shared.m_skillType == SkillType.Crossbows && item.m_shared.m_attack.m_attackAnimation == "" && item.m_shared.m_ammoType == "$ammo_bolts" && item.m_shared.m_damages.GetTotalDamage() > 0,
+                filter = item => item.m_shared.m_attack.m_attackAnimation == "" && item.m_shared.m_ammoType == "$ammo_bolts" && item.m_shared.m_damages.GetTotalDamage() > 0,
             });
         }
 

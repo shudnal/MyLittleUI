@@ -1,3 +1,7 @@
+# 1.2.8
+* multicraft resets on recipe change to prevent crafting newly selected items
+* bolts and arrows from mods should now be better placed in sorting categories
+
 # 1.2.7
 * new feature: mark for yet uncrafted items that, when crafted, will potentially unlock new recipes or build pieces
 * if status effect has long name and no timer, its name will not be truncated

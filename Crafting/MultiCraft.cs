@@ -245,10 +245,26 @@ namespace MyLittleUI
             private static bool IsCrafting(InventoryGui __instance) => __instance.m_craftTimer != -1f;
 
             private static bool queueNextCraft;
+            private static Recipe currentRecipe;
 
             public static void Prefix(InventoryGui __instance)
             {
                 isCrafting = IsCrafting(__instance);
+
+                if (!isCrafting)
+                    return;
+
+                Recipe selected = __instance.m_selectedRecipe.Recipe;
+
+                if (currentRecipe == null)
+                {
+                    currentRecipe = selected;
+                }
+                else if (currentRecipe != selected)
+                {
+                    amount = 0;
+                    currentRecipe = null;
+                }
             }
 
             [HarmonyPriority(Priority.Last)]
@@ -278,7 +294,11 @@ namespace MyLittleUI
 
                 if (isCrafting && !IsCrafting(__instance))
                 {
-                    amount--;
+                    if (currentRecipe == __instance.m_selectedRecipe.Recipe)
+                        amount--;
+                    else
+                        amount = 0;
+
                     queueNextCraft = amount > 0;
                 }
 
