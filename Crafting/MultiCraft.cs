@@ -206,8 +206,8 @@ namespace MyLittleUI
             if (AAA_Crafting)
                 return;
 
-            showPanel = IsMulticraftEnabled && InventoryGui.instance.m_selectedRecipe.Recipe != null 
-                                            && InventoryGui.instance.m_selectedRecipe.ItemData == null 
+            showPanel = IsMulticraftEnabled && InventoryGui.instance.m_selectedRecipe.Recipe != null
+                                            && InventoryGui.instance.m_selectedRecipe.ItemData == null
                                             && (InventoryGui.instance.m_selectedRecipe.CanCraft || Player.m_localPlayer.NoCostCheat());
 
             panel?.gameObject.SetActive(showPanel && InventoryGui.instance.m_craftButton.isActiveAndEnabled);
@@ -240,31 +240,15 @@ namespace MyLittleUI
         [HarmonyPatch(typeof(InventoryGui), nameof(InventoryGui.UpdateRecipe))]
         public static class InventoryGui_UpdateRecipe_MulticraftShowButtons
         {
-            private static bool isCrafting;
+            internal static bool isCrafting;
 
             private static bool IsCrafting(InventoryGui __instance) => __instance.m_craftTimer != -1f;
 
             private static bool queueNextCraft;
-            private static Recipe currentRecipe;
 
             public static void Prefix(InventoryGui __instance)
             {
                 isCrafting = IsCrafting(__instance);
-
-                if (!isCrafting)
-                    return;
-
-                Recipe selected = __instance.m_selectedRecipe.Recipe;
-
-                if (currentRecipe == null)
-                {
-                    currentRecipe = selected;
-                }
-                else if (currentRecipe != selected)
-                {
-                    amount = 0;
-                    currentRecipe = null;
-                }
             }
 
             [HarmonyPriority(Priority.Last)]
@@ -294,11 +278,7 @@ namespace MyLittleUI
 
                 if (isCrafting && !IsCrafting(__instance))
                 {
-                    if (currentRecipe == __instance.m_selectedRecipe.Recipe)
-                        amount--;
-                    else
-                        amount = 0;
-
+                    amount--;
                     queueNextCraft = amount > 0;
                 }
 
@@ -351,7 +331,7 @@ namespace MyLittleUI
                     return "";
 
                 bool clearAndRestart = false;
-                sb.Clear(); 
+                sb.Clear();
                 foreach (TMP_Text text in resAmountElements)
                 {
                     if (text == null)
@@ -369,7 +349,7 @@ namespace MyLittleUI
                     resAmountElements.Clear();
                     return CombinedResAmount();
                 }
-                    
+
                 return sb.ToString();
             }
 
@@ -442,6 +422,18 @@ namespace MyLittleUI
             public static void Postfix()
             {
                 cachedAmount.Clear();
+            }
+        }
+
+        [HarmonyPatch(typeof(InventoryGui), nameof(InventoryGui.SetRecipe))]
+        public static class InventoryGui_SetRecipe_ResetMulticraftAfterRecipeChange
+        {
+            public static void Prefix(InventoryGui __instance, ref Recipe __state) => __state = __instance.m_selectedRecipe.Recipe;
+
+            public static void Postfix(InventoryGui __instance, Recipe __state)
+            {
+                if (__state != __instance.m_selectedRecipe.Recipe && InventoryGui_UpdateRecipe_MulticraftShowButtons.isCrafting)
+                    amount = 0;
             }
         }
     }

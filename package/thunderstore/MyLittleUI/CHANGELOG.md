@@ -1,3 +1,6 @@
+# 1.2.9
+* refined multicraft reset on recipe change
+
 # 1.2.8
 * multicraft resets on recipe change to prevent crafting newly selected items
 * bolts and arrows from mods should now be better placed in sorting categories
