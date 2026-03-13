@@ -1,6 +1,7 @@
 ﻿using BepInEx;
 using BepInEx.Bootstrap;
 using BepInEx.Configuration;
+using ExtraSlotsAPI;
 using HarmonyLib;
 using ServerSync;
 using System;
@@ -23,12 +24,13 @@ namespace MyLittleUI
     [BepInDependency("ZenDragon.ZenUI", BepInDependency.DependencyFlags.SoftDependency)]
     [BepInDependency("Azumatt.AzuAntiArthriticCrafting", BepInDependency.DependencyFlags.SoftDependency)]
     [BepInDependency("org.bepinex.plugins.jewelcrafting", BepInDependency.DependencyFlags.SoftDependency)]
+    [BepInDependency(Advize_StumpsRegrow_Compat.GUID, BepInDependency.DependencyFlags.SoftDependency)]
     [BepInIncompatibility("randyknapp.mods.auga")]
     public class MyLittleUI : BaseUnityPlugin
     {
         public const string pluginID = "shudnal.MyLittleUI";
         public const string pluginName = "My Little UI";
-        public const string pluginVersion = "1.2.9";
+        public const string pluginVersion = "1.2.10";
 
         private readonly Harmony harmony = new Harmony(pluginID);
 
@@ -174,6 +176,8 @@ namespace MyLittleUI
         public static ConfigEntry<bool> hoverBeeHiveTotal;
         public static ConfigEntry<bool> hoverCookingNextItem;
         public static ConfigEntry<bool> hoverCookingRemoveLastItem;
+        public static ConfigEntry<bool> hoverStumpGrowerEnabled;
+        public static ConfigEntry<StationHover> hoverStumpGrower;
 
         public static ConfigEntry<StationHover> hoverCharacter;
         public static ConfigEntry<bool> hoverCharacterGrowth;
@@ -361,8 +365,6 @@ namespace MyLittleUI
 
         private void Awake()
         {
-            harmony.PatchAll();
-
             instance = this;
 
             ConfigInit();
@@ -376,6 +378,8 @@ namespace MyLittleUI
             LoadIcons();
 
             Game.isModded = true;
+
+            harmony.PatchAll();
         }
 
         private void OnDestroy()
@@ -644,6 +648,8 @@ namespace MyLittleUI
             hoverBeeHiveTotal = config("Hover - Stations", "Bee Hive Show total", defaultValue: true, "Show total needed time/percent for bee hive.");
             hoverCookingNextItem = config("Hover - Stations", "Cooking station next item", defaultValue: true, "Show next item to be added to cooking station. Player inventory only.");
             hoverCookingRemoveLastItem = config("Hover - Stations", "Cooking station Remove last item", defaultValue: true, "Add an option to remove last uncooked item. [Synced with Server]", synchronizedSetting: true);
+            hoverStumpGrowerEnabled = config("Hover - Stations", "Stump Hover Enabled", defaultValue: true, "Enable Hover text for stumps when Advize_StumpsRegrow is installed. [Synced with Server]", synchronizedSetting: true);
+            hoverStumpGrower = config("Hover - Stations", "Stump Hover", defaultValue: StationHover.Vanilla, "Hover text for stumps.");
 
             hoverTame = config("Hover - Tameable", "Tameable Hover", defaultValue: StationHover.Vanilla, "Format of total needed time/percent to tame or to stay fed.");
             hoverTameTimeToTame = config("Hover - Tameable", "Show time to tame", defaultValue: true, "Show total needed time/percent to tame. [Synced with Server]", synchronizedSetting: true);
@@ -823,13 +829,13 @@ namespace MyLittleUI
             return tex.LoadImage(data, true);
         }
 
-        private static string FromSeconds(double seconds)
+        internal static string FromSeconds(double seconds)
         {
             TimeSpan ts = TimeSpan.FromSeconds(seconds);
             return ts.ToString(ts.Hours > 0 ? @"h\:mm\:ss" : @"m\:ss");
         }
 
-        private static string FromPercent(double percent) => GetBar(Mathf.RoundToInt((float)percent * 10), 10);
+        internal static string FromPercent(double percent) => GetBar(Mathf.RoundToInt((float)percent * 10), 10);
         
         private static string GetBar(int amount, int total, char symbol = '▀') => $"<sup><alpha=#ff>{new string(symbol, total)}<alpha=#ff></sup>".Insert(Mathf.Clamp(amount, 0, total) + 16, "<alpha=#33>");
 

@@ -1,3 +1,6 @@
+# 1.2.10
+* hover for Advize_StumpsRegrow stumps
+
 # 1.2.9
 * refined multicraft reset on recipe change
 
