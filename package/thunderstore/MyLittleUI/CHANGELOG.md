@@ -1,3 +1,6 @@
+# 1.2.11
+* fixed hover for Valheim Cuisine smokehouse station
+
 # 1.2.10
 * hover for Advize_StumpsRegrow stumps
 

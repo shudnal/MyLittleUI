@@ -30,7 +30,7 @@ namespace MyLittleUI
     {
         public const string pluginID = "shudnal.MyLittleUI";
         public const string pluginName = "My Little UI";
-        public const string pluginVersion = "1.2.10";
+        public const string pluginVersion = "1.2.11";
 
         private readonly Harmony harmony = new Harmony(pluginID);
 
@@ -999,7 +999,7 @@ namespace MyLittleUI
                 if (!hoverCookingEnabled.Value || hoverCooking.Value == StationHover.Vanilla)
                     return;
 
-                if (!__instance.m_nview.IsValid())
+                if (__instance.m_nview.IsValid() != true)
                     return;
 
                 if ((bool)__instance.m_addFoodSwitch && __instance.m_addFoodSwitch.m_onHover == null)
@@ -1056,7 +1056,7 @@ namespace MyLittleUI
                 if (hoverCookingNextItem.Value && Player.m_localPlayer != null && FindCookableItem(__instance, Player.m_localPlayer.GetInventory()) is ItemDrop.ItemData itemToCook)
                     sb.Append($" (<color=#add8e6ff>{itemToCook.m_shared.m_name}</color>)");
 
-                if (hoverCookingRemoveLastItem.Value && __instance.m_nview.IsValid() &&  __instance.GetFreeSlot() != 0)
+                if (hoverCookingRemoveLastItem.Value && __instance.m_nview?.IsValid() == true &&  __instance.GetFreeSlot() != 0)
                 {
                     if (CookingStationRemoveItem.GetSlotToRemove(__instance, out string itemName, out _) != -1)
                     {
@@ -1085,7 +1085,7 @@ namespace MyLittleUI
 
                     string itemListName = GetItemName(__instance, itemName, out bool itemReady, out CookingStation.ItemConversion itemConversion);
 
-                    if (itemConversion == null || itemName == __instance.m_overCookedItem.name)
+                    if (itemConversion == null || itemName == __instance.m_overCookedItem?.name)
                     {
                         sb.Append(itemListName);
                         continue;
@@ -1123,7 +1123,7 @@ namespace MyLittleUI
                 if (!hoverCookingEnabled.Value || hoverCooking.Value == StationHover.Vanilla)
                     return;
 
-                if (!__instance.m_nview.IsValid())
+                if (__instance.m_nview?.IsValid() != true)
                     return;
 
                 __result = HoverText(__instance, __instance.m_name, __instance.m_addItemTooltip);
