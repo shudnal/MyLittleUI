@@ -1,7 +1,6 @@
 ﻿using BepInEx;
 using BepInEx.Bootstrap;
 using BepInEx.Configuration;
-using ExtraSlotsAPI;
 using HarmonyLib;
 using ServerSync;
 using System;
@@ -30,7 +29,7 @@ namespace MyLittleUI
     {
         public const string pluginID = "shudnal.MyLittleUI";
         public const string pluginName = "My Little UI";
-        public const string pluginVersion = "1.2.11";
+        public const string pluginVersion = "1.2.12";
 
         private readonly Harmony harmony = new Harmony(pluginID);
 

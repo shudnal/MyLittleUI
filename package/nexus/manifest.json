@@ -1,0 +1,9 @@
+{
+    "name":  "MyLittleUI",
+    "description":  "minor technical optimizations",
+    "version":  "1.2.12",
+    "file_category":  "main",
+    "allow_mod_manager_download":  true,
+    "show_requirements_pop_up":  false,
+    "archive_existing_file":  true
+}

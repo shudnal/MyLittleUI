@@ -1,3 +1,6 @@
+# 1.2.12
+* minor technical optimizations
+
 # 1.2.11
 * fixed hover for Valheim Cuisine smokehouse station
 

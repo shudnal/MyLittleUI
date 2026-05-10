@@ -1,13 +1,12 @@
-﻿using HarmonyLib;
+﻿using BepInEx;
+using HarmonyLib;
 using System;
 using System.Collections.Generic;
 using System.Text;
 using TMPro;
-using UnityEngine.UI;
 using UnityEngine;
+using UnityEngine.UI;
 using static MyLittleUI.MyLittleUI;
-using BepInEx;
-using System.Linq;
 
 namespace MyLittleUI
 {
@@ -170,37 +169,76 @@ namespace MyLittleUI
             private static bool IsEAQSEquipmentGrid(InventoryGrid grid) => grid.name == "EquipmentSlotGrid";
             private static bool IsEAQSQuickSlotGrid(InventoryGrid grid) => grid.name == "QuickSlotGrid";
 
-            private static IEnumerable<ItemDrop.ItemData> GetAzuEPIEqupmentSlotsItems()
+            private static readonly List<ItemDrop.ItemData> azuEpiSlotsItems = new List<ItemDrop.ItemData>();
+
+            private static List<ItemDrop.ItemData> GetAzuEPIEqupmentSlotsItems()
             {
-                return AzuExtendedPlayerInventory.API.GetSlots().GetItemFuncs.Where(func => func != null).Select(func => func.Invoke(Player.m_localPlayer)).Where(item => item != null);
+                azuEpiSlotsItems.Clear();
+
+                if (!Player.m_localPlayer)
+                    return azuEpiSlotsItems;
+
+                var slotFuncs = AzuExtendedPlayerInventory.API.GetSlots().GetItemFuncs;
+                if (slotFuncs == null)
+                    return azuEpiSlotsItems;
+                
+                for (int i = 0; i < slotFuncs.Length; i++)
+                {
+                    var func = slotFuncs[i];
+                    if (func != null && func(Player.m_localPlayer) is ItemDrop.ItemData item)
+                        azuEpiSlotsItems.Add(item);
+                }
+
+                return azuEpiSlotsItems;
             }
 
             private static void FillItemsToFilter()
             {
                 if (AzuExtendedPlayerInventory.API.IsLoaded())
                 {
+                    List<ItemDrop.ItemData> azuItems = GetAzuEPIEqupmentSlotsItems();
                     if (itemQualityIgnoreCustomSlots.Value)
-                        GetAzuEPIEqupmentSlotsItems().Do(item => filterItemQuality.Add(item));
+                    {
+                        for (int i = 0; i < azuItems.Count; i++)
+                            filterItemQuality.Add(azuItems[i]);
+                    }
                     else if (itemQualityIgnoreCustomEquipmentSlots.Value)
-                        GetAzuEPIEqupmentSlotsItems().DoIf(item => item.IsEquipable(), item => filterItemQuality.Add(item));
+                    {
+                        for (int i = 0; i < azuItems.Count; i++)
+                            if (azuItems[i].IsEquipable())
+                                filterItemQuality.Add(azuItems[i]);
+                    }
                 }
 
                 if (ExtraSlotsAPI.API.IsReady())
                 {
                     if (itemQualityIgnoreCustomSlots.Value)
-                        ExtraSlotsAPI.API.GetAllExtraSlotsItems().Do(item => filterItemQuality.Add(item));
+                    {
+                        foreach (ItemDrop.ItemData item in ExtraSlotsAPI.API.GetAllExtraSlotsItems())
+                            filterItemQuality.Add(item);
+                    }
                     else if (itemQualityIgnoreCustomEquipmentSlots.Value)
-                        ExtraSlotsAPI.API.GetEquipmentSlotsItems().Do(item => filterItemQuality.Add(item));
+                    {
+                        foreach (ItemDrop.ItemData item in ExtraSlotsAPI.API.GetEquipmentSlotsItems())
+                            filterItemQuality.Add(item);
+                    }
                 }
             }
 
             private static void FillItemsToHide()
             {
                 if (AzuExtendedPlayerInventory.API.IsLoaded())
-                    GetAzuEPIEqupmentSlotsItems().Do(item => hideItemQuality.Add(item));
+                {
+                    List<ItemDrop.ItemData> azuItems = GetAzuEPIEqupmentSlotsItems();
+                    for (int i = 0; i < azuItems.Count; i++)
+                        hideItemQuality.Add(azuItems[i]);
+                }
 
                 if (ExtraSlotsAPI.API.IsReady())
-                    ExtraSlotsAPI.API.GetEquipmentSlotsItems().Do(item => hideItemQuality.Add(item));
+                {
+                    foreach (ItemDrop.ItemData item in ExtraSlotsAPI.API.GetEquipmentSlotsItems())
+                        hideItemQuality.Add(item);
+                }
             }
 
             private static bool IgnoreItemQuality(InventoryGrid grid, ItemDrop.ItemData item)
