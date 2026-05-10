@@ -8,7 +8,7 @@ $ErrorActionPreference = "Stop"
 Set-StrictMode -Version 2.0
 
 # ---- Mod-specific values -----------------------------------------------------
-$ModName = "MyLittleUI.zip"
+$ModName = "MyLittleUI"
 
 # Nexus game domain from the URL, for Valheim it is always "valheim".
 # Example: https://www.nexusmods.com/valheim/mods/1234
@@ -20,7 +20,7 @@ $GameScopedModId = "2562"
 
 # Optional. If empty, the script uses package\nexus\manifest.json -> name.
 # Set this only if the Nexus file update group has a different name than the file name.
-$FileGroupName = ""
+$FileGroupName = "MyLittleUI.zip"
 
 # Optional escape hatch. Leave empty for automatic lookup.
 # If Nexus changes the API or the lookup is ambiguous, you can temporarily set the group id here.
