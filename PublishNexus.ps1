@@ -18,25 +18,35 @@ $GameDomain = "valheim"
 # Example: https://www.nexusmods.com/valheim/mods/1234 -> 1234
 $GameScopedModId = "2562"
 
-# Optional. If empty, the script uses package\nexus\manifest.json -> name.
-# Set this only if the Nexus file update group has a different name than the file name.
+# Optional. Nexus file update group name.
 $FileGroupName = "MyLittleUI.zip"
 
 # Optional escape hatch. Leave empty for automatic lookup.
-# If Nexus changes the API or the lookup is ambiguous, you can temporarily set the group id here.
+# If Nexus changes the API or lookup is ambiguous, set the group id here.
 $FileGroupIdOverride = ""
+
+# If uploaded version is newer than current primary/main Nexus version,
+# mark the uploaded file as the primary mod-manager download.
+$SetUploadedFileAsPrimaryModManagerDownloadWhenNewer = $true
 
 $NexusApiBase = "https://api.nexusmods.com/v3"
 $NexusApiKeyFileName = "nexus-api-key.txt"
 $NexusDescriptionMaxLength = 255
 $NexusApplicationName = "shudnal-valheim-publish"
 $NexusApplicationVersion = "1.0.0"
+
+# Nexus presigned R2 upload for this flow expects application/octet-stream.
+$NexusUploadContentType = "application/octet-stream"
 # -----------------------------------------------------------------------------
 
 $ProjectRoot = $PSScriptRoot
 $RepositoryRoot = Split-Path -Parent $ProjectRoot
-$CommonScript = Join-Path $RepositoryRoot "API\CommonPublish.ps1"
+$ApiDir = Join-Path $RepositoryRoot "API"
+$CommonScript = Join-Path $ApiDir "CommonPublish.ps1"
+
 . $CommonScript
+
+Initialize-CurlProxyFromApiDirectory -ApiDir $ApiDir
 
 function Get-NexusInternalModId {
     param(
@@ -87,6 +97,41 @@ function Format-NexusFileGroupList {
         $lastUploadedAt = [string]$_.last_file_uploaded_at
         "  $id | '$name' | active=$isActive | versions=$versionsCount | last=$lastUploadedAt"
     }) -join [Environment]::NewLine)
+}
+
+function ConvertTo-VersionParts {
+    param([Parameter(Mandatory = $true)][string]$Version)
+
+    $normalized = Normalize-PackageVersion -Version $Version -Name "version"
+    $parts = $normalized.Split(".")
+
+    return @(
+        [int]$parts[0],
+        [int]$parts[1],
+        [int]$parts[2]
+    )
+}
+
+function Compare-PackageVersion {
+    param(
+        [Parameter(Mandatory = $true)][string]$Left,
+        [Parameter(Mandatory = $true)][string]$Right
+    )
+
+    $leftParts = ConvertTo-VersionParts -Version $Left
+    $rightParts = ConvertTo-VersionParts -Version $Right
+
+    for ($i = 0; $i -lt 3; $i++) {
+        if ($leftParts[$i] -gt $rightParts[$i]) {
+            return 1
+        }
+
+        if ($leftParts[$i] -lt $rightParts[$i]) {
+            return -1
+        }
+    }
+
+    return 0
 }
 
 function Get-NexusFileGroupId {
@@ -141,135 +186,85 @@ function Get-NexusFileGroupId {
     throw "Nexus file update group '$RequestedGroupName' was not found or selection is ambiguous. Set `$FileGroupName to one of available active group names, or set `$FileGroupIdOverride manually.$([Environment]::NewLine)Available groups:$([Environment]::NewLine)$(Format-NexusFileGroupList -Groups $groups)"
 }
 
-$ApiDir = Join-Path $RepositoryRoot "API"
-
-
-function Get-PublishProxyConfigPropertyValue {
+function Get-NexusCurrentPrimaryVersion {
     param(
-        [Parameter(Mandatory = $true)]$Object,
-        [Parameter(Mandatory = $true)][string]$Name
+        [Parameter(Mandatory = $true)][string]$BaseUrl,
+        [Parameter(Mandatory = $true)][hashtable]$Headers,
+        [Parameter(Mandatory = $true)][string]$FileGroupId
     )
 
-    if ($null -eq $Object) {
-        return $null
+    $response = Invoke-CurlJson `
+        -Method GET `
+        -Url "$BaseUrl/file-update-groups/$FileGroupId/versions" `
+        -Headers $Headers
+
+    if ($null -eq $response.Json -or $null -eq $response.Json.data) {
+        throw "Nexus did not return file update group versions. Response: $($response.Body)"
     }
 
-    $property = $Object.PSObject.Properties[$Name]
-    if ($null -eq $property) {
-        return $null
-    }
-
-    return $property.Value
-}
-
-function Get-PublishProxyConfigString {
-    param(
-        [Parameter(Mandatory = $true)]$Object,
-        [Parameter(Mandatory = $true)][string]$Name
-    )
-
-    $value = Get-PublishProxyConfigPropertyValue -Object $Object -Name $Name
-    if ($null -eq $value) {
+    $versions = @($response.Json.data.versions)
+    if ($versions.Count -eq 0) {
         return ""
     }
 
-    return ([string]$value).Trim()
+    $primaryVersions = @($versions | Where-Object {
+        $null -ne $_.file -and $true -eq [bool]$_.file.is_primary
+    })
+
+    if ($primaryVersions.Count -gt 0) {
+        $primary = $primaryVersions |
+            Sort-Object { [datetime]$_.file.uploaded_at } -Descending |
+            Select-Object -First 1
+
+        return [string]$primary.file.version
+    }
+
+    $mainVersions = @($versions | Where-Object {
+        $null -ne $_.file -and ([string]$_.file.category) -eq "main"
+    })
+
+    if ($mainVersions.Count -gt 0) {
+        $latestMain = $mainVersions |
+            Sort-Object { [datetime]$_.file.uploaded_at } -Descending |
+            Select-Object -First 1
+
+        return [string]$latestMain.file.version
+    }
+
+    $latest = $versions |
+        Where-Object { $null -ne $_.file } |
+        Sort-Object { [datetime]$_.file.uploaded_at } -Descending |
+        Select-Object -First 1
+
+    if ($null -eq $latest) {
+        return ""
+    }
+
+    return [string]$latest.file.version
 }
 
-function Clear-CurlProxyEnvironment {
-    foreach ($name in @("HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY", "NO_PROXY", "http_proxy", "https_proxy", "all_proxy", "no_proxy")) {
-        [System.Environment]::SetEnvironmentVariable($name, $null, "Process")
+function Invoke-NexusPresignedUpload {
+    param(
+        [Parameter(Mandatory = $true)][string]$Url,
+        [Parameter(Mandatory = $true)][string]$FilePath
+    )
+
+    Write-Host "Uploading archive to presigned URL..."
+
+    $response = Invoke-CurlUploadFile `
+        -Method PUT `
+        -Url $Url `
+        -FilePath $FilePath `
+        -Headers @{ "Content-Type" = $NexusUploadContentType } `
+        -AllowHttpError
+
+    if ($response.StatusCode -ge 200 -and $response.StatusCode -lt 300) {
+        return $response
     }
+
+    throw "HTTP $($response.StatusCode) upload to Nexus presigned URL.`n$($response.Body)`n$($response.Headers)"
 }
 
-function New-CurlProxyUrlFromConfig {
-    param([Parameter(Mandatory = $true)]$Config)
-
-    $rawUrl = Get-PublishProxyConfigString -Object $Config -Name "url"
-    if ([string]::IsNullOrWhiteSpace($rawUrl)) {
-        throw "curl proxy config is enabled but 'url' is empty."
-    }
-
-    $uri = $null
-    try {
-        $uri = [System.Uri]$rawUrl
-    }
-    catch {
-        throw "curl proxy url is invalid: $rawUrl"
-    }
-
-    if ($uri.Scheme -ne "http" -and $uri.Scheme -ne "https" -and $uri.Scheme -ne "socks5" -and $uri.Scheme -ne "socks5h") {
-        throw "curl proxy url scheme '$($uri.Scheme)' is not supported by this script. Use http://host:port for your HTTP proxy."
-    }
-
-    $hostAndPort = $uri.GetComponents([System.UriComponents]::HostAndPort, [System.UriFormat]::UriEscaped)
-    if ([string]::IsNullOrWhiteSpace($hostAndPort)) {
-        throw "curl proxy url must contain host and port: $rawUrl"
-    }
-
-    $userInfo = $uri.UserInfo
-    $username = Get-PublishProxyConfigString -Object $Config -Name "username"
-    $password = Get-PublishProxyConfigString -Object $Config -Name "password"
-
-    if (-not [string]::IsNullOrWhiteSpace($username)) {
-        $userInfo = [System.Uri]::EscapeDataString($username)
-        if (-not [string]::IsNullOrWhiteSpace($password)) {
-            $userInfo += ":" + [System.Uri]::EscapeDataString($password)
-        }
-    }
-
-    if (-not [string]::IsNullOrWhiteSpace($userInfo)) {
-        return "$($uri.Scheme)://$userInfo@$hostAndPort"
-    }
-
-    return "$($uri.Scheme)://$hostAndPort"
-}
-
-function Initialize-CurlProxyFromApiDirectory {
-    param([Parameter(Mandatory = $true)][string]$ApiDir)
-
-    $proxyConfigPath = Join-Path $ApiDir "curl-proxy.json"
-    if (-not (Test-Path -LiteralPath $proxyConfigPath -PathType Leaf)) {
-        return
-    }
-
-    $configText = Get-Content -LiteralPath $proxyConfigPath -Raw
-    if ([string]::IsNullOrWhiteSpace($configText)) {
-        throw "curl proxy config is empty: $proxyConfigPath"
-    }
-
-    $config = $configText | ConvertFrom-Json
-
-    $enabledValue = Get-PublishProxyConfigPropertyValue -Object $config -Name "enabled"
-    $enabled = $true
-    if ($null -ne $enabledValue) {
-        $enabled = [System.Convert]::ToBoolean($enabledValue)
-    }
-
-    if (-not $enabled) {
-        Clear-CurlProxyEnvironment
-        Write-Host "curl proxy disabled by API\\curl-proxy.json. Existing proxy environment variables were cleared for this process."
-        return
-    }
-
-    $proxyUrl = New-CurlProxyUrlFromConfig -Config $config
-    $safeUri = [System.Uri]$proxyUrl
-    $safeProxyUrl = "$($safeUri.Scheme)://$($safeUri.GetComponents([System.UriComponents]::HostAndPort, [System.UriFormat]::UriEscaped))"
-
-    foreach ($name in @("HTTPS_PROXY", "HTTP_PROXY", "ALL_PROXY", "https_proxy", "http_proxy", "all_proxy")) {
-        [System.Environment]::SetEnvironmentVariable($name, $proxyUrl, "Process")
-    }
-
-    $noProxy = Get-PublishProxyConfigString -Object $config -Name "no_proxy"
-    if (-not [string]::IsNullOrWhiteSpace($noProxy)) {
-        [System.Environment]::SetEnvironmentVariable("NO_PROXY", $noProxy, "Process")
-        [System.Environment]::SetEnvironmentVariable("no_proxy", $noProxy, "Process")
-    }
-
-    Write-Host "curl proxy enabled: $safeProxyUrl"
-}
-
-Initialize-CurlProxyFromApiDirectory -ApiDir $ApiDir
 $ApiKey = Read-SecretFile -Path (Join-Path $ApiDir $NexusApiKeyFileName)
 
 $ArchivePath = Join-Path $ProjectRoot "package\nexus\$ModName.zip"
@@ -277,15 +272,17 @@ $ManifestPath = Join-Path $ProjectRoot "package\nexus\manifest.json"
 
 Assert-FileExists -Path $ArchivePath
 Assert-FileExists -Path $ManifestPath
-$ArchiveInfo = Get-Item -LiteralPath $ArchivePath
 
+$ArchiveInfo = Get-Item -LiteralPath $ArchivePath
 $Manifest = Get-JsonFile -Path $ManifestPath
 
 $FileName = [string]$Manifest.name
+
 $Description = ""
 if ($null -ne $Manifest.description) {
     $Description = [string]$Manifest.description
 }
+
 $Version = Normalize-PackageVersion -Version ([string]$Manifest.version) -Name "Nexus file version"
 $FileCategory = [string]$Manifest.file_category
 
@@ -310,6 +307,7 @@ $RequestHeaders = @{
 }
 
 $FileGroupId = ""
+
 if (-not [string]::IsNullOrWhiteSpace($FileGroupIdOverride)) {
     $FileGroupId = $FileGroupIdOverride.Trim()
     Write-Warning "Using manual Nexus file update group id override: $FileGroupId"
@@ -332,6 +330,26 @@ if ([string]::IsNullOrWhiteSpace($FileGroupId)) {
     throw "Nexus file update group id is empty."
 }
 
+$CurrentNexusPrimaryVersion = ""
+
+if ($SetUploadedFileAsPrimaryModManagerDownloadWhenNewer) {
+    $CurrentNexusPrimaryVersion = Get-NexusCurrentPrimaryVersion `
+        -BaseUrl $NexusApiBase `
+        -Headers $RequestHeaders `
+        -FileGroupId $FileGroupId
+}
+
+$SetUploadedFileAsPrimaryModManagerDownload = $false
+
+if ($SetUploadedFileAsPrimaryModManagerDownloadWhenNewer) {
+    if ([string]::IsNullOrWhiteSpace($CurrentNexusPrimaryVersion)) {
+        $SetUploadedFileAsPrimaryModManagerDownload = $true
+    }
+    elseif ((Compare-PackageVersion -Left $Version -Right $CurrentNexusPrimaryVersion) -gt 0) {
+        $SetUploadedFileAsPrimaryModManagerDownload = $true
+    }
+}
+
 Write-Host "Nexus upload prepared:"
 Write-Host "  archive:          $ArchivePath"
 Write-Host "  size:             $($ArchiveInfo.Length) bytes"
@@ -344,10 +362,19 @@ Write-Host "  version:          $Version"
 Write-Host "  category:         $FileCategory"
 Write-Host "  description:      $($Description.Length)/$NexusDescriptionMaxLength chars"
 
+if ($SetUploadedFileAsPrimaryModManagerDownloadWhenNewer) {
+    if ([string]::IsNullOrWhiteSpace($CurrentNexusPrimaryVersion)) {
+        Write-Host "  current primary:  <not found>"
+    }
+    else {
+        Write-Host "  current primary:  $CurrentNexusPrimaryVersion"
+    }
+
+    Write-Host "  make primary:     $SetUploadedFileAsPrimaryModManagerDownload"
+}
+
 Confirm-ManualPublish -Yes:$Yes -Prompt "This will upload $($ArchiveInfo.Name) to Nexus Mods as version $Version."
 
-# Nexus v3 single-part upload. For Valheim plugin ZIPs this is normally enough.
-# If a package grows above 100 MiB, switch this script to /uploads/multipart.
 $MaxSinglePartBytes = 100MB
 if ($ArchiveInfo.Length -gt $MaxSinglePartBytes) {
     throw "Archive is larger than 100 MiB. This script intentionally handles only Nexus single-part uploads. Size: $($ArchiveInfo.Length) bytes."
@@ -358,6 +385,7 @@ $CreateUploadBody = @{
     size_bytes = [Int64]$ArchiveInfo.Length
     filename   = $ArchiveInfo.Name
 }
+
 $CreateUpload = Invoke-CurlJson -Method POST -Url "$NexusApiBase/uploads" -Headers $RequestHeaders -Body $CreateUploadBody
 $Upload = $CreateUpload.Json.data
 $UploadId = [string]$Upload.id
@@ -367,19 +395,21 @@ if ([string]::IsNullOrWhiteSpace($UploadId) -or [string]::IsNullOrWhiteSpace($Pr
     throw "Nexus did not return upload id or presigned_url. Response: $($CreateUpload.Body)"
 }
 
-Write-Host "Uploading archive to presigned URL..."
-Invoke-CurlUploadFile -Method PUT -Url $PresignedUrl -FilePath $ArchivePath | Out-Null
+Invoke-NexusPresignedUpload -Url $PresignedUrl -FilePath $ArchivePath | Out-Null
 
 Write-Host "Finalising Nexus upload..."
 Invoke-CurlJson -Method POST -Url "$NexusApiBase/uploads/$UploadId/finalise" -Headers $RequestHeaders | Out-Null
 
 Write-Host "Waiting until Nexus upload becomes available..."
 $UploadState = $null
+
 for ($i = 0; $i -lt 60; $i++) {
     Start-Sleep -Seconds 2
+
     $GetUpload = Invoke-CurlJson -Method GET -Url "$NexusApiBase/uploads/$UploadId" -Headers $RequestHeaders
     $UploadState = [string]$GetUpload.Json.data.state
     Write-Host "  state: $UploadState"
+
     if ($UploadState -eq "available") {
         break
     }
@@ -390,22 +420,28 @@ if ($UploadState -ne "available") {
 }
 
 $CreateVersionBody = [ordered]@{
-    upload_id                  = $UploadId
-    name                       = $FileName
-    description                = $Description
-    version                    = $Version
-    file_category              = $FileCategory
-    allow_mod_manager_download = [bool]$Manifest.allow_mod_manager_download
-    show_requirements_pop_up   = [bool]$Manifest.show_requirements_pop_up
-    archive_existing_file      = [bool]$Manifest.archive_existing_file
-}
-
-if ($Manifest.PSObject.Properties.Name -contains "primary_mod_manager_download") {
-    $CreateVersionBody["primary_mod_manager_download"] = [bool]$Manifest.primary_mod_manager_download
+    upload_id                    = $UploadId
+    name                         = $FileName
+    description                  = $Description
+    version                      = $Version
+    file_category                = $FileCategory
+    primary_mod_manager_download = [bool]$SetUploadedFileAsPrimaryModManagerDownload
+    allow_mod_manager_download   = [bool]$Manifest.allow_mod_manager_download
+    show_requirements_pop_up     = [bool]$Manifest.show_requirements_pop_up
+    archive_existing_file        = [bool]$Manifest.archive_existing_file
 }
 
 Write-Host "Creating Nexus file update group version..."
-$CreateVersion = Invoke-CurlJson -Method POST -Url "$NexusApiBase/mod-file-update-groups/$FileGroupId/versions" -Headers $RequestHeaders -Body $CreateVersionBody
+
+if ($SetUploadedFileAsPrimaryModManagerDownload) {
+    Write-Host "Uploaded file will be marked as primary mod-manager download."
+}
+
+$CreateVersion = Invoke-CurlJson `
+    -Method POST `
+    -Url "$NexusApiBase/mod-file-update-groups/$FileGroupId/versions" `
+    -Headers $RequestHeaders `
+    -Body $CreateVersionBody
 
 Write-Host "Nexus upload completed."
 Write-Host ($CreateVersion.Body)
