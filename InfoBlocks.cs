@@ -170,7 +170,7 @@ namespace MyLittleUI
 
             RectTransform rtForecast = forecastObject.GetComponent<RectTransform>();
             rtForecast.SetAnchor(forecastPositionAnchor.Value);
-            rtForecast.anchoredPosition = Game.m_noMap ? forecastPositionNomap.Value : forecastPosition.Value;
+            rtForecast.anchoredPosition = UseNomapLayout() ? forecastPositionNomap.Value : forecastPosition.Value;
             rtForecast.sizeDelta = forecastSize.Value;
 
             float height = forecastSize.Value.y;
@@ -275,12 +275,12 @@ namespace MyLittleUI
 
         internal static Vector2 GetWindsSize()
         {
-            return (Game.m_noMap ? windsSizeNomap.Value : windsSize.Value);
+            return UseNomapLayout() ? windsSizeNomap.Value : windsSize.Value;
         }
 
         private static Vector2 GetWindsPosition()
         {
-            return Game.m_noMap ? windsPositionNomap.Value : windsPosition.Value;
+            return UseNomapLayout() ? windsPositionNomap.Value : windsPosition.Value;
         }
 
         internal static void UpdateDayTimeBackground()
@@ -343,11 +343,20 @@ namespace MyLittleUI
 
         internal static void UpdateInfoBlocksVisibility()
         {
-            parentObject?.SetActive(modEnabled.Value && Minimap.instance && (Game.m_noMap ? Minimap.instance.m_mode != Minimap.MapMode.Large : Minimap.instance.m_mode == Minimap.MapMode.Small));
+            parentObject?.SetActive(modEnabled.Value && Minimap.instance && (UseNomapLayout() ? Minimap.instance.m_mode != Minimap.MapMode.Large : Minimap.instance.m_mode == Minimap.MapMode.Small));
+        }
+
+        internal static void ApplyMinimapToggle()
+        {
+            if (!Minimap.instance || Game.m_noMap || !disableMinimap.Value || Minimap.instance.m_mode != Minimap.MapMode.Small)
+                return;
+
+            Minimap.instance.SetMapMode(Minimap.MapMode.None);
         }
 
         internal static void UpdateVisibility()
         {
+            ApplyMinimapToggle();
             UpdateInfoBlocksVisibility();
 
             UpdateDayTimeText();
@@ -500,6 +509,14 @@ namespace MyLittleUI
         [HarmonyPatch(typeof(Minimap), nameof(Minimap.SetMapMode))]
         public static class Minimap_SetMapMode_UpdateInfoBlocksVisibility
         {
+            public static void Prefix([HarmonyArgument(0)] ref Minimap.MapMode mode)
+            {
+                if (!modEnabled.Value || Game.m_noMap || !disableMinimap.Value || mode != Minimap.MapMode.Small)
+                    return;
+
+                mode = Minimap.MapMode.None;
+            }
+
             public static void Postfix()
             {
                 if (!modEnabled.Value)

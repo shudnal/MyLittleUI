@@ -21,8 +21,8 @@ namespace MyLittleUI
        
         private static Vector3 GetStatusEffectPosition(int i)
         {
-            float offset = i * (Game.m_noMap ? statusEffectsPositionSpacingNomap.Value + statusEffectsElementSizeNomap.Value : statusEffectsPositionSpacing.Value + statusEffectsElementSize.Value);
-            return (Game.m_noMap ? statusEffectsFillingDirectionNomap.Value : statusEffectsFillingDirection.Value) switch
+            float offset = i * (UseNomapLayout() ? statusEffectsPositionSpacingNomap.Value + statusEffectsElementSizeNomap.Value : statusEffectsPositionSpacing.Value + statusEffectsElementSize.Value);
+            return (UseNomapLayout() ? statusEffectsFillingDirectionNomap.Value : statusEffectsFillingDirection.Value) switch
             {
                 ListDirection.LeftToRight => new Vector3(offset, 0, 0),
                 ListDirection.RightToLeft => new Vector3(-offset, 0, 0),
@@ -55,7 +55,7 @@ namespace MyLittleUI
             m_statusEffectTemplate.gameObject.SetActive(value: false);
             m_statusEffectTemplate.name = templateName;
 
-            int size = Game.m_noMap ? statusEffectsElementSizeNomap.Value : statusEffectsElementSize.Value;
+            int size = UseNomapLayout() ? statusEffectsElementSizeNomap.Value : statusEffectsElementSize.Value;
 
             RectTransform icon = m_statusEffectTemplate.Find("Icon").GetComponent<RectTransform>();
             icon.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, size);
@@ -197,42 +197,42 @@ namespace MyLittleUI
             if (fixStatusEffectAndForecastPosition.Value && instance.Info.Metadata.Version >= new System.Version("1.0.11") && statusEffectsPositionAnchor.Value == new Vector2(-170f, -240f))
                 statusEffectsPositionAnchor.Value = (Vector2)statusEffectsPositionAnchor.DefaultValue;
 
-            return Game.m_noMap ? statusEffectsPositionAnchorNomap.Value : statusEffectsPositionAnchor.Value;
+            return UseNomapLayout() ? statusEffectsPositionAnchorNomap.Value : statusEffectsPositionAnchor.Value;
         }
 
         private static bool GetSailingIndicatorEnabled()
         {
-            return Game.m_noMap ? sailingIndicatorEnabledNomap.Value : sailingIndicatorEnabled.Value;
+            return UseNomapLayout() ? sailingIndicatorEnabledNomap.Value : sailingIndicatorEnabled.Value;
         }
 
         private static Vector2 GetSailingIndicatorWindIndicatorPosition()
         {
-            return Game.m_noMap ? sailingIndicatorWindIndicatorPositionNomap.Value : sailingIndicatorWindIndicatorPosition.Value;
+            return UseNomapLayout() ? sailingIndicatorWindIndicatorPositionNomap.Value : sailingIndicatorWindIndicatorPosition.Value;
         }
 
         private static float GetSailingIndicatorWindIndicatorScale()
         {
-            return Game.m_noMap ? sailingIndicatorWindIndicatorScaleNomap.Value : sailingIndicatorWindIndicatorScale.Value;
+            return UseNomapLayout() ? sailingIndicatorWindIndicatorScaleNomap.Value : sailingIndicatorWindIndicatorScale.Value;
         }
 
         private static Vector2 GetSailingIndicatorPowerIconPosition()
         {
-            return Game.m_noMap ? sailingIndicatorPowerIconPositionNomap.Value : sailingIndicatorPowerIconPosition.Value;
+            return UseNomapLayout() ? sailingIndicatorPowerIconPositionNomap.Value : sailingIndicatorPowerIconPosition.Value;
         }
 
         private static float GetSailingIndicatorPowerIconScale()
         {
-            return Game.m_noMap ? sailingIndicatorPowerIconScaleNomap.Value : sailingIndicatorPowerIconScale.Value;
+            return UseNomapLayout() ? sailingIndicatorPowerIconScaleNomap.Value : sailingIndicatorPowerIconScale.Value;
         }
 
         private static bool GetStatusEffectsPositionEnabled()
         {
-            return Game.m_noMap ? statusEffectsPositionEnabledNomap.Value : statusEffectsPositionEnabled.Value;
+            return UseNomapLayout() ? statusEffectsPositionEnabledNomap.Value : statusEffectsPositionEnabled.Value;
         }
 
         private static bool GetStatusEffectsElementEnabled()
         {
-            return Game.m_noMap ? statusEffectsElementEnabledNomap.Value : statusEffectsElementEnabled.Value;
+            return UseNomapLayout() ? statusEffectsElementEnabledNomap.Value : statusEffectsElementEnabled.Value;
         }
     }
 }
