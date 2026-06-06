@@ -177,6 +177,7 @@ namespace MyLittleUI
         public static ConfigEntry<bool> hoverCookingRemoveLastItem;
         public static ConfigEntry<bool> hoverStumpGrowerEnabled;
         public static ConfigEntry<StationHover> hoverStumpGrower;
+        public static ConfigEntry<bool> hoverHoldToMassRepair;
 
         public static ConfigEntry<StationHover> hoverCharacter;
         public static ConfigEntry<bool> hoverCharacterGrowth;
@@ -649,6 +650,7 @@ namespace MyLittleUI
             hoverCookingRemoveLastItem = config("Hover - Stations", "Cooking station Remove last item", defaultValue: true, "Add an option to remove last uncooked item. [Synced with Server]", synchronizedSetting: true);
             hoverStumpGrowerEnabled = config("Hover - Stations", "Stump Hover Enabled", defaultValue: true, "Enable Hover text for stumps when Advize_StumpsRegrow is installed. [Synced with Server]", synchronizedSetting: true);
             hoverStumpGrower = config("Hover - Stations", "Stump Hover", defaultValue: StationHover.Vanilla, "Hover text for stumps.");
+            hoverHoldToMassRepair = config("Hover - Stations", "Hold to mass repair", defaultValue: true, "Hold interaction button at a crafting station to repair every item and close station.");
 
             hoverTame = config("Hover - Tameable", "Tameable Hover", defaultValue: StationHover.Vanilla, "Format of total needed time/percent to tame or to stay fed.");
             hoverTameTimeToTame = config("Hover - Tameable", "Show time to tame", defaultValue: true, "Show total needed time/percent to tame. [Synced with Server]", synchronizedSetting: true);

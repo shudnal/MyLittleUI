@@ -39,7 +39,7 @@ namespace MyLittleUI
         {
             public static void Postfix(CraftingStation __instance, bool __result)
             {
-                if (__result)
+                if (__result || !MyLittleUI.hoverHoldToMassRepair.Value)
                     return;
 
                 if (InventoryGui.IsVisible())
