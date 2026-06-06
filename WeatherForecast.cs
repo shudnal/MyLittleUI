@@ -324,17 +324,17 @@ namespace MyLittleUI
 
         private static int GetWindsCount()
         {
-            return Game.m_noMap ? windsCountNomap.Value : windsCount.Value;
+            return UseNomapLayout() ? windsCountNomap.Value : windsCount.Value;
         }
 
         private static float GetWindsSpacing()
         {
-            return Game.m_noMap ? windsPositionSpacingNomap.Value : windsPositionSpacing.Value;
+            return UseNomapLayout() ? windsPositionSpacingNomap.Value : windsPositionSpacing.Value;
         }
 
         public static ListDirection GetWindsListDirection()
         {
-            return Game.m_noMap ? windsFillingDirectionNomap.Value : windsFillingDirection.Value;
+            return UseNomapLayout() ? windsFillingDirectionNomap.Value : windsFillingDirection.Value;
         }
 
         internal static bool IsWindListVertical()
