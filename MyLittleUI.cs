@@ -29,7 +29,7 @@ namespace MyLittleUI
     {
         public const string pluginID = "shudnal.MyLittleUI";
         public const string pluginName = "My Little UI";
-        public const string pluginVersion = "1.2.12";
+        public const string pluginVersion = "1.2.13";
 
         private readonly Harmony harmony = new Harmony(pluginID);
 
@@ -395,10 +395,7 @@ namespace MyLittleUI
                 instance.Logger.LogInfo(data);
         }
 
-        internal static bool UseNomapLayout()
-        {
-            return Game.m_noMap || (disableMinimap?.Value ?? false);
-        }
+        internal static bool UseNomapLayout() => Game.m_noMap || (disableMinimap?.Value ?? false);
 
         private void ConfigInit()
         {
@@ -408,11 +405,11 @@ namespace MyLittleUI
             configLocked = config("General", "Lock Configuration", defaultValue: true, "Configuration is locked and can be changed by server admins only. [Synced with Server]", synchronizedSetting: true);
             loggingEnabled = config("General", "Logging enabled", defaultValue: false, "Enable logging.");
             nonlocalizedButtons = config("General", "Nonlocalized button keys", defaultValue: true, "Keyboard keys A-Z will not be localized in the current keyboard layout. If changed while in game then time should pass for some cached localization strings to be cleared.");
-            disableMinimap = config("General", "Disable minimap", defaultValue: false, "Disable the small minimap while keeping the large map available. Does nothing when the world is in no-map mode.");
+            disableMinimap = config("General", "Disable minimap", defaultValue: false, "Disable the small minimap while keeping the large map available. Does nothing when the world is in nomap mode.");
             fixStatusEffectAndForecastPosition = config("General", "Status effects and forecast position fix", defaultValue: true, "If status effect position was not changed prior to 1.0.11 version - fix status effect list position for forecast.");
 
             modEnabled.SettingChanged += (s, e) => { InfoBlocks.UpdateVisibility(); CustomStatusEffectsList.InitializeStatusEffectTemplate(); CustomStatusEffectsList.ChangeSailingIndicator(); ZInput_GetBoundKeyString_NonlocalizedButtons.OnChange(); };
-            disableMinimap.SettingChanged += (s, e) => { InfoBlocks.ApplyMinimapToggle(); InfoBlocks.UpdateVisibility(); CustomStatusEffectsList.UpdateStatusEffectList(); };
+            disableMinimap.SettingChanged += (s, e) => { InfoBlocks.ApplyMinimapToggle(); InfoBlocks.UpdateVisibility(); InfoBlocks.UpdateWindsBlock(forceRebuildList: true); CustomStatusEffectsList.UpdateStatusEffectList(); };
             nonlocalizedButtons.SettingChanged += (s, e) => ZInput_GetBoundKeyString_NonlocalizedButtons.OnChange();
 
             clockShowDay = config("Info - Clock", "Show day", defaultValue: true, "Enable day number [Synced with Server]", synchronizedSetting: true);

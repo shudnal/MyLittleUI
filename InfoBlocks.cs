@@ -47,6 +47,7 @@ namespace MyLittleUI
         public static TMP_Text weatherText;
         public static Image weatherIcon;
 
+        private static bool minimapHiddenByToggle;
         private static string[] fuzzyTime;
 
         private static void AddInfoBlocks(Transform parentTransform)
@@ -348,15 +349,30 @@ namespace MyLittleUI
 
         internal static void ApplyMinimapToggle()
         {
-            if (!Minimap.instance || Game.m_noMap || !disableMinimap.Value || Minimap.instance.m_mode != Minimap.MapMode.Small)
+            if (!Minimap.instance || Game.m_noMap)
                 return;
 
-            Minimap.instance.SetMapMode(Minimap.MapMode.None);
+            if (modEnabled.Value && disableMinimap.Value)
+            {
+                if (Minimap.instance.m_mode == Minimap.MapMode.Small)
+                {
+                    minimapHiddenByToggle = true;
+                    Minimap.instance.SetMapMode(Minimap.MapMode.None);
+                }
+
+                return;
+            }
+
+            if (minimapHiddenByToggle && Minimap.instance.m_mode == Minimap.MapMode.None)
+                Minimap.instance.SetMapMode(Minimap.MapMode.Small);
+
+            minimapHiddenByToggle = false;
         }
 
         internal static void UpdateVisibility()
         {
             ApplyMinimapToggle();
+
             UpdateInfoBlocksVisibility();
 
             UpdateDayTimeText();
@@ -509,11 +525,12 @@ namespace MyLittleUI
         [HarmonyPatch(typeof(Minimap), nameof(Minimap.SetMapMode))]
         public static class Minimap_SetMapMode_UpdateInfoBlocksVisibility
         {
-            public static void Prefix([HarmonyArgument(0)] ref Minimap.MapMode mode)
+            public static void Prefix(ref Minimap.MapMode mode)
             {
                 if (!modEnabled.Value || Game.m_noMap || !disableMinimap.Value || mode != Minimap.MapMode.Small)
                     return;
 
+                minimapHiddenByToggle = true;
                 mode = Minimap.MapMode.None;
             }
 
