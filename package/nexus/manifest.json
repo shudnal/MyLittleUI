@@ -1,7 +1,7 @@
 {
     "name":  "MyLittleUI",
-    "description":  "new config to disable minimap, new config to disable mass repair",
-    "version":  "1.2.13",
+    "description":  "fixed disable minimap config preventing opening regular map",
+    "version":  "1.2.14",
     "file_category":  "main",
     "allow_mod_manager_download":  true,
     "show_requirements_pop_up":  false,

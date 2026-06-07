@@ -39,7 +39,7 @@ namespace MyLittleUI
         public static GameObject forecastObject;
         public static GameObject windsObject;
         public static GameObject windTemplate;
-        
+
         private static GameObject windsProgress;
         public static RectTransform windsProgressRect;
         public static RectTransform windsObjectRect;
@@ -117,7 +117,7 @@ namespace MyLittleUI
 
             weatherIcon = UnityEngine.Object.Instantiate(Minimap.instance.m_windMarker.gameObject, forecastObject.transform).GetComponent<Image>();
             weatherIcon.gameObject.name = objectForecastWeatherIcon;
-            
+
             // Winds
             windsObject = new GameObject(objectWindsName, typeof(RectTransform))
             {
@@ -294,7 +294,7 @@ namespace MyLittleUI
 
             if (clockBackground == null)
                 clockBackground = clockObject.AddComponent<Image>();
-            
+
             clockBackground.enabled = minimapBackground != null && clockShowBackground.Value;
 
             if (!clockBackground.enabled)
@@ -352,21 +352,22 @@ namespace MyLittleUI
             if (!Minimap.instance || Game.m_noMap)
                 return;
 
-            if (modEnabled.Value && disableMinimap.Value)
-            {
-                if (Minimap.instance.m_mode == Minimap.MapMode.Small)
-                {
-                    minimapHiddenByToggle = true;
-                    Minimap.instance.SetMapMode(Minimap.MapMode.None);
-                }
+            bool shouldHideSmallMinimap = modEnabled.Value && disableMinimap.Value && Minimap.instance.m_mode == Minimap.MapMode.Small;
 
+            if (shouldHideSmallMinimap)
+            {
+                minimapHiddenByToggle = true;
+                Minimap.instance.m_smallRoot?.SetActive(false);
                 return;
             }
 
-            if (minimapHiddenByToggle && Minimap.instance.m_mode == Minimap.MapMode.None)
-                Minimap.instance.SetMapMode(Minimap.MapMode.Small);
+            if (!minimapHiddenByToggle)
+                return;
 
             minimapHiddenByToggle = false;
+
+            if (Minimap.instance.m_mode == Minimap.MapMode.Small)
+                Minimap.instance.m_smallRoot?.SetActive(true);
         }
 
         internal static void UpdateVisibility()
@@ -488,7 +489,7 @@ namespace MyLittleUI
                 WeatherForecast.windList.Clear();
                 WeatherForecast.winds.Clear();
                 WeatherForecast.windsTransition.Clear();
-                
+
                 parentObject = null;
 
                 clockObject = null;
@@ -525,20 +526,12 @@ namespace MyLittleUI
         [HarmonyPatch(typeof(Minimap), nameof(Minimap.SetMapMode))]
         public static class Minimap_SetMapMode_UpdateInfoBlocksVisibility
         {
-            public static void Prefix(ref Minimap.MapMode mode)
-            {
-                if (!modEnabled.Value || Game.m_noMap || !disableMinimap.Value || mode != Minimap.MapMode.Small)
-                    return;
-
-                minimapHiddenByToggle = true;
-                mode = Minimap.MapMode.None;
-            }
-
             public static void Postfix()
             {
                 if (!modEnabled.Value)
                     return;
 
+                ApplyMinimapToggle();
                 UpdateInfoBlocksVisibility();
             }
         }

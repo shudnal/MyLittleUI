@@ -1,3 +1,6 @@
+# 1.2.14
+* fixed disable minimap config preventing opening regular map
+
 # 1.2.13
 * new config to disable minimap in normal mode and adapt minimap blocks for nomap layout
 * new config to disable mass repair
