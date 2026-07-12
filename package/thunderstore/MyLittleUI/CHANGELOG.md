@@ -1,3 +1,7 @@
+# 1.2.15
+* little code improvements
+* migrated to ConditionalConfigSync; server administrators can override the ownership policy of policy-controlled settings, making them server- or client-controlled
+
 # 1.2.14
 * fixed disable minimap config preventing opening regular map
 

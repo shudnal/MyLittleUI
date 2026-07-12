@@ -2,7 +2,7 @@
 using BepInEx.Bootstrap;
 using BepInEx.Configuration;
 using HarmonyLib;
-using ServerSync;
+using ConditionalConfigSync;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -24,16 +24,17 @@ namespace MyLittleUI
     [BepInDependency("Azumatt.AzuAntiArthriticCrafting", BepInDependency.DependencyFlags.SoftDependency)]
     [BepInDependency("org.bepinex.plugins.jewelcrafting", BepInDependency.DependencyFlags.SoftDependency)]
     [BepInDependency(Advize_StumpsRegrow_Compat.GUID, BepInDependency.DependencyFlags.SoftDependency)]
+    [BepInDependency("_shudnal.ConditionalConfigSync", BepInDependency.DependencyFlags.HardDependency)]
     [BepInIncompatibility("randyknapp.mods.auga")]
     public class MyLittleUI : BaseUnityPlugin
     {
         public const string pluginID = "shudnal.MyLittleUI";
         public const string pluginName = "My Little UI";
-        public const string pluginVersion = "1.2.14";
+        public const string pluginVersion = "1.2.15";
 
         private readonly Harmony harmony = new Harmony(pluginID);
 
-        internal static readonly ConfigSync configSync = new ConfigSync(pluginID) { DisplayName = pluginName, CurrentVersion = pluginVersion, MinimumRequiredVersion = pluginVersion };
+        internal static readonly ConfigSync configSync = new ConfigSync(pluginID) { DisplayName = pluginName, CurrentVersion = pluginVersion, MinimumRequiredVersion = pluginVersion, ModRequired = false };
         
         public static MyLittleUI instance;
 
@@ -399,10 +400,8 @@ namespace MyLittleUI
 
         private void ConfigInit()
         {
-            Config.Bind("General", "NexusID", 2562, "Nexus mod ID for updates");
-
-            modEnabled = config("General", "Enabled", defaultValue: true, "Enable the mod. [Synced with Server]", synchronizedSetting: true);
-            configLocked = config("General", "Lock Configuration", defaultValue: true, "Configuration is locked and can be changed by server admins only. [Synced with Server]", synchronizedSetting: true);
+            modEnabled = serverConfig("General", "Enabled", defaultValue: true, "Enable the mod. [Synced with Server]");
+            configLocked = serverConfig("General", "Lock Configuration", defaultValue: true, "Configuration is locked and can be changed by server admins only. [Synced with Server]");
             loggingEnabled = config("General", "Logging enabled", defaultValue: false, "Enable logging.");
             nonlocalizedButtons = config("General", "Nonlocalized button keys", defaultValue: true, "Keyboard keys A-Z will not be localized in the current keyboard layout. If changed while in game then time should pass for some cached localization strings to be cleared.");
             disableMinimap = config("General", "Disable minimap", defaultValue: false, "Disable the small minimap while keeping the large map available. Does nothing when the world is in nomap mode.");
@@ -785,17 +784,21 @@ namespace MyLittleUI
             inworldDarkenIntensity = config("Chat - Inworld text", "Darker backking intensity", defaultValue: 0.8f, "Transparency of darken element.");
         }
 
+#pragma warning disable IDE1006 // Naming Styles
         ConfigEntry<T> config<T>(string group, string name, T defaultValue, ConfigDescription description, bool synchronizedSetting = false)
         {
-            ConfigEntry<T> configEntry = Config.Bind(group, name, defaultValue, description);
+            return configSync.AddConfigEntry(Config, group, name, defaultValue, description, syncMode: ConfigSyncMode.Conditional, synchronizedSetting).SourceConfig;
+        }
 
-            SyncedConfigEntry<T> syncedConfigEntry = configSync.AddConfigEntry(configEntry);
-            syncedConfigEntry.SynchronizedConfig = synchronizedSetting;
-
-            return configEntry;
+        ConfigEntry<T> serverConfig<T>(string group, string name, T defaultValue, ConfigDescription description)
+        {
+            return configSync.AddConfigEntry(Config, group, name, defaultValue, description, syncMode: ConfigSyncMode.AlwaysServerControlled, serverControlledByDefault: true).SourceConfig;
         }
 
         ConfigEntry<T> config<T>(string group, string name, T defaultValue, string description, bool synchronizedSetting = false) => config(group, name, defaultValue, new ConfigDescription(description), synchronizedSetting);
+
+        ConfigEntry<T> serverConfig<T>(string group, string name, T defaultValue, string description) => serverConfig(group, name, defaultValue, new ConfigDescription(description));
+#pragma warning restore IDE1006 // Naming Styles
 
         private void LoadIcons()
         {

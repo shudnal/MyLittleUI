@@ -370,7 +370,7 @@ namespace MyLittleUI
                 name = "armor_helmet",
                 category = "Armor",
                 tooltip = "$radial_armor_utility",
-                icon = ObjectDB.instance.GetItemPrefab("HelmetBronze").GetComponent<ItemDrop>().m_itemData.GetIcon(),
+                icon = GetItemIcon("HelmetBronze"),
 
                 sort = ByArmor,
                 filter = item => item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Helmet || item.m_shared.m_attachOverride == ItemDrop.ItemData.ItemType.Helmet,
@@ -382,7 +382,7 @@ namespace MyLittleUI
                 name = "armor_chest",
                 category = "Armor",
                 tooltip = "$radial_armor_utility",
-                icon = ObjectDB.instance.GetItemPrefab("ArmorIronChest").GetComponent<ItemDrop>().m_itemData.GetIcon(),
+                icon = GetItemIcon("ArmorIronChest"),
 
                 sort = ByArmor,
                 filter = item => item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Chest || item.m_shared.m_attachOverride == ItemDrop.ItemData.ItemType.Chest,
@@ -394,7 +394,7 @@ namespace MyLittleUI
                 name = "armor_legs",
                 category = "Armor",
                 tooltip = "$radial_armor_utility",
-                icon = ObjectDB.instance.GetItemPrefab("ArmorIronLegs").GetComponent<ItemDrop>().m_itemData.GetIcon(),
+                icon = GetItemIcon("ArmorIronLegs"),
 
                 sort = ByArmor,
                 filter = item => item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Legs || item.m_shared.m_attachOverride == ItemDrop.ItemData.ItemType.Legs,
@@ -406,7 +406,7 @@ namespace MyLittleUI
                 name = "armor_cape",
                 category = "Armor",
                 tooltip = "$radial_armor_utility",
-                icon = ObjectDB.instance.GetItemPrefab("CapeDeerHide").GetComponent<ItemDrop>().m_itemData.GetIcon(),
+                icon = GetItemIcon("CapeDeerHide"),
 
                 sort = SortCape,
                 filter = item => item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Shoulder || item.m_shared.m_attachOverride == ItemDrop.ItemData.ItemType.Shoulder,
@@ -418,7 +418,7 @@ namespace MyLittleUI
                 name = "armor_utility",
                 category = "Armor",
                 tooltip = "$radial_armor_utility",
-                icon = ObjectDB.instance.GetItemPrefab("Demister").GetComponent<ItemDrop>().m_itemData.GetIcon(),
+                icon = GetItemIcon("Demister"),
 
                 sort = ByArmor,
                 filter = item => item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Utility || item.m_shared.m_attachOverride == ItemDrop.ItemData.ItemType.Utility,
@@ -430,7 +430,7 @@ namespace MyLittleUI
                 name = "armor_trinket",
                 category = "Armor",
                 tooltip = "$radial_armor_utility",
-                icon = ObjectDB.instance.GetItemPrefab("TrinketBronzeHealth").GetComponent<ItemDrop>().m_itemData.GetIcon(),
+                icon = GetItemIcon("TrinketBronzeHealth"),
 
                 sort = ByAdrenaline,
                 filter = item => item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Trinket || item.m_shared.m_attachOverride == ItemDrop.ItemData.ItemType.Trinket,
@@ -502,7 +502,7 @@ namespace MyLittleUI
                 name = "ammo_arrows",
                 category = "Bows",
                 tooltip = "$ammo_arrows",
-                icon = ObjectDB.instance.GetItemPrefab("ArrowIron").GetComponent<ItemDrop>().m_itemData.GetIcon(),
+                icon = GetItemIcon("ArrowIron"),
 
                 sort = ByTotalDamage,
                 filter = item => item.m_shared.m_attack.m_attackAnimation == "" && item.m_shared.m_ammoType == "$ammo_arrows" && item.m_shared.m_damages.GetTotalDamage() > 0,
@@ -531,7 +531,7 @@ namespace MyLittleUI
                 name = "ammo_arrows",
                 category = "Crossbows",
                 tooltip = "$ammo_bolts",
-                icon = ObjectDB.instance.GetItemPrefab("BoltIron").GetComponent<ItemDrop>().m_itemData.GetIcon(),
+                icon = GetItemIcon("BoltIron"),
 
                 sort = ByTotalDamage,
                 filter = item => item.m_shared.m_attack.m_attackAnimation == "" && item.m_shared.m_ammoType == "$ammo_bolts" && item.m_shared.m_damages.GetTotalDamage() > 0,
@@ -589,7 +589,7 @@ namespace MyLittleUI
                 name = "tools_consumables",
                 category = "Tools",
                 tooltip = "$radial_consumables",
-                icon = ObjectDB.instance.GetItemPrefab("MeadBaseTasty").GetComponent<ItemDrop>().m_itemData.GetIcon(),
+                icon = GetItemIcon("MeadBaseTasty"),
 
                 sort = ByDefault,
                 filter = item => item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Consumable && item.m_shared.m_consumeStatusEffect != null || item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Material && item.m_shared.m_consumeStatusEffect != null,
@@ -601,7 +601,7 @@ namespace MyLittleUI
                 name = "tools_material",
                 category = "Tools",
                 tooltip = "$skill_crafting",
-                icon = ObjectDB.instance.GetItemPrefab("Bronze").GetComponent<ItemDrop>().m_itemData.GetIcon(),
+                icon = GetItemIcon("Bronze"),
 
                 sort = ByDefault,
                 filter = item => (item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Material && item.m_shared.m_appendToolTip == null && item.m_shared.m_consumeStatusEffect == null && !item.m_shared.m_name.StartsWith("$jc_")) || item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.AmmoNonEquipable,
@@ -613,7 +613,7 @@ namespace MyLittleUI
                 name = "skill_fishing",
                 category = "Tools",
                 tooltip = "$skill_fishing",
-                icon = ObjectDB.instance.GetItemPrefab("FishingRod").GetComponent<ItemDrop>().m_itemData.GetIcon(),
+                icon = GetItemIcon("FishingRod"),
 
                 sort = ByDefault,
                 filter = item => item.m_shared.m_skillType == SkillType.Fishing || item.m_shared.m_name == "$item_helmet_fishinghat" || item.m_shared.m_ammoType == "$item_fishingbait",
@@ -625,7 +625,7 @@ namespace MyLittleUI
                 name = "tools_misc",
                 category = "Tools",
                 tooltip = "$hud_misc",
-                icon = ObjectDB.instance.GetItemPrefab("BoneFragments").GetComponent<ItemDrop>().m_itemData.GetIcon(),
+                icon = GetItemIcon("BoneFragments"),
 
                 sort = ByDefault,
                 filter = item => tempUnfitItems.Contains(item.m_shared.m_name) || (item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Misc || item.m_shared.m_attachOverride == ItemDrop.ItemData.ItemType.Misc || (int)item.m_shared.m_itemType > 25) && !item.m_shared.m_name.StartsWith("$jc_"),
@@ -638,7 +638,7 @@ namespace MyLittleUI
                     name = "tools_jewelcrafting",
                     category = "Tools",
                     tooltip = "$jc_jewelcrafting_skill_name",
-                    icon = GetJewelcraftingIcon() ?? ObjectDB.instance.GetItemPrefab("GemstoneRed")?.GetComponent<ItemDrop>()?.m_itemData?.GetIcon(),
+                    icon = GetJewelcraftingIcon() ?? GetItemIcon("GemstoneRed"),
 
                     sort = ByName,
                     filter = item => item.m_shared.m_itemType != ItemDrop.ItemData.ItemType.Utility && item.m_shared.m_name.StartsWith("$jc_"),
@@ -803,6 +803,8 @@ namespace MyLittleUI
                     rectTransform.anchoredPosition = new Vector2(0f, i * (0f - InventoryGui.instance.m_recipeListSpace));
         }
 
+        private static Sprite GetItemIcon(string prefabName) => ObjectDB.instance?.GetItemPrefab(prefabName)?.GetComponent<ItemDrop>()?.m_itemData?.GetIcon();
+        
         internal static void ClearPanels() => panels.Do(panel => panel.ClearPanel());
 
         public static void CheckPanels()

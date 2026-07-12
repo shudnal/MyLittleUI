@@ -2,10 +2,12 @@
 ![logo](https://staticdelivery.nexusmods.com/mods/3667/images/headers/2562_1711322538.jpg)
 Bunch of little UI tweaks. Tooltips for production timers, player status, items. Custom chest names, buff list, multicraft, weather forecast, crafting sorting, filtering and so on.
 
-## Server sync
-* Config values marked with [Synced with Server] tail in tooltip will be synchronized from the server to all clients.
-* Most of that synced values are responsible for enabling/disabling whole section while the format of information is left to be chosen by client.
-* Please use modpack shared configs or share your config manually if you want the rest of the config similar.
+## Conditional Config Sync
+* Config values marked with [Synced with Server] are synchronized from the server by default. Most of them control whether an entire feature or section is enabled, while its visual presentation and formatting remain configurable by each client
+* Server administrators can change the synchronization policy for policy-controlled settings in BepInEx/config/shudnal.ConditionalConfigSync/ConditionalConfigSync.SyncPolicy.cfg
+* Prefix an exact setting or whole-section identifier with + to force server control or - to make it client-controlled. Exact-setting rules take precedence over whole-section rules
+* Use shared modpack configs or distribute your config manually if you also want client-controlled appearance and formatting settings to be identical for all players initially
+* If you install this mod manually do not forget to install [ConditionalConfigSync](https://thunderstore.io/c/valheim/p/shudnal/ConditionalConfigSync/)
 
 ## Items
 * Amount of required resources from your inventory when crafting

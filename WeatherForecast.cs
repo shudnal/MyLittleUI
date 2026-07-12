@@ -47,7 +47,7 @@ namespace MyLittleUI
 
         public static void UpdateWeather()
         {
-            InfoBlocks.forecastObject.SetActive(nextWeatherChange > 0);
+            InfoBlocks.forecastObject.SetActive(forecastEnabled.Value && nextWeatherChange > 0);
 
             UpdateWeatherIcon();
             InfoBlocks.UpdateForecastBackground();
@@ -88,6 +88,9 @@ namespace MyLittleUI
                     windsTransitionTimer += time;
                 }
             }
+
+            if (!InfoBlocks.windsProgressRect || !InfoBlocks.windsObjectRect)
+                return;
 
             float percent = Mathf.Clamp01((float)(nextWindChange - EnvMan.instance.m_totalSeconds) / GetWindPeriodDuration()) - 1f;
             InfoBlocks.windsProgressRect.offsetMax = Vector2.zero;

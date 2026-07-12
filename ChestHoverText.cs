@@ -265,8 +265,11 @@ namespace MyLittleUI
         [HarmonyPatch(typeof(Container), nameof(Container.Interact))]
         private class Container_Interact_ChestRename
         {
-            private static bool Prefix(Container __instance, Humanoid character, bool hold, bool alt, bool ___m_checkGuardStone)
+            private static bool Prefix(Container __instance, Humanoid character, bool hold, bool alt, bool ___m_checkGuardStone, bool __runOriginal)
             {
+                if (!__runOriginal)
+                    return false;
+
                 if (!modEnabled.Value)
                     return true;
 

@@ -57,6 +57,8 @@ namespace MyLittleUI.Crafting
 
         public static void FillRequiredItems()
         {
+            requiredItems.Clear();
+
             if (ObjectDB.instance)
             {
                 foreach (var item in ObjectDB.instance.m_items)

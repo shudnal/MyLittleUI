@@ -199,7 +199,7 @@ namespace MyLittleUI
         {
             public static void Postfix(ref bool __result)
             {
-                __result = __result || IsCraftingFilterEnabled && playerFilter.isFocused;
+                __result = __result || IsCraftingFilterEnabled && playerFilter && playerFilter.isFocused;
             }
         }
 

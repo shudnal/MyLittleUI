@@ -125,6 +125,9 @@ namespace MyLittleUI
 
         public static void UpdateVisibility()
         {
+            if (!ammoCount || !ammoIcon || !ammoBait || !ammoMead || !elementPrefab)
+                return;
+            
             RectTransform rtAmmo = ammoCount.GetComponent<RectTransform>();
             rtAmmo.anchoredPosition = ammoCountPosition.Value;
 
@@ -312,7 +315,7 @@ namespace MyLittleUI
                     if (extraData == null)
                         continue;
 
-                    if (!elementData.m_used || itemIndex > __instance.m_items.Count)
+                    if (!elementData.m_used || itemIndex >= __instance.m_items.Count)
                         extraData.m_item = null;
                     else
                     {

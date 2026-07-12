@@ -1,7 +1,7 @@
 {
     "name":  "MyLittleUI",
     "description":  "fixed disable minimap config preventing opening regular map",
-    "version":  "1.2.14",
+    "version":  "1.2.15",
     "file_category":  "main",
     "allow_mod_manager_download":  true,
     "show_requirements_pop_up":  false,

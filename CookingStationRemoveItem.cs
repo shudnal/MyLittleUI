@@ -89,10 +89,16 @@ namespace MyLittleUI
         [HarmonyPatch(typeof(CookingStation), nameof(CookingStation.Interact))]
         public static class CookingStation_Interact_RemoveLastItem
         {
-            public static bool Prefix(CookingStation __instance, Humanoid user, bool hold, bool alt)
+            public static bool Prefix(CookingStation __instance, Humanoid user, bool hold, bool alt, bool __runOriginal)
             {
-                if (hold || __instance.m_addFoodSwitch != null || !alt)
+                if (!__runOriginal)
+                    return false;
+
+                if (!MyLittleUI.modEnabled.Value || hold || __instance.m_addFoodSwitch != null || !alt)
                     return true;
+
+                if (!__runOriginal)
+                    return false;
 
                 RemoveLastItemFromStation(__instance, user);
                 return false;
@@ -102,8 +108,11 @@ namespace MyLittleUI
         [HarmonyPatch(typeof(Switch), nameof(Switch.Interact))]
         public static class Switch_Interact_RemoveLastItem
         {
-            public static bool Prefix(Switch __instance, Humanoid character, bool hold, bool alt)
+            public static bool Prefix(Switch __instance, Humanoid character, bool hold, bool alt, bool __runOriginal)
             {
+                if (!__runOriginal)
+                    return false;
+
                 if (hold || !alt || !MyLittleUI.hoverCookingRemoveLastItem.Value)
                     return true;
 

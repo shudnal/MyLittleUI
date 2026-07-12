@@ -341,7 +341,7 @@ namespace MyLittleUI
             if (!InventoryGui.instance || InventoryGui.instance.m_recipeDecription == null)
                 return;
 
-            InventoryGui.instance.m_recipeDecription.fontSizeMin = Math.Min(itemTooltipRecipeFontSize.Value, InventoryGui.instance.m_recipeDecription.fontSizeMin);
+            InventoryGui.instance.m_recipeDecription.fontSizeMin = Math.Clamp(itemTooltipRecipeFontSize.Value, 1, InventoryGui.instance.m_recipeDecription.fontSizeMax);
         }
 
         [HarmonyPatch(typeof(InventoryGui), nameof(InventoryGui.Awake))]
