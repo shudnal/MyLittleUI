@@ -13,13 +13,14 @@ jobs:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           ref: ${{ github.sha }}
+          fetch-depth: 2
       - name: Apply exact source replacements without building or running the mod
         shell: python
         run: |
           from pathlib import Path
           import subprocess
 
-          expected_parent = 'ff9037a2fa674893b328d67eaf9bc721c2f8c608'
+          expected_parent = '71e57d8dcc7ab6980784471db6752178caf5a879'
           parent = subprocess.check_output(['git', 'rev-parse', 'HEAD^'], text=True).strip()
           if parent != expected_parent:
               raise RuntimeError('The branch changed before the guarded source migration.')
@@ -51,6 +52,7 @@ jobs:
           replace('WeatherForecast.cs', 'Heightmap.Biome biome', 'BiomeSector biome', 2)
 
           replace('CookingStationRemoveItem.cs', 'station.GetSlot(i, out itemName, out _, out _);', 'station.GetSlot(i, out itemName, out _, out _, out _);')
+          replace('CookingStationRemoveItem.cs', 'station.SpawnItem(itemName, slot, userPoint);', 'station.GetSlot(slot, out _, out _, out _, out bool cheated);\n            station.SpawnItem(itemName, slot, userPoint, cheated);')
           replace('CookingStationRemoveItem.cs', 'station.SetSlot(slot, "", 0f, CookingStation.Status.NotDone);', 'station.SetSlot(slot, "", 0f, CookingStation.Status.NotDone, cheated: false);')
 
           subprocess.run(['git', 'diff', '--check'], check=True)
