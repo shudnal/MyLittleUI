@@ -12,6 +12,11 @@ namespace MyLittleUI
             hovered = false;
         }
 
+        private void OnDisable()
+        {
+            hovered = false;
+        }
+
         public void OnPointerEnter(PointerEventData eventData)
         {
             hovered = true;

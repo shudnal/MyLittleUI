@@ -603,7 +603,11 @@ namespace MyLittleUI
             itemQualityIgnoreCustomEquipmentSlots = config("Item - Quality", "Ignore equipment slots", defaultValue: false, "Ignore custom equipment slots added by AzuEPI or EaQS. Quick slot items will remain.");
             itemQualityIgnoreCustomSlots = config("Item - Quality", "Ignore any custom slot", defaultValue: false, "Ignore every custom slot outside of shown inventory rows.");
             
-            itemQualitySymbol.SettingChanged += (sender, args) => { if (!string.IsNullOrEmpty(itemQualitySymbol.Value) && itemQualitySymbol.Value.Length > 1) itemQualitySymbol.Value = itemQualitySymbol.Value[0].ToString(); };
+            itemQualitySymbol.SettingChanged += (sender, args) =>
+            {
+                if (!string.IsNullOrEmpty(itemQualitySymbol.Value) && itemQualitySymbol.Value.Length > 1)
+                    itemQualitySymbol.Value = itemQualitySymbol.Value[0].ToString();
+            };
 
             itemQualitySymbol.SettingChanged += (sender, args) => ItemIcon.FillItemQualityCache();
             itemQualityMax.SettingChanged += (sender, args) => ItemIcon.FillItemQualityCache();

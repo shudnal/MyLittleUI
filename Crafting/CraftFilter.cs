@@ -86,8 +86,10 @@ namespace MyLittleUI
             {
                 gamepad.m_zinputKey = "";
                 gamepad.m_keyCode = KeyCode.None;
-                if (gamepad.m_hint)
+                gamepad.enabled = false;
+                if (gamepad.m_hint && gamepad.m_hint.transform.IsChildOf(clearButton.transform))
                     gamepad.m_hint.SetActive(false);
+                gamepad.m_hint = null;
             }
 
             playerFilter.onValueChanged.AddListener(delegate

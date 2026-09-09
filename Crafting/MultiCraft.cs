@@ -36,6 +36,7 @@ namespace MyLittleUI
         private static TMP_Text textCrafting;
         private static int amount = 1;
         private static bool showPanel;
+        private static bool progressTextChanged;
 
         private static InventoryGui queueGui;
         private static Player queuePlayer;
@@ -348,13 +349,25 @@ namespace MyLittleUI
                 if (queueGui && !QueueContextMatches())
                     StopQueue();
                 UpdateMulticraftPanel();
-                if (!IsMulticraftEnabled)
+                if (textCrafting)
+                {
+                    if (IsMulticraftEnabled && queueGui == __instance && amount > 1)
+                    {
+                        textCrafting.SetText(Localization.instance.Localize($"$inventory_craftingprog ({amount})"));
+                        progressTextChanged = true;
+                    }
+                    else if (progressTextChanged)
+                    {
+                        textCrafting.SetText(Localization.instance.Localize("$inventory_craftingprog"));
+                        progressTextChanged = false;
+                    }
+                }
+                if (!IsMulticraftEnabled || !showPanel)
+                {
+                    if (queueNextCraft && !isCrafting)
+                        StopQueue();
                     return;
-
-                if (textCrafting && queueGui == __instance && amount > 1)
-                    textCrafting.SetText(Localization.instance.Localize($"$inventory_craftingprog ({amount})"));
-                if (!showPanel)
-                    return;
+                }
 
                 int maximum = GetMaximumCached(__instance.m_selectedRecipe.Recipe, Player.m_localPlayer);
                 amount = Mathf.Clamp(amount, 1, Math.Max(1, maximum));
@@ -387,8 +400,13 @@ namespace MyLittleUI
         }
 
         [HarmonyPatch(typeof(InventoryGui), nameof(InventoryGui.OnCraftCancelPressed))]
-        [HarmonyPatch(typeof(InventoryGui), nameof(InventoryGui.Hide))]
         private static class InventoryGui_Cancel_StopQueue
+        {
+            private static void Prefix() => StopQueue();
+        }
+
+        [HarmonyPatch(typeof(InventoryGui), nameof(InventoryGui.Hide))]
+        private static class InventoryGui_Hide_StopQueue
         {
             private static void Prefix() => StopQueue();
         }
@@ -449,6 +467,7 @@ namespace MyLittleUI
                 cachedStation = null;
                 cacheUntil = 0f;
                 showPanel = false;
+                progressTextChanged = false;
                 AmountScrollHandler.hovered = false;
                 InventoryGui_UpdateRecipe_MulticraftShowButtons.isCrafting = false;
                 if (tempRecipe)
