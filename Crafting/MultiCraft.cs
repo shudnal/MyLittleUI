@@ -2,11 +2,9 @@
 using HarmonyLib;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Text;
-using System.Text.RegularExpressions;
 using TMPro;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 using static MyLittleUI.MyLittleUI;
 
@@ -18,76 +16,119 @@ namespace MyLittleUI
         public const string buttonIncreaseName = "Increase";
         public const string buttonDecreaseName = "Decrease";
         public const string textAmountName = "Amount";
+        private const int maximumAmount = 99;
 
-        private static readonly Recipe tempRecipe = ScriptableObject.CreateInstance<Recipe>();
-        private static readonly StringBuilder sb = new StringBuilder(10);
-        private static readonly Dictionary<Recipe, Tuple<string, int>> cachedAmount = new Dictionary<Recipe, Tuple<string, int>>();
-        private static readonly List<TMP_Text> resAmountElements = new List<TMP_Text>();
+        private static Recipe tempRecipe;
+        private static Recipe tempRecipeSource;
+        private static Recipe cachedRecipe;
+        private static Player cachedPlayer;
+        private static CraftingStation cachedStation;
+        private static bool cachedNoCost;
+        private static int cachedMaximum;
+        private static float cacheUntil;
 
         private static RectTransform panel;
         private static RectTransform craftButton;
+        private static Vector2 craftButtonAnchorMax;
         private static Button buttonIncrease;
         private static Button buttonDecrease;
         private static TMP_Text textAmount;
         private static TMP_Text textCrafting;
-
         private static int amount = 1;
         private static bool showPanel;
 
+        private static InventoryGui queueGui;
+        private static Player queuePlayer;
+        private static Recipe queueRecipe;
+        private static CraftingStation queueStation;
+        private static int queueVariant;
+        private static bool queueNextCraft;
+        private static CraftAttempt activeAttempt;
+
+        private sealed class CraftAttempt
+        {
+            public CraftAttempt Previous;
+            public InventoryGui Gui;
+            public Player Player;
+            public Recipe Recipe;
+            public bool Owned;
+            public bool ProducedItem;
+        }
+
         public static int lastScrollTriggerFrame;
         public const int minScrollDeltaFrames = 2;
-
         public static bool IsMulticraftEnabled => modEnabled.Value && showMulticraftButtons.Value && !AAA_Crafting;
+
+        private static bool IsCrafting(InventoryGui gui) => gui && gui.m_craftTimer >= 0f;
+        private static bool NativeBatchRequested(InventoryGui gui) => gui &&
+            (ZInput.GetButton("AltPlace") || ZInput.GetButton("JoyLStick") || gui.m_touchMultiCrafting);
+
+        private static bool CanQueue(InventoryGui gui)
+        {
+            return IsMulticraftEnabled && gui && gui == InventoryGui.instance && Player.m_localPlayer
+                && !Player.m_localPlayer.IsDead() && InventoryGui.IsVisible() && gui.InCraftTab()
+                && gui.m_selectedRecipe.Recipe && gui.m_selectedRecipe.ItemData == null
+                && !NativeBatchRequested(gui) && !(IsCrafting(gui) && gui.m_multiCrafting);
+        }
+
+        private static bool QueueContextMatches()
+        {
+            return queueGui && queuePlayer && queuePlayer == Player.m_localPlayer && CanQueue(queueGui)
+                && queueGui.m_selectedRecipe.Recipe == queueRecipe
+                && queuePlayer.GetCurrentCraftingStation() == queueStation
+                && queueGui.m_selectedVariant == queueVariant
+                && (!IsCrafting(queueGui) || (queueGui.m_craftRecipe == queueRecipe
+                    && queueGui.m_craftUpgradeItem == null && queueGui.m_craftVariant == queueVariant));
+        }
+
+        private static void StopQueue(bool resetAmount = true)
+        {
+            queueGui = null;
+            queuePlayer = null;
+            queueRecipe = null;
+            queueStation = null;
+            queueNextCraft = false;
+            amount = resetAmount ? 1 : Mathf.Clamp(amount, 1, maximumAmount);
+        }
 
         private static int GetMaximumAmount(Recipe recipe, Player player)
         {
-            if (player.NoCostCheat())
-                return 99;
-
-            CraftingStation currentCraftingStation = player.GetCurrentCraftingStation();
-            bool haveStation = !recipe.GetRequiredStation(1) || ((bool)currentCraftingStation && currentCraftingStation.CheckUsable(player, showMessage: false));
-
-            if (!haveStation)
+            if (!recipe || !recipe.m_item || !player)
                 return 0;
+            if (player.NoCostCheat())
+                return maximumAmount;
 
-            if (ZoneSystem.instance.GetGlobalKey(GlobalKeys.NoCraftCost))
-                return 99;
-
+            CraftingStation station = player.GetCurrentCraftingStation();
+            if (recipe.GetRequiredStation(1) && (!station || !station.CheckUsable(player, showMessage: false)))
+                return 0;
+            if (ZoneSystem.instance && ZoneSystem.instance.GetGlobalKey(GlobalKeys.NoCraftCost))
+                return maximumAmount;
             if (!recipe.m_requireOnlyOneIngredient)
                 return GetMaxCraftAmount(player, recipe);
 
-            // Vanilla logic only counts max amount on single resource usage
-            // To get proper max amount calculate maximum amount of every resource available
-            // Iterate through every resource one by one and get max amount
-            tempRecipe.m_item = recipe.m_item;
-            tempRecipe.m_amount = recipe.m_amount;
-            tempRecipe.m_enabled = recipe.m_enabled;
-            tempRecipe.m_qualityResultAmountMultiplier = recipe.m_qualityResultAmountMultiplier;
-            tempRecipe.m_craftingStation = recipe.m_craftingStation;
-            tempRecipe.m_repairStation = recipe.m_repairStation;
-            tempRecipe.m_minStationLevel = recipe.m_minStationLevel;
-            tempRecipe.m_listSortWeight = recipe.m_listSortWeight;
-            tempRecipe.m_requireOnlyOneIngredient = false;
-            tempRecipe.m_resources = new Piece.Requirement[1];
-
-            int result = 0;
-            for (int i = 0; i < recipe.m_resources.Length; i++)
+            // Clone the recipe, not serialized Unity references in its requirements.
+            // Future recipe fields are retained and the original resources remain read-only.
+            if (!tempRecipe || tempRecipeSource != recipe)
             {
-                Piece.Requirement requirement = recipe.m_resources[i];
-                if (!player.IsKnownMaterial(requirement.m_resItem.m_itemData.m_shared.m_name) || requirement.m_amount < 1)
-                    continue;
-
-                tempRecipe.m_resources[0] = JsonUtility.FromJson<Piece.Requirement>(JsonUtility.ToJson(requirement));
-
-                result += GetMaxCraftAmount(player, tempRecipe);
-
-                if (result >= 99)
-                {
-                    result = 99;
-                    break;
-                }
+                if (tempRecipe)
+                    UnityEngine.Object.Destroy(tempRecipe);
+                tempRecipe = UnityEngine.Object.Instantiate(recipe);
+                tempRecipeSource = recipe;
+                tempRecipe.m_requireOnlyOneIngredient = false;
+                tempRecipe.m_resources = new Piece.Requirement[1];
             }
 
+            int result = 0;
+            foreach (Piece.Requirement requirement in recipe.m_resources)
+            {
+                if (requirement?.m_resItem == null || requirement.GetAmount(1) < 1
+                    || !player.IsKnownMaterial(requirement.m_resItem.m_itemData.m_shared.m_name))
+                    continue;
+                tempRecipe.m_resources[0] = requirement;
+                result = Math.Min(maximumAmount, result + GetMaxCraftAmount(player, tempRecipe));
+                if (result == maximumAmount)
+                    break;
+            }
             return result;
         }
 
@@ -95,8 +136,7 @@ namespace MyLittleUI
         {
             if (!HaveRequirements(1))
                 return 0;
-
-            int left = 1, right = 99;
+            int left = 1, right = maximumAmount;
             while (left < right)
             {
                 int mid = (left + right + 1) / 2;
@@ -105,136 +145,194 @@ namespace MyLittleUI
                 else
                     right = mid - 1;
             }
-
             return left;
 
-            bool HaveRequirements(int amount) => player.HaveRequirements(recipe, discover: false, qualityLevel: 1, amount: amount);
+            bool HaveRequirements(int count) => player.HaveRequirements(recipe, discover: false, qualityLevel: 1, amount: count);
+        }
+
+        private static int GetMaximumCached(Recipe recipe, Player player)
+        {
+            if (!recipe || !player)
+                return 0;
+            CraftingStation station = player.GetCurrentCraftingStation();
+            bool noCost = player.NoCostCheat() || (ZoneSystem.instance && ZoneSystem.instance.GetGlobalKey(GlobalKeys.NoCraftCost));
+            if (cachedRecipe != recipe || cachedPlayer != player || cachedStation != station
+                || cachedNoCost != noCost || Time.unscaledTime >= cacheUntil)
+            {
+                cachedRecipe = recipe;
+                cachedPlayer = player;
+                cachedStation = station;
+                cachedNoCost = noCost;
+                cachedMaximum = GetMaximumAmount(recipe, player);
+                cacheUntil = Time.unscaledTime + 0.2f;
+            }
+            return cachedMaximum;
+        }
+
+        private static Button CreateAmountButton(string name, string label, bool increase)
+        {
+            GameObject clone = UnityEngine.Object.Instantiate(craftButton.gameObject, panel);
+            clone.name = name;
+            Button button = clone.GetComponent<Button>();
+            button.onClick = new Button.ButtonClickedEvent();
+            button.onClick.AddListener(() => ChangeAmount(increase ? 1 : -1));
+            foreach (EventTrigger trigger in clone.GetComponentsInChildren<EventTrigger>(true))
+                trigger.triggers = new List<EventTrigger.Entry>();
+
+            UIGamePad gamepad = clone.GetComponent<UIGamePad>();
+            if (gamepad)
+            {
+                gamepad.m_zinputKey = increase ? "JoyRStickUp" : "JoyRStickDown";
+                gamepad.m_keyCode = increase ? KeyCode.UpArrow : KeyCode.DownArrow;
+                if (gamepad.m_hint && gamepad.m_hint.transform.IsChildOf(clone.transform))
+                    UnityEngine.Object.Destroy(gamepad.m_hint);
+                gamepad.m_hint = null;
+            }
+
+            RectTransform rect = clone.GetComponent<RectTransform>();
+            rect.anchorMin = new Vector2(0.5f, increase ? 0.5f : 0f);
+            rect.anchorMax = new Vector2(1f, increase ? 1f : 0.5f);
+            rect.offsetMin = rect.offsetMax = Vector2.zero;
+            TMP_Text text = clone.GetComponentInChildren<TMP_Text>(true);
+            if (text)
+            {
+                text.SetText(label);
+                text.rectTransform.offsetMin = new Vector2(0f, 2f);
+                text.rectTransform.offsetMax = Vector2.zero;
+            }
+            return button;
         }
 
         private static void CreateMulticraftPanel()
         {
-            if (!craftButton)
+            if (!craftButton || panel || !InventoryGui.instance.m_craftButton)
+                return;
+            TMP_Text template = craftButton.GetComponentInChildren<TMP_Text>(true);
+            if (!template)
                 return;
 
             textCrafting = InventoryGui.instance.m_craftProgressPanel?.Find("Text")?.GetComponent<TMP_Text>();
-
             panel = new GameObject(panelName, typeof(RectTransform)).GetComponent<RectTransform>();
-
             panel.SetParent(craftButton.parent, false);
-            panel.anchorMin = new Vector2(0.75f, 0);
+            panel.anchorMin = new Vector2(0.75f, 0f);
             panel.anchorMax = Vector2.one;
             panel.offsetMin = Vector2.zero;
             panel.offsetMax = new Vector2(0f, -5f);
-
             panel.gameObject.AddComponent<AmountScrollHandler>();
-
-            GameObject increase = UnityEngine.Object.Instantiate(craftButton.gameObject, panel);
-            increase.name = buttonIncreaseName;
-
-            buttonIncrease = increase.GetComponent<Button>();
-            buttonIncrease.onClick.RemoveAllListeners();
-            buttonIncrease.onClick.AddListener(OnIncreaseButtonPressed);
-            buttonIncrease.gameObject.AddComponent<ButtonSfx>().m_sfxPrefab = InventoryGui.instance.m_tabCraft.GetComponent<ButtonSfx>().m_sfxPrefab;
-
-            UIGamePad increaseGamePad = buttonIncrease.GetComponent<UIGamePad>();
-            increaseGamePad.m_zinputKey = "JoyRStickUp";
-            increaseGamePad.m_keyCode = KeyCode.UpArrow;
-
-            UnityEngine.Object.Destroy(increaseGamePad.m_hint);
-            increaseGamePad.m_hint = null;
-
-            RectTransform rtIncrease = increase.GetComponent<RectTransform>();
-            rtIncrease.anchorMin = new Vector2(0.5f, 0.5f);
-            rtIncrease.anchorMax = Vector2.one;
-            rtIncrease.offsetMin = Vector2.zero;
-            rtIncrease.offsetMax = Vector2.zero;
-
-            TMP_Text textIncrease = rtIncrease.Find("Text").GetComponent<TMP_Text>();
-            textIncrease.SetText("+");
-            RectTransform rtTextIncrease = textIncrease.GetComponent<RectTransform>();
-            rtTextIncrease.offsetMin = new Vector2(0, 2f);
-            rtTextIncrease.offsetMax = Vector2.zero;
-
-            GameObject decrease = UnityEngine.Object.Instantiate(craftButton.gameObject, panel);
-            decrease.name = buttonDecreaseName;
-
-            buttonDecrease = decrease.GetComponent<Button>();
-            buttonDecrease.onClick.RemoveAllListeners();
-            buttonDecrease.onClick.AddListener(OnDecreaseButtonPressed);
-            buttonDecrease.gameObject.AddComponent<ButtonSfx>().m_sfxPrefab = InventoryGui.instance.m_tabCraft.GetComponent<ButtonSfx>().m_sfxPrefab;
-
-            UIGamePad decreaseGamePad = buttonDecrease.GetComponent<UIGamePad>();
-            decreaseGamePad.m_zinputKey = "JoyRStickDown";
-            decreaseGamePad.m_keyCode = KeyCode.DownArrow;
-
-            UnityEngine.Object.Destroy(decreaseGamePad.m_hint);
-            decreaseGamePad.m_hint = null;
-
-            RectTransform rtDecrease = decrease.GetComponent<RectTransform>();
-            rtDecrease.anchorMin = new Vector2(0.5f, 0f);
-            rtDecrease.anchorMax = new Vector2(1f, 0.5f);
-            rtDecrease.offsetMin = Vector2.zero;
-            rtDecrease.offsetMax = Vector2.zero;
-
-            TMP_Text textDecrease = rtDecrease.Find("Text").GetComponent<TMP_Text>();
-            textDecrease.SetText("-");
-            RectTransform rtTextDecrease = textDecrease.GetComponent<RectTransform>();
-            rtTextDecrease.offsetMin = new Vector2(0, 2f);
-            rtTextDecrease.offsetMax = Vector2.zero;
-
-            GameObject amount = UnityEngine.Object.Instantiate(craftButton.transform.Find("Text").gameObject, panel);
-            amount.name = textAmountName;
-            RectTransform rtAmount = amount.GetComponent<RectTransform>();
-            rtAmount.anchorMin = Vector2.zero;
-            rtAmount.anchorMax = new Vector2(0.5f, 1f);
-            rtAmount.offsetMin = Vector2.zero;
-            rtAmount.offsetMax = Vector2.zero;
-            rtAmount.sizeDelta = new Vector2(-4f, 0f);
-
-            textAmount = amount.GetComponent<TMP_Text>();
-            textAmount.SetText("99");
+            buttonIncrease = CreateAmountButton(buttonIncreaseName, "+", increase: true);
+            buttonDecrease = CreateAmountButton(buttonDecreaseName, "-", increase: false);
+            textAmount = UnityEngine.Object.Instantiate(template, panel);
+            textAmount.name = textAmountName;
+            RectTransform rect = textAmount.rectTransform;
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = new Vector2(0.5f, 1f);
+            rect.offsetMin = rect.offsetMax = Vector2.zero;
+            rect.sizeDelta = new Vector2(-4f, 0f);
             textAmount.fontSizeMax = 32f;
-
-            LogInfo("Multicraft panel initialized");
+            textAmount.SetText("1");
         }
 
         internal static void UpdateMulticraftPanel()
         {
-            if (!InventoryGui.instance)
-                return;
-
-            if (AAA_Crafting)
-                return;
-
-            showPanel = IsMulticraftEnabled && InventoryGui.instance.m_selectedRecipe.Recipe != null
-                                            && InventoryGui.instance.m_selectedRecipe.ItemData == null
-                                            && (InventoryGui.instance.m_selectedRecipe.CanCraft || Player.m_localPlayer.NoCostCheat());
-
-            panel?.gameObject.SetActive(showPanel && InventoryGui.instance.m_craftButton.isActiveAndEnabled);
-
+            InventoryGui gui = InventoryGui.instance;
+            showPanel = panel && CanQueue(gui) && (gui.m_selectedRecipe.CanCraft || Player.m_localPlayer.NoCostCheat());
+            if (panel)
+                panel.gameObject.SetActive(showPanel && gui.m_craftButton && gui.m_craftButton.isActiveAndEnabled);
             if (craftButton)
-                craftButton.anchorMax = showPanel ? new Vector2(0.75f, 1f) : Vector2.one;
-        }
-
-        private static void OnIncreaseButtonPressed()
-        {
-            ChangeAmount(1);
-        }
-
-        private static void OnDecreaseButtonPressed()
-        {
-            ChangeAmount(-1);
+                craftButton.anchorMax = showPanel ? new Vector2(0.75f, craftButtonAnchorMax.y) : craftButtonAnchorMax;
         }
 
         private static void ChangeAmount(int direction)
         {
-            int delta = 1;
-            if (UnityInput.Current.GetKey(KeyCode.LeftControl))
-                delta = 99;
-            else if (UnityInput.Current.GetKey(KeyCode.LeftShift))
-                delta = 10;
+            InventoryGui gui = InventoryGui.instance;
+            if (!showPanel || !CanQueue(gui))
+                return;
+            int delta = UnityInput.Current.GetKey(KeyCode.LeftControl) || UnityInput.Current.GetKey(KeyCode.RightControl) ? maximumAmount
+                : UnityInput.Current.GetKey(KeyCode.LeftShift) || UnityInput.Current.GetKey(KeyCode.RightShift) ? 10 : 1;
+            int maximum = GetMaximumCached(gui.m_selectedRecipe.Recipe, Player.m_localPlayer);
+            amount = Mathf.Clamp(amount + direction * delta, 1, Math.Max(1, maximum));
+        }
 
-            amount += direction * delta;
+        [HarmonyPatch(typeof(InventoryGui), nameof(InventoryGui.OnCraftPressed))]
+        private static class InventoryGui_OnCraftPressed_StartQueue
+        {
+            private static void Prefix(InventoryGui __instance, out bool __state) => __state = IsCrafting(__instance);
+
+            private static void Postfix(InventoryGui __instance, bool __state)
+            {
+                if (__state || !IsCrafting(__instance) || __instance.m_multiCrafting || !CanQueue(__instance)
+                    || __instance.m_craftUpgradeItem != null || __instance.m_craftRecipe != __instance.m_selectedRecipe.Recipe)
+                {
+                    StopQueue();
+                    return;
+                }
+                queueGui = __instance;
+                queuePlayer = Player.m_localPlayer;
+                queueRecipe = __instance.m_craftRecipe;
+                queueStation = queuePlayer.GetCurrentCraftingStation();
+                queueVariant = __instance.m_craftVariant;
+                queueNextCraft = false;
+            }
+
+            private static void Finalizer(Exception __exception)
+            {
+                if (__exception != null)
+                    StopQueue();
+            }
+        }
+
+        [HarmonyPatch(typeof(InventoryGui), nameof(InventoryGui.DoCrafting))]
+        private static class InventoryGui_DoCrafting_ObserveCompletion
+        {
+            private static void Prefix(InventoryGui __instance, Player player, out CraftAttempt __state)
+            {
+                __state = new CraftAttempt
+                {
+                    Previous = activeAttempt,
+                    Gui = __instance,
+                    Player = player,
+                    Recipe = __instance.m_craftRecipe,
+                    Owned = queueGui == __instance && QueueContextMatches()
+                };
+                activeAttempt = __state;
+            }
+
+            private static void Postfix(CraftAttempt __state)
+            {
+                if (!__state.Owned || queueGui != __state.Gui)
+                    return;
+                if (!__state.ProducedItem || !QueueContextMatches())
+                {
+                    StopQueue();
+                    return;
+                }
+                amount = Math.Max(0, amount - 1);
+                queueNextCraft = amount > 0;
+                cacheUntil = 0f;
+                if (!queueNextCraft)
+                    StopQueue(resetAmount: false);
+            }
+
+            private static void Finalizer(CraftAttempt __state, Exception __exception)
+            {
+                if (__state != null)
+                    activeAttempt = __state.Previous;
+                if (__exception != null)
+                    StopQueue();
+            }
+        }
+
+        [HarmonyPatch(typeof(Inventory), nameof(Inventory.AddItem), typeof(string), typeof(int), typeof(int), typeof(int),
+            typeof(long), typeof(string), typeof(Vector2i), typeof(bool), typeof(bool), typeof(bool))]
+        private static class Inventory_AddItem_ObserveCraftedOutput
+        {
+            private static void Postfix(Inventory __instance, string name, ItemDrop.ItemData __result)
+            {
+                CraftAttempt attempt = activeAttempt;
+                if (attempt != null && attempt.Owned && attempt.Player && attempt.Recipe && attempt.Recipe.m_item
+                    && __result != null && __instance == attempt.Player.GetInventory() && name == attempt.Recipe.m_item.gameObject.name)
+                    attempt.ProducedItem = true;
+            }
         }
 
         [HarmonyPatch(typeof(InventoryGui), nameof(InventoryGui.UpdateRecipe))]
@@ -242,198 +340,120 @@ namespace MyLittleUI
         {
             internal static bool isCrafting;
 
-            private static bool IsCrafting(InventoryGui __instance) => __instance.m_craftTimer != -1f;
-
-            private static bool queueNextCraft;
-
-            public static void Prefix(InventoryGui __instance)
-            {
-                isCrafting = IsCrafting(__instance);
-            }
-
             [HarmonyPriority(Priority.Last)]
             [HarmonyAfter("Azumatt.AzuCraftyBoxes", "aedenthorn.CraftFromContainers", "org.bepinex.plugins.valheim_plus")]
             public static void Postfix(InventoryGui __instance)
             {
-                if (AAA_Crafting)
+                isCrafting = IsCrafting(__instance);
+                if (queueGui && !QueueContextMatches())
+                    StopQueue();
+                UpdateMulticraftPanel();
+                if (!IsMulticraftEnabled)
                     return;
 
-                UpdateMulticraftPanel();
-
-                textCrafting.SetText(Localization.instance.Localize("$inventory_craftingprog"));
-
+                if (textCrafting && queueGui == __instance && amount > 1)
+                    textCrafting.SetText(Localization.instance.Localize($"$inventory_craftingprog ({amount})"));
                 if (!showPanel)
                     return;
 
+                int maximum = GetMaximumCached(__instance.m_selectedRecipe.Recipe, Player.m_localPlayer);
+                amount = Mathf.Clamp(amount, 1, Math.Max(1, maximum));
+                if (AmountScrollHandler.hovered && panel.gameObject.activeInHierarchy
+                    && Time.frameCount - lastScrollTriggerFrame > minScrollDeltaFrames)
+                {
+                    float scroll = ZInput.GetMouseScrollWheel();
+                    if (scroll != 0f)
+                    {
+                        ChangeAmount(scroll > 0f ? 1 : -1);
+                        lastScrollTriggerFrame = Time.frameCount;
+                    }
+                }
+                if (textAmount)
+                    textAmount.SetText(maximum > 0 ? amount.ToString() : "0");
                 if (buttonIncrease)
-                    buttonIncrease.interactable = __instance.m_craftButton.interactable;
-
+                    buttonIncrease.interactable = __instance.m_craftButton.interactable && amount < maximum;
                 if (buttonDecrease)
-                    buttonDecrease.interactable = __instance.m_craftButton.interactable;
+                    buttonDecrease.interactable = __instance.m_craftButton.interactable && amount > 1;
 
-                textAmount?.SetText("0");
-
-                if (!__instance.m_craftButton.interactable)
+                if (!queueNextCraft || isCrafting)
                     return;
-
-                if (isCrafting && !IsCrafting(__instance))
-                {
-                    amount--;
-                    queueNextCraft = amount > 0;
-                }
-
-                int maxAmount = GetMaxAmountCached();
-
-                if (AmountScrollHandler.hovered && ZInput.GetMouseScrollWheel() != 0 && Time.frameCount - lastScrollTriggerFrame > 2)
-                {
-                    if (ZInput.GetMouseScrollWheel() > 0)
-                    {
-                        if (buttonIncrease && CanIncrease())
-                            buttonIncrease.onClick.Invoke();
-                    }
-                    else
-                    {
-                        if (buttonDecrease && CanDecrease())
-                            buttonDecrease.onClick.Invoke();
-                    }
-
-                    lastScrollTriggerFrame = Time.frameCount;
-                }
-
-                amount = Mathf.Clamp(amount, isCrafting ? 0 : 1, maxAmount);
-                textAmount?.SetText(amount.ToString());
-
-                if (buttonIncrease)
-                    buttonIncrease.interactable = CanIncrease();
-
-                if (buttonDecrease)
-                    buttonDecrease.interactable = CanDecrease();
-
-                if (amount > 1)
-                    textCrafting.SetText(Localization.instance.Localize($"$inventory_craftingprog ({amount})"));
-
-                if (queueNextCraft)
-                    __instance.m_craftButton.onClick.Invoke();
-
                 queueNextCraft = false;
-
-                bool CanIncrease() => amount < maxAmount;
-                bool CanDecrease() => amount > 1;
-            }
-
-            private static string CombinedResAmount()
-            {
-                if (resAmountElements.Count == 0)
-                    for (int i = 0; i < InventoryGui.instance.m_recipeRequirementList.Length; i++)
-                        resAmountElements.Add(InventoryGui.instance.m_recipeRequirementList[i].transform.Find("res_amount")?.GetComponent<TMP_Text>());
-
-                if (resAmountElements.Count == 0)
-                    return "";
-
-                bool clearAndRestart = false;
-                sb.Clear();
-                foreach (TMP_Text text in resAmountElements)
-                {
-                    if (text == null)
-                    {
-                        clearAndRestart = true;
-                        break;
-                    }
-
-                    if (text.isActiveAndEnabled)
-                        sb.Append(text.text);
-                }
-
-                if (clearAndRestart)
-                {
-                    resAmountElements.Clear();
-                    return CombinedResAmount();
-                }
-
-                return sb.ToString();
-            }
-
-            private static string GetNumbersString()
-            {
-                string combinedResources = CombinedResAmount();
-                if (combinedResources.IsNullOrWhiteSpace())
-                    return combinedResources;
-
-                // Clear tags and get only numbers from string
-                string numbers = Regex.Replace(Regex.Replace(combinedResources, "<.*?>", string.Empty), @"[^\d]", string.Empty);
-                if (InventoryGui.instance.m_selectedRecipe.Recipe.m_requireOnlyOneIngredient)
-                    numbers += Mathf.Sin(Time.time * 5f) > 0f;
-
-                return numbers;
-            }
-
-            private static int GetMaxAmountCached()
-            {
-                string numbers = GetNumbersString();
-                if (numbers.IsNullOrWhiteSpace())
-                    return 0;
-
-                if (cachedAmount.TryGetValue(InventoryGui.instance.m_selectedRecipe.Recipe, out Tuple<string, int> tuple) && tuple.Item1 == numbers)
-                    return tuple.Item2;
-
-                Stopwatch stopwatch = Stopwatch.StartNew();
-                int maxAmount = GetMaximumAmount(InventoryGui.instance.m_selectedRecipe.Recipe, Player.m_localPlayer);
-                LogInfo($"Multicraft max amount calculated in {(double)stopwatch.ElapsedTicks / Stopwatch.Frequency * 1000d:F2} ms");
-                stopwatch.Stop();
-
-                cachedAmount[InventoryGui.instance.m_selectedRecipe.Recipe] = Tuple.Create(numbers, maxAmount);
-                return maxAmount;
+                // Revalidate actual requirements; display cache entries never authorize crafting.
+                if (QueueContextMatches() && __instance.m_craftButton.interactable && GetMaximumAmount(queueRecipe, queuePlayer) > 0)
+                    __instance.m_craftButton.onClick.Invoke();
+                else
+                    StopQueue();
             }
         }
 
-        [HarmonyPatch(typeof(InventoryGui), nameof(InventoryGui.Awake))]
-        public static class InventoryGui_Awake_MulticraftCreateButtons
+        [HarmonyPatch(typeof(InventoryGui), nameof(InventoryGui.OnCraftCancelPressed))]
+        [HarmonyPatch(typeof(InventoryGui), nameof(InventoryGui.Hide))]
+        private static class InventoryGui_Cancel_StopQueue
         {
-            public static void Postfix(InventoryGui __instance)
+            private static void Prefix() => StopQueue();
+        }
+
+        [HarmonyPatch(typeof(InventoryGui), nameof(InventoryGui.SetRecipe))]
+        private static class InventoryGui_SetRecipe_ValidateQueue
+        {
+            private static void Postfix()
+            {
+                cacheUntil = 0f;
+                if (queueGui && !QueueContextMatches())
+                    StopQueue();
+            }
+        }
+
+        [HarmonyPatch(typeof(Inventory), nameof(Inventory.Changed))]
+        private static class Inventory_Changed_InvalidateAmount
+        {
+            private static void Postfix(Inventory __instance)
+            {
+                if (Player.m_localPlayer && __instance == Player.m_localPlayer.GetInventory())
+                    cacheUntil = 0f;
+            }
+        }
+
+        [HarmonyPatch(typeof(Player), nameof(Player.ToggleNoPlacementCost))]
+        private static class Player_ToggleNoPlacementCost_InvalidateAmount
+        {
+            private static void Postfix() => cacheUntil = 0f;
+        }
+
+        [HarmonyPatch(typeof(InventoryGui), nameof(InventoryGui.Awake))]
+        private static class InventoryGui_Awake_CreateButtons
+        {
+            private static void Postfix(InventoryGui __instance)
             {
                 if (AAA_Crafting)
                     return;
-
-                craftButton = __instance.m_craftButton?.GetComponent<RectTransform>();
-
+                craftButton = __instance.m_craftButton ? __instance.m_craftButton.GetComponent<RectTransform>() : null;
+                if (craftButton)
+                    craftButtonAnchorMax = craftButton.anchorMax;
                 CreateMulticraftPanel();
-
                 UpdateMulticraftPanel();
             }
         }
 
         [HarmonyPatch(typeof(InventoryGui), nameof(InventoryGui.OnDestroy))]
-        public static class InventoryGui_OnDestroy_MulticraftOnDestroy
+        private static class InventoryGui_OnDestroy_ClearState
         {
-            public static void Postfix()
+            private static void Postfix()
             {
-                panel = null;
-                craftButton = null;
-                buttonIncrease = null;
-                buttonDecrease = null;
-                textAmount = null;
-                resAmountElements.Clear();
-            }
-        }
-
-        [HarmonyPatch(typeof(Player), nameof(Player.ToggleNoPlacementCost))]
-        public static class Player_ToggleNoPlacementCost_MulticraftUpdateMaxAmount
-        {
-            public static void Postfix()
-            {
-                cachedAmount.Clear();
-            }
-        }
-
-        [HarmonyPatch(typeof(InventoryGui), nameof(InventoryGui.SetRecipe))]
-        public static class InventoryGui_SetRecipe_ResetMulticraftAfterRecipeChange
-        {
-            public static void Prefix(InventoryGui __instance, ref Recipe __state) => __state = __instance.m_selectedRecipe.Recipe;
-
-            public static void Postfix(InventoryGui __instance, Recipe __state)
-            {
-                if (__state != __instance.m_selectedRecipe.Recipe && InventoryGui_UpdateRecipe_MulticraftShowButtons.isCrafting)
-                    amount = 0;
+                StopQueue();
+                panel = craftButton = null;
+                buttonIncrease = buttonDecrease = null;
+                textAmount = textCrafting = null;
+                cachedRecipe = tempRecipeSource = null;
+                cachedPlayer = null;
+                cachedStation = null;
+                cacheUntil = 0f;
+                showPanel = false;
+                AmountScrollHandler.hovered = false;
+                InventoryGui_UpdateRecipe_MulticraftShowButtons.isCrafting = false;
+                if (tempRecipe)
+                    UnityEngine.Object.Destroy(tempRecipe);
+                tempRecipe = null;
             }
         }
     }
