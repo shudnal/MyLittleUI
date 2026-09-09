@@ -1,0 +1,50 @@
+name: Apply guarded game release source corrections
+on:
+  push:
+    branches: [fix/game-release]
+    paths: [.github/workflows/game-release-source-update.yml]
+permissions:
+  contents: write
+jobs:
+  update-sources:
+    if: github.repository == 'shudnal/MyLittleUI'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+      - name: Apply source-only corrections
+        shell: python
+        run: |
+          from pathlib import Path
+          import subprocess
+          parent = subprocess.check_output(['git', 'rev-parse', 'HEAD^'], text=True).strip()
+          if parent != 'bdfb82cac7701ba214f5bf95a4fd47ade269187a':
+              raise RuntimeError('The branch changed before this guarded source edit.')
+          subprocess.run(['python', '.github/game_release_review.py'], check=True)
+          Path('.github/game_release_review.py').unlink()
+          Path('.github/workflows/game-release-source-update.yml').unlink()
+      - name: Check changed source text without building or running the mod
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+          import subprocess
+          baseline = '6babe41cb21a05a4d7d04daf9c8f05ed63efaea4'
+          subprocess.run(['git', 'diff', '--check', baseline], check=True)
+          paths = subprocess.check_output(['git', 'diff', '--name-only', baseline], text=True).splitlines()
+          for name in paths:
+              path = Path(name)
+              if path.is_file() and path.suffix in {'.cs', '.csproj', '.md', '.yml', '.py'}:
+                  if re.search(r'[\u0400-\u052f]', path.read_text(encoding='utf-8-sig')):
+                      raise RuntimeError(f'Unexpected Cyrillic text in {name}')
+          print('Changed files:', ', '.join(paths))
+          print('Source-text checks only. No compilation or mod tests were performed.')
+      - name: Commit corrections and remove temporary editing files
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -u
+          git commit -m "Harden game release UI lifecycle, forecasts, and tooltip formatting"
+          git push origin HEAD:refs/heads/fix/game-release
