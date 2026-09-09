@@ -1,0 +1,64 @@
+name: Apply guarded game release source updates
+on:
+  push:
+    branches: [fix/game-release]
+    paths: [.github/workflows/game-release-source-update.yml]
+permissions:
+  contents: write
+jobs:
+  update-sources:
+    if: github.repository == 'shudnal/MyLittleUI'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ${{ github.sha }}
+      - name: Apply exact source replacements without building or running the mod
+        shell: python
+        run: |
+          from pathlib import Path
+          import subprocess
+
+          expected_parent = 'ff9037a2fa674893b328d67eaf9bc721c2f8c608'
+          parent = subprocess.check_output(['git', 'rev-parse', 'HEAD^'], text=True).strip()
+          if parent != expected_parent:
+              raise RuntimeError('The branch changed before the guarded source migration.')
+
+          def replace(path, old, new, count=1):
+              file = Path(path)
+              data = file.read_bytes()
+              old_bytes, new_bytes = old.encode('utf-8'), new.encode('utf-8')
+              found = data.count(old_bytes)
+              if found != count:
+                  raise RuntimeError(f'{path}: expected {count} occurrences, found {found}: {old}')
+              file.write_bytes(data.replace(old_bytes, new_bytes))
+
+          replace('MyLittleUI.cs', 'playerProfile.m_playerStats.m_stats', 'playerProfile.m_playerStats[PlayerProfile.c_RawStats].m_stats', 2)
+          replace('MyLittleUI.cs', '__instance.GetSlot(slot, out string itemName, out float cookedTime, out _);', '__instance.GetSlot(slot, out string itemName, out float cookedTime, out _, out _);')
+          replace('MyLittleUI.cs', 'itemQualitySymbol.SettingChanged += (sender, args) => itemQualitySymbol.Value = itemQualitySymbol.Value[0].ToString();', 'itemQualitySymbol.SettingChanged += (sender, args) => { if (!string.IsNullOrEmpty(itemQualitySymbol.Value) && itemQualitySymbol.Value.Length > 1) itemQualitySymbol.Value = itemQualitySymbol.Value[0].ToString(); };')
+          replace('MyLittleUI.cs', '"jewelcrafting").GetValue(null)', '"jewelcrafting")?.GetValue(null)')
+          replace('MyLittleUI.cs', 'if (int.TryParse(text.text, out _))', 'if (text && player && req?.m_resItem && int.TryParse(text.text, out _))')
+          replace('MyLittleUI.cs', 'if (!__instance.m_nview.IsValid())', 'if (__instance.m_nview?.IsValid() != true)')
+          replace('MyLittleUI.cs', 'if (__instance.m_nview.IsValid() != true)', 'if (__instance.m_nview?.IsValid() != true)')
+          replace('MyLittleUI.cs', 'if (itemConversion == null || itemName == __instance.m_overCookedItem?.name)', 'if (itemConversion == null || itemConversion.m_cookTime <= 0f || itemName == __instance.m_overCookedItem?.name || (itemReady && !__instance.m_canOvercookItems))')
+          replace('MyLittleUI.cs', 'itemName = conversion.m_from.m_itemData.m_shared.m_name;', 'itemName = conversion.m_from ? conversion.m_from.m_itemData.m_shared.m_name : conversion.m_to ? conversion.m_to.m_itemData.m_shared.m_name : currentItem;')
+
+          for path in ['InventoryPanel.cs', 'InventoryCharacterStats.cs']:
+              replace(path, 'typeof(StatusEffect), typeof(bool), typeof(int), typeof(float)', 'typeof(StatusEffect), typeof(bool), typeof(int), typeof(float), typeof(short)')
+
+          replace('ItemTooltip.cs', 'typeof(ItemDrop.ItemData), typeof(int), typeof(bool), typeof(float), typeof(int))]', 'typeof(ItemDrop.ItemData), typeof(int), typeof(bool), typeof(float), typeof(int), typeof(bool))]')
+          replace('WeatherForecast.cs', 'Heightmap.Biome currentBiome', 'BiomeSector currentBiome')
+          replace('WeatherForecast.cs', 'Heightmap.Biome biome', 'BiomeSector biome', 2)
+
+          replace('CookingStationRemoveItem.cs', 'station.GetSlot(i, out itemName, out _, out _);', 'station.GetSlot(i, out itemName, out _, out _, out _);')
+          replace('CookingStationRemoveItem.cs', 'station.SetSlot(slot, "", 0f, CookingStation.Status.NotDone);', 'station.SetSlot(slot, "", 0f, CookingStation.Status.NotDone, cheated: false);')
+
+          subprocess.run(['git', 'diff', '--check'], check=True)
+          Path('.github/workflows/game-release-source-update.yml').unlink()
+      - name: Commit the source updates and remove this one-time workflow
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add MyLittleUI.cs InventoryPanel.cs InventoryCharacterStats.cs ItemTooltip.cs WeatherForecast.cs CookingStationRemoveItem.cs .github/workflows/game-release-source-update.yml
+          git commit -m "Migrate remaining Valheim 1.0.7 API contracts"
+          git push origin HEAD:refs/heads/fix/game-release
