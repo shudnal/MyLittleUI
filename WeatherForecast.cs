@@ -21,7 +21,7 @@ namespace MyLittleUI
             RainCinder
         }
 
-        public static Heightmap.Biome currentBiome;
+        public static BiomeSector currentBiome;
         public static bool inAshlandsOrDeepnorth;
         public static long environmentPeriod = -1L;
 
@@ -410,7 +410,7 @@ namespace MyLittleUI
                    env.m_psystems != null && env.m_psystems.Any(ps => ps.name != null && environmentSystems.Contains(ps.name));
         }
 
-        private static EnvSetup GetEnvironment(long period, Heightmap.Biome biome, bool isAshlands, bool isDeepNorth)
+        private static EnvSetup GetEnvironment(long period, BiomeSector biome, bool isAshlands, bool isDeepNorth)
         {
             UnityEngine.Random.State state = UnityEngine.Random.state;
             UnityEngine.Random.InitState((int)period);
@@ -422,7 +422,7 @@ namespace MyLittleUI
             return env;
         } 
 
-        private static EnvSetup GetAvailableEnvironment(Heightmap.Biome biome, bool isAshlands, bool isDeepNorth)
+        private static EnvSetup GetAvailableEnvironment(BiomeSector biome, bool isAshlands, bool isDeepNorth)
         {
             List<EnvEntry> availableEnvironments = EnvMan.instance.GetAvailableEnvironments(biome);
             if (availableEnvironments != null && availableEnvironments.Count > 0)

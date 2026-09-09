@@ -13,7 +13,7 @@ namespace MyLittleUI
         {
             for (int i = station.m_slots.Length - 1; i >= 0; i--)
             {
-                station.GetSlot(i, out itemName, out _, out _);
+                station.GetSlot(i, out itemName, out _, out _, out _);
                 if (itemName == "" || station.IsItemDone(itemName))
                     continue;
 
@@ -46,9 +46,10 @@ namespace MyLittleUI
             if (slot == -1)
                 return;
 
-            station.SpawnItem(itemName, slot, userPoint);
+            station.GetSlot(slot, out _, out _, out _, out bool cheated);
+            station.SpawnItem(itemName, slot, userPoint, cheated);
 
-            station.SetSlot(slot, "", 0f, CookingStation.Status.NotDone);
+            station.SetSlot(slot, "", 0f, CookingStation.Status.NotDone, cheated: false);
             station.m_nview.InvokeRPC(ZNetView.Everybody, "RPC_SetSlotVisual", slot, "");
             
             if (author != 0L)

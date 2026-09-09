@@ -350,7 +350,7 @@ namespace MyLittleUI
             private static void Postfix() => UpdateRecipeDescriptionFontSize();
         }
 
-        [HarmonyPatch(typeof(ItemDrop.ItemData), nameof(ItemDrop.ItemData.GetTooltip), typeof(ItemDrop.ItemData), typeof(int), typeof(bool), typeof(float), typeof(int))]
+        [HarmonyPatch(typeof(ItemDrop.ItemData), nameof(ItemDrop.ItemData.GetTooltip), typeof(ItemDrop.ItemData), typeof(int), typeof(bool), typeof(float), typeof(int), typeof(bool))]
         private class ItemDropItemData_GetTooltip_ItemTooltip
         {
             [HarmonyPriority(Priority.First)]

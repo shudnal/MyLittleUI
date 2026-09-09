@@ -282,7 +282,7 @@ namespace MyLittleUI
             if (!Chainloader.PluginInfos.TryGetValue("org.bepinex.plugins.jewelcrafting", out PluginInfo plugin))
                 return null;
 
-            var jewelcraftingSkill = AccessTools.Field(Assembly.GetAssembly(plugin.Instance.GetType()).GetType("Jewelcrafting.Jewelcrafting"), "jewelcrafting").GetValue(null);
+            var jewelcraftingSkill = AccessTools.Field(Assembly.GetAssembly(plugin.Instance.GetType()).GetType("Jewelcrafting.Jewelcrafting"), "jewelcrafting")?.GetValue(null);
             if (jewelcraftingSkill == null)
                 return null;
 
@@ -603,7 +603,7 @@ namespace MyLittleUI
             itemQualityIgnoreCustomEquipmentSlots = config("Item - Quality", "Ignore equipment slots", defaultValue: false, "Ignore custom equipment slots added by AzuEPI or EaQS. Quick slot items will remain.");
             itemQualityIgnoreCustomSlots = config("Item - Quality", "Ignore any custom slot", defaultValue: false, "Ignore every custom slot outside of shown inventory rows.");
             
-            itemQualitySymbol.SettingChanged += (sender, args) => itemQualitySymbol.Value = itemQualitySymbol.Value[0].ToString();
+            itemQualitySymbol.SettingChanged += (sender, args) => { if (!string.IsNullOrEmpty(itemQualitySymbol.Value) && itemQualitySymbol.Value.Length > 1) itemQualitySymbol.Value = itemQualitySymbol.Value[0].ToString(); };
 
             itemQualitySymbol.SettingChanged += (sender, args) => ItemIcon.FillItemQualityCache();
             itemQualityMax.SettingChanged += (sender, args) => ItemIcon.FillItemQualityCache();
@@ -991,7 +991,7 @@ namespace MyLittleUI
                 if (!hoverCookingEnabled.Value || hoverCooking.Value == StationHover.Vanilla)
                     return;
 
-                if (!__instance.m_nview.IsValid())
+                if (__instance.m_nview?.IsValid() != true)
                     return;
 
                 if ((bool)__instance.m_addFoodSwitch)
@@ -1010,7 +1010,7 @@ namespace MyLittleUI
                 if (!hoverCookingEnabled.Value || hoverCooking.Value == StationHover.Vanilla)
                     return;
 
-                if (__instance.m_nview.IsValid() != true)
+                if (__instance.m_nview?.IsValid() != true)
                     return;
 
                 if ((bool)__instance.m_addFoodSwitch && __instance.m_addFoodSwitch.m_onHover == null)
@@ -1088,7 +1088,7 @@ namespace MyLittleUI
 
                 for (int slot = 0; slot < __instance.m_slots?.Length; slot++)
                 {
-                    __instance.GetSlot(slot, out string itemName, out float cookedTime, out _);
+                    __instance.GetSlot(slot, out string itemName, out float cookedTime, out _, out _);
                     if (itemName == "")
                         continue;
 
@@ -1096,7 +1096,7 @@ namespace MyLittleUI
 
                     string itemListName = GetItemName(__instance, itemName, out bool itemReady, out CookingStation.ItemConversion itemConversion);
 
-                    if (itemConversion == null || itemName == __instance.m_overCookedItem?.name)
+                    if (itemConversion == null || itemConversion.m_cookTime <= 0f || itemName == __instance.m_overCookedItem?.name || (itemReady && !__instance.m_canOvercookItems))
                     {
                         sb.Append(itemListName);
                         continue;
@@ -1197,7 +1197,7 @@ namespace MyLittleUI
                 Smelter.ItemConversion conversion = __instance.GetItemConversion(currentItem);
                 if (conversion != null)
                 {
-                    itemName = conversion.m_from.m_itemData.m_shared.m_name;
+                    itemName = conversion.m_from ? conversion.m_from.m_itemData.m_shared.m_name : conversion.m_to ? conversion.m_to.m_itemData.m_shared.m_name : currentItem;
                 }
                 else
                 {
@@ -1368,10 +1368,10 @@ namespace MyLittleUI
 
             private static void AddStat(PlayerStatType stat, string statName = "", bool showIfZero = false)
             {
-                if (!playerProfile.m_playerStats.m_stats.ContainsKey(stat))
+                if (!playerProfile.m_playerStats[PlayerProfile.c_RawStats].m_stats.ContainsKey(stat))
                     return;
 
-                float counter = playerProfile.m_playerStats.m_stats[stat];
+                float counter = playerProfile.m_playerStats[PlayerProfile.c_RawStats].m_stats[stat];
 
                 if (counter == 0f && !showIfZero)
                     return;
@@ -1649,7 +1649,7 @@ namespace MyLittleUI
                     return;
 
                 TMP_Text text = elementRoot.transform.Find("res_amount")?.GetComponent<TMP_Text>();
-                if (int.TryParse(text.text, out _))
+                if (text && player && req?.m_resItem && int.TryParse(text.text, out _))
                     text?.SetText(text.text + $" <color=#{ColorUtility.ToHtmlStringRGBA(availableItemsAmountColor.Value)}>({player.GetInventory().CountItems(req.m_resItem.m_itemData.m_shared.m_name)})</color>");
             }
         }

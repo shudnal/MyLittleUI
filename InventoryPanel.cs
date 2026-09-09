@@ -314,7 +314,7 @@ namespace MyLittleUI
             }
         }
 
-        [HarmonyPatch(typeof(SEMan), nameof(SEMan.AddStatusEffect), typeof(StatusEffect), typeof(bool), typeof(int), typeof(float))]
+        [HarmonyPatch(typeof(SEMan), nameof(SEMan.AddStatusEffect), typeof(StatusEffect), typeof(bool), typeof(int), typeof(float), typeof(short))]
         public static class SEManAddStatusEffect_UpdateStats
         {
             public static void Postfix(StatusEffect __result)
