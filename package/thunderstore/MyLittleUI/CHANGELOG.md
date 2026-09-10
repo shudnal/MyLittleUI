@@ -1,3 +1,6 @@
+# 1.2.16
+* adaptation to game release version 1.0.7
+
 # 1.2.15
 * little code improvements
 * migrated to ConditionalConfigSync; server administrators can override the ownership policy of policy-controlled settings, making them server- or client-controlled
