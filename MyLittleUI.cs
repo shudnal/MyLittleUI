@@ -1407,7 +1407,7 @@ namespace MyLittleUI
 
                 playerProfile = ___m_profiles[___m_profileIndex];
 
-                sb.Append(Localization.instance.Localize(((playerProfile.m_fileSource == FileHelpers.FileSource.Legacy) ? "$menu_legacynotice \n\n" : "") + ((!FileHelpers.CloudStorageEnabled) ? "$menu_cloudsavesdisabled" : "")));
+                sb.Append(Localization.instance.Localize(((playerProfile.m_fileSource == FileHelpers.FileSource.Legacy) ? "$menu_legacynotice \n\n" : "") + ((!FileHelpers.CloudStorageSupportedAndEnabled) ? "$menu_cloudsavesdisabled" : "")));
 
                 if (statsMainMenuAll.Value)
                 {

@@ -329,6 +329,9 @@ namespace MyLittleUI
         {
             private static void Postfix(Inventory __instance, string name, ItemDrop.ItemData __result)
             {
+                if (__instance.m_temoraryInventory)
+                    return;
+
                 CraftAttempt attempt = activeAttempt;
                 if (attempt != null && attempt.Owned && attempt.Player && attempt.Recipe && attempt.Recipe.m_item
                     && __result != null && __instance == attempt.Player.GetInventory() && name == attempt.Recipe.m_item.gameObject.name)
@@ -427,6 +430,9 @@ namespace MyLittleUI
         {
             private static void Postfix(Inventory __instance)
             {
+                if (__instance.m_temoraryInventory)
+                    return;
+
                 if (Player.m_localPlayer && __instance == Player.m_localPlayer.GetInventory())
                     cacheUntil = 0f;
             }
