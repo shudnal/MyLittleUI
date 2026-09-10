@@ -14,7 +14,7 @@ namespace MyLittleUI
         private static UITooltip characterStatsTooltip;
         private static UITooltip characterEffectsTooltip;
 
-        private static double totalSecondTooltipWasUpdated = 0;
+        private static double totalSecondTooltipWasUpdated = double.NegativeInfinity;
 
         private static readonly StringBuilder sb = new StringBuilder();
         private static readonly Dictionary<Skills.SkillType, float> skills = new Dictionary<Skills.SkillType, float>();
@@ -25,24 +25,37 @@ namespace MyLittleUI
 
         private static void ClearStats(this SE_Stats statsEffect)
         {
-            foreach (FieldInfo field in AccessTools.GetDeclaredFields(typeof(SE_Stats)))
-                field.SetValue(statsEffect, null);
-
-            statsEffect.m_mods = new List<HitData.DamageModPair>();
-            statsEffect.m_healthOverTimeInterval = 5f;
+            statsEffect.m_mods.Clear();
+            statsEffect.m_jumpStaminaUseModifier = 0f;
+            statsEffect.m_runStaminaDrainModifier = 0f;
+            statsEffect.m_healthOverTime = 0f;
+            statsEffect.m_staminaOverTime = 0f;
+            statsEffect.m_eitrOverTime = 0f;
             statsEffect.m_healthRegenMultiplier = 1f;
             statsEffect.m_staminaRegenMultiplier = 1f;
             statsEffect.m_eitrRegenMultiplier = 1f;
-            statsEffect.m_damageModifier = 1f;
+            statsEffect.m_addMaxCarryWeight = 0f;
+            statsEffect.m_noiseModifier = 0f;
+            statsEffect.m_stealthModifier = 0f;
+            statsEffect.m_speedModifier = 0f;
+            statsEffect.m_maxMaxFallSpeed = 0f;
+            statsEffect.m_fallDamageModifier = 0f;
+            statsEffect.m_adrenalineModifier = 0f;
+            statsEffect.m_staggerModifier = 0f;
+            statsEffect.m_blockStaminaUseFlatValue = 0f;
+            statsEffect.m_timedBlockBonus = 0f;
+            statsEffect.m_swimSpeedModifier = 0f;
+            statsEffect.m_addArmor = 0f;
+            statsEffect.m_armorMultiplier = 0f;
         }
 
         public static void UpdateTooltipState()
         {
             if (characterStatsTooltip != null)
-                characterStatsTooltip.enabled = statsCharacterArmor.Value;
+                characterStatsTooltip.enabled = modEnabled.Value && statsCharacterArmor.Value;
 
             if (characterEffectsTooltip != null)
-                characterEffectsTooltip.enabled = statsCharacterEffects.Value;
+                characterEffectsTooltip.enabled = modEnabled.Value && statsCharacterEffects.Value;
         }
 
         private static void InitEffectsTooltipPrefab(UITooltip prefabTooltip)
@@ -54,7 +67,11 @@ namespace MyLittleUI
 
         private static void InitCharacterTooltips(InventoryGui __instance, Player player)
         {
+            if (!player || !__instance.m_containerGrid || !__instance.m_containerGrid.m_elementPrefab || !__instance.m_armor || !__instance.m_weight)
+                return;
             UITooltip prefabTooltip = __instance.m_containerGrid.m_elementPrefab.GetComponent<UITooltip>();
+            if (!prefabTooltip || !prefabTooltip.m_tooltipPrefab)
+                return;
 
             if (effectsTooltip == null)
                 InitEffectsTooltipPrefab(prefabTooltip);
@@ -75,7 +92,8 @@ namespace MyLittleUI
             UITooltip tooltip = text.transform.parent.gameObject.AddComponent<UITooltip>();
 
             foreach (FieldInfo field in fields)
-                field.SetValue(tooltip, field.GetValue(uiTooltip));
+                if (!field.IsStatic && !field.IsInitOnly)
+                    field.SetValue(tooltip, field.GetValue(uiTooltip));
 
             tooltip.m_topic = topic;
             tooltip.m_anchor = tooltipAnchor;
@@ -128,17 +146,16 @@ namespace MyLittleUI
         private static string TooltipEffects(Player player, TextsDialog textsDialog)
         {
             sb.Clear();
-            for (int i = 0; i < player.m_equipmentModifierValues.Length; i++)
+            for (int i = 0; i < System.Math.Min(player.m_equipmentModifierValues.Length, Player.s_equipmentModifierTooltips.Length); i++)
                 if (player.m_equipmentModifierValues[i] != 0f)
                     sb.Append(TooltipModifierColored(Player.s_equipmentModifierTooltips[i], player.m_equipmentModifierValues[i], i >= 10));
 
             skills.Clear();
             mods.Clear();
 
-            if (stats == null)
-                stats = ScriptableObject.CreateInstance("SE_Stats") as SE_Stats;
-            else
-                stats.ClearStats();
+            if (!stats)
+                stats = ScriptableObject.CreateInstance<SE_Stats>();
+            stats.ClearStats();
 
             foreach (StatusEffect statusEffect in player.GetSEMan().GetStatusEffects().ToList())
             {
@@ -298,14 +315,18 @@ namespace MyLittleUI
                 if (statsCharacterArmor.Value && characterStatsTooltip == null || statsCharacterEffects.Value && characterEffectsTooltip == null)
                     InitCharacterTooltips(__instance, player);
 
-                if (ZNet.instance.GetTimeSeconds() - totalSecondTooltipWasUpdated > 3)
+                if (!player || !ZNet.instance)
+                    return;
+
+                if (ZNet.instance.GetTimeSeconds() < totalSecondTooltipWasUpdated
+                    || ZNet.instance.GetTimeSeconds() - totalSecondTooltipWasUpdated > 3)
                 {
                     totalSecondTooltipWasUpdated = ZNet.instance.GetTimeSeconds();
 
-                    if (statsCharacterArmor.Value)
+                    if (statsCharacterArmor.Value && characterStatsTooltip)
                         characterStatsTooltip.m_text = TooltipStats(player);
 
-                    if (statsCharacterEffects.Value)
+                    if (statsCharacterEffects.Value && characterEffectsTooltip)
                         characterEffectsTooltip.m_text = TooltipEffects(player, ___m_textsDialog);
                 }
             }
@@ -323,7 +344,7 @@ namespace MyLittleUI
             private static void Postfix(Humanoid __instance)
             {
                 if (__instance == Player.m_localPlayer)
-                    totalSecondTooltipWasUpdated = 0;
+                    totalSecondTooltipWasUpdated = double.NegativeInfinity;
             }
         }
 
@@ -339,11 +360,11 @@ namespace MyLittleUI
                     return;
 
                 if (__instance == Player.m_localPlayer?.GetSEMan())
-                    totalSecondTooltipWasUpdated = 0;
+                    totalSecondTooltipWasUpdated = double.NegativeInfinity;
             }
         }
 
-        [HarmonyPatch(typeof(SEMan), nameof(SEMan.AddStatusEffect), new[] { typeof(StatusEffect), typeof(bool), typeof(int), typeof(float) })]
+        [HarmonyPatch(typeof(SEMan), nameof(SEMan.AddStatusEffect), new[] { typeof(StatusEffect), typeof(bool), typeof(int), typeof(float), typeof(short) })]
         private class SEMan_AddStatusEffect_TooltipUpdate
         {
             private static void Postfix(SEMan __instance, StatusEffect __result)
@@ -355,7 +376,7 @@ namespace MyLittleUI
                     return;
 
                 if (__result != null && __instance == Player.m_localPlayer?.GetSEMan())
-                    totalSecondTooltipWasUpdated = 0;
+                    totalSecondTooltipWasUpdated = double.NegativeInfinity;
             }
         }
 
@@ -371,9 +392,27 @@ namespace MyLittleUI
                     return;
 
                 if (__result && __instance == Player.m_localPlayer?.GetSEMan())
-                    totalSecondTooltipWasUpdated = 0;
+                    totalSecondTooltipWasUpdated = double.NegativeInfinity;
             }
         }
 
+        [HarmonyPatch(typeof(InventoryGui), nameof(InventoryGui.OnDestroy))]
+        private static class InventoryGui_OnDestroy_ClearTooltips
+        {
+            private static void Postfix()
+            {
+                characterStatsTooltip = null;
+                characterEffectsTooltip = null;
+                if (effectsTooltip)
+                    Object.Destroy(effectsTooltip);
+                effectsTooltip = null;
+                if (stats)
+                    Object.Destroy(stats);
+                stats = null;
+                skills.Clear();
+                mods.Clear();
+                totalSecondTooltipWasUpdated = double.NegativeInfinity;
+            }
+        }
     }
 }

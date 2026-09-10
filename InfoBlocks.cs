@@ -307,7 +307,7 @@ namespace MyLittleUI
 
         internal static void UpdateDayTimeText()
         {
-            if (!clockObject)
+            if (!clockObject || !clockTimeObject || !clockDayObject || !timeText || !dayText || !Minimap.instance)
                 return;
 
             clockObject.SetActive(clockShowTime.Value || clockShowDay.Value);
@@ -426,7 +426,7 @@ namespace MyLittleUI
 
                 if (fuzzyTime.Length > 0)
                 {
-                    float fraction = EnvMan.instance.m_smoothDayFraction + (1 / (fuzzyTime.Length * 2));
+                    float fraction = EnvMan.instance.m_smoothDayFraction + (1f / (fuzzyTime.Length * 2));
                     return fraction >= 1 ? fuzzyTime[0] : fuzzyTime[Mathf.Clamp((int)(fraction * fuzzyTime.Length), 0, fuzzyTime.Length - 1)];
                 }
             }
@@ -483,12 +483,13 @@ namespace MyLittleUI
         {
             public static void Postfix()
             {
-                if (!modEnabled.Value)
-                    return;
-
-                WeatherForecast.windList.Clear();
-                WeatherForecast.winds.Clear();
-                WeatherForecast.windsTransition.Clear();
+                WeatherForecast.Reset();
+                minimapHiddenByToggle = false;
+                minimapBackground = null;
+                clockBackground = null;
+                forecastBackground = null;
+                windsBackground = null;
+                weatherIcon = null;
 
                 parentObject = null;
 

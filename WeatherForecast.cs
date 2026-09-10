@@ -21,7 +21,7 @@ namespace MyLittleUI
             RainCinder
         }
 
-        public static Heightmap.Biome currentBiome;
+        public static BiomeSector currentBiome;
         public static bool inAshlandsOrDeepnorth;
         public static long environmentPeriod = -1L;
 
@@ -45,9 +45,25 @@ namespace MyLittleUI
         public const float windsTransitionDuration = 5f;
         public static float windsTransitionTimer = -1f;
 
+        public static void Reset()
+        {
+            currentBiome = default;
+            inAshlandsOrDeepnorth = false;
+            environmentPeriod = windPeriod = -1L;
+            nextWeatherChange = nextWindChange = 0L;
+            nextWeatherState = WeatherState.Clear;
+            windsTransitionTimer = -1f;
+            windList.Clear();
+            winds.Clear();
+            windsTransition.Clear();
+        }
+
         public static void UpdateWeather()
         {
-            InfoBlocks.forecastObject.SetActive(forecastEnabled.Value && nextWeatherChange > 0);
+            if (!InfoBlocks.forecastObject)
+                return;
+
+            InfoBlocks.forecastObject.SetActive(modEnabled.Value && forecastEnabled.Value && nextWeatherChange > 0);
 
             UpdateWeatherIcon();
             InfoBlocks.UpdateForecastBackground();
@@ -58,7 +74,7 @@ namespace MyLittleUI
 
         public static void UpdateWindTimer(float time)
         {
-            if (!windsEnabled.Value)
+            if (!modEnabled.Value || !windsEnabled.Value || !EnvMan.instance || !InfoBlocks.windsObject)
                 return;
 
             InfoBlocks.windsObject.SetActive(windsEnabled.Value && nextWindChange >= EnvMan.instance.m_totalSeconds && !EnvMan.instance.m_debugWind);
@@ -114,12 +130,16 @@ namespace MyLittleUI
 
         public static void SetWindsDirection(float transition)
         {
-            for (int i = 0; i < Math.Min(windList.Count, windsTransition.Count); i++)
+            for (int i = 0; i < Math.Min(windList.Count, Math.Min(winds.Count, windsTransition.Count)); i++)
             {
                 Vector4 wind = Vector4.Lerp(winds[i], windsTransition[i], transition);
+                if (!windList[i] || ((Vector3)wind).sqrMagnitude < 0.0001f)
+                    continue;
                 Quaternion quaternion = Quaternion.LookRotation((Vector3)wind);
 
                 Image arrow = windList[i].GetComponent<Image>();
+                if (!arrow)
+                    continue;
                 arrow.transform.rotation = Quaternion.Euler(0f, 0f, 0f - quaternion.eulerAngles.y);
                 if (windsAlphaIntensity.Value)
                     arrow.color = new Color(windsArrowColor.Value.r, windsArrowColor.Value.g, windsArrowColor.Value.b, Mathf.Lerp(windsMinimumAlpha.Value, windsArrowColor.Value.a, wind.w));
@@ -133,17 +153,17 @@ namespace MyLittleUI
 
         public static long GetWindPeriodDuration()
         {
-            return EnvMan.instance.m_windPeriodDuration / 8L;
+            return Math.Max(1L, EnvMan.instance ? EnvMan.instance.m_windPeriodDuration / 8L : 1L);
         }
 
         public static long GetWeatherPeriodDuration()
         {
-            return EnvMan.instance.m_environmentDuration;
+            return Math.Max(1L, EnvMan.instance ? EnvMan.instance.m_environmentDuration : 1L);
         }
 
         public static long GetCurrentWindPeriod(double sec)
         {
-            return (int)sec / GetWindPeriodDuration();
+            return (long)sec / GetWindPeriodDuration();
         }
 
         public static long GetCurrentWeatherPeriod(double sec)
@@ -187,20 +207,18 @@ namespace MyLittleUI
         [HarmonyPatch(typeof(EnvMan), nameof(EnvMan.UpdateEnvironment))]
         public static class EnvMan_UpdateEnvironment_UpdateForecast
         {
-            private static long preCalculatedPeriod = -1L;
-
-            public static void Prefix(EnvMan __instance)
+            public static void Prefix(EnvMan __instance, out long __state)
             {
-                // In case m_environmentPeriod was changed to force update environment
-                preCalculatedPeriod = __instance.m_environmentPeriod;
+                __state = __instance.m_environmentPeriod;
             }
 
-            public static void Postfix(EnvMan __instance)
+            public static void Postfix(EnvMan __instance, long __state)
             {
-                if (!modEnabled.Value || !forecastEnabled.Value)
+                if (!modEnabled.Value || !forecastEnabled.Value || !InfoBlocks.forecastObject)
                     return;
 
-                if (__instance.m_environmentPeriod == environmentPeriod && __instance.m_environmentPeriod == preCalculatedPeriod && __instance.m_currentBiome == currentBiome && __instance.m_inAshlandsOrDeepnorth == inAshlandsOrDeepnorth)
+                if (__instance.m_environmentPeriod == environmentPeriod && __instance.m_environmentPeriod == __state
+                    && __instance.m_currentBiome == currentBiome && __instance.m_inAshlandsOrDeepnorth == inAshlandsOrDeepnorth)
                 {
                     UpdateWeatherTimer();
                     return;
@@ -209,7 +227,6 @@ namespace MyLittleUI
                 environmentPeriod = __instance.m_environmentPeriod;
                 currentBiome = __instance.m_currentBiome;
                 inAshlandsOrDeepnorth = __instance.m_inAshlandsOrDeepnorth;
-
                 UpdateNextWeather();
             }
         }
@@ -219,7 +236,7 @@ namespace MyLittleUI
         {
             public static void Postfix(EnvMan __instance, long timeSec, float dt)
             {
-                if (!modEnabled.Value || !windsEnabled.Value)
+                if (!modEnabled.Value || !windsEnabled.Value || !InfoBlocks.windsObject)
                     return;
 
                 if (windPeriod == GetCurrentWindPeriod(timeSec))
@@ -262,9 +279,11 @@ namespace MyLittleUI
             nextWeatherState = WeatherState.Clear;
             nextWeatherChange = 0;
 
-            if (environmentPeriod > 0 && (string.IsNullOrEmpty(EnvMan.instance.m_forceEnv) || EnvMan.instance.GetEnv(EnvMan.instance.m_forceEnv) == null))
+            Camera camera = Utils.GetMainCamera();
+            if (modEnabled.Value && forecastEnabled.Value && EnvMan.instance && camera && environmentPeriod >= 0
+                && (string.IsNullOrEmpty(EnvMan.instance.m_forceEnv) || EnvMan.instance.GetEnv(EnvMan.instance.m_forceEnv) == null))
             {
-                Vector3 position = Utils.GetMainCamera().transform.position;
+                Vector3 position = camera.transform.position;
                 bool inAshlands = WorldGenerator.IsAshlands(position.x, position.z);
                 bool inDeepNorth = WorldGenerator.IsDeepnorth(position.x, position.y);
 
@@ -287,7 +306,7 @@ namespace MyLittleUI
 
         public static void UpdateNextWinds(bool forceRebuildList = false)
         {
-            if (!windsEnabled.Value || !EnvMan.instance)
+            if (!modEnabled.Value || !windsEnabled.Value || !EnvMan.instance || !InfoBlocks.windsObject || !InfoBlocks.windTemplate)
                 return;
 
             nextWindChange = 0;
@@ -308,7 +327,7 @@ namespace MyLittleUI
                 }
             }
 
-            if (windPeriod > 0)
+            if (windPeriod >= 0)
             {
                 windsTransition.Clear();
                 windsTransitionTimer = 0f;
@@ -373,16 +392,21 @@ namespace MyLittleUI
                 return Vector4.zero;
 
             UnityEngine.Random.State state = UnityEngine.Random.state;
-            float angle = 0f;
-            float intensity = 0.5f;
-            long timeSec = (windPeriod + period) * GetWindPeriodDuration();
-            EnvMan.instance.AddWindOctave(timeSec, 1, ref angle, ref intensity);
-            EnvMan.instance.AddWindOctave(timeSec, 2, ref angle, ref intensity);
-            EnvMan.instance.AddWindOctave(timeSec, 4, ref angle, ref intensity);
-            EnvMan.instance.AddWindOctave(timeSec, 8, ref angle, ref intensity);
-            UnityEngine.Random.state = state;
-
-            return new Vector4(Mathf.Sin(angle), 0f, Mathf.Cos(angle), Mathf.Clamp(intensity, 0.05f, 1f));
+            try
+            {
+                float angle = 0f;
+                float intensity = 0.5f;
+                long timeSec = (windPeriod + period) * GetWindPeriodDuration();
+                EnvMan.instance.AddWindOctave(timeSec, 1, ref angle, ref intensity);
+                EnvMan.instance.AddWindOctave(timeSec, 2, ref angle, ref intensity);
+                EnvMan.instance.AddWindOctave(timeSec, 4, ref angle, ref intensity);
+                EnvMan.instance.AddWindOctave(timeSec, 8, ref angle, ref intensity);
+                return new Vector4(Mathf.Sin(angle), 0f, Mathf.Cos(angle), Mathf.Clamp(intensity, 0.05f, 1f));
+            }
+            finally
+            {
+                UnityEngine.Random.state = state;
+            }
         }
 
         private static WeatherState GetWeatherState(EnvSetup env)
@@ -407,22 +431,24 @@ namespace MyLittleUI
         private static bool IsInList(EnvSetup env, string[] environmentSystems)
         {
             return env.m_envObject != null && environmentSystems.Contains(env.m_envObject.name) ||
-                   env.m_psystems != null && env.m_psystems.Any(ps => ps.name != null && environmentSystems.Contains(ps.name));
+                   env.m_psystems != null && env.m_psystems.Any(ps => ps && environmentSystems.Contains(ps.name));
         }
 
-        private static EnvSetup GetEnvironment(long period, Heightmap.Biome biome, bool isAshlands, bool isDeepNorth)
+        private static EnvSetup GetEnvironment(long period, BiomeSector biome, bool isAshlands, bool isDeepNorth)
         {
             UnityEngine.Random.State state = UnityEngine.Random.state;
-            UnityEngine.Random.InitState((int)period);
+            try
+            {
+                UnityEngine.Random.InitState((int)period);
+                return GetAvailableEnvironment(biome, isAshlands, isDeepNorth);
+            }
+            finally
+            {
+                UnityEngine.Random.state = state;
+            }
+        }
 
-            EnvSetup env = GetAvailableEnvironment(biome, isAshlands, isDeepNorth);
-
-            UnityEngine.Random.state = state;
-
-            return env;
-        } 
-
-        private static EnvSetup GetAvailableEnvironment(Heightmap.Biome biome, bool isAshlands, bool isDeepNorth)
+        private static EnvSetup GetAvailableEnvironment(BiomeSector biome, bool isAshlands, bool isDeepNorth)
         {
             List<EnvEntry> availableEnvironments = EnvMan.instance.GetAvailableEnvironments(biome);
             if (availableEnvironments != null && availableEnvironments.Count > 0)

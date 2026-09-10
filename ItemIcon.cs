@@ -18,6 +18,9 @@ namespace MyLittleUI
 
         private static void UpdateItemIcon(GuiBar durability, Image icon, Image equiped)
         {
+            if (!icon)
+                return;
+
             if (itemIconScaleOriginal == Vector3.zero)
                 itemIconScaleOriginal = icon.transform.localScale;
 
@@ -82,14 +85,15 @@ namespace MyLittleUI
             StringBuilder sb = new StringBuilder();
 
             qualityCache.Clear();
-            int maxSymbols = Math.Min(itemQualityMax.Value, itemQualityColumns.Value * itemQualityRows.Value);
+            int columns = Math.Max(1, itemQualityColumns.Value);
+            int maxSymbols = (int)Math.Min(Math.Max(0, itemQualityMax.Value), (long)columns * Math.Max(0, itemQualityRows.Value));
             for (int i = 1; i <= maxSymbols; i++)
             {
                 sb.Append(GetQualitySymbol());
 
                 qualityCache.Add(i, sb.ToString());
 
-                if (i % (itemQualityColumns.Value) == 0)
+                if (i % columns == 0)
                     sb.Append("\n");
             }
         }
@@ -132,19 +136,19 @@ namespace MyLittleUI
                      || quality.color != color
                      || quality.isRightToLeftText != isRightToLeftText
                      || quality.lineSpacing != lineSpacing
-                     || quality.lineSpacing != characterSpacing;
+                     || quality.characterSpacing != characterSpacing;
             }
         };
 
         private static void UpdateItemQuality(TMP_Text quality, int m_quality)
         {
-            if (!itemQuality.Value || !quality.enabled)
+            if (!quality || !quality.enabled)
                 return;
 
             if (!DefaultQualityStyle.initialized)
                 DefaultQualityStyle.Save(quality);
 
-            if (!qualityCache.ContainsKey(m_quality))
+            if (!itemQuality.Value || !qualityCache.ContainsKey(m_quality))
             {
                 if (DefaultQualityStyle.IsTextWasChanged(quality))
                     DefaultQualityStyle.Load(quality);
@@ -250,14 +254,14 @@ namespace MyLittleUI
 
             private static bool HideEquipmentSlotsQuality(InventoryGrid grid, ItemDrop.ItemData item)
             {
-                return IsEAQSEquipmentGrid(grid) || hideItemQuality.Contains(item);
+                return itemQualityHideCustomEquipmentSlots.Value && (IsEAQSEquipmentGrid(grid) || hideItemQuality.Contains(item));
             }
 
             [HarmonyPriority(Priority.Last)]
             [HarmonyAfter("Azumatt.AzuExtendedPlayerInventory", "shudnal.ExtraSlots")]
-            private static void Postfix(InventoryGrid __instance, Inventory ___m_inventory, List<InventoryGrid.Element> ___m_elements)
+            private static void Postfix(InventoryGrid __instance, Inventory ___m_inventory, List<InventoryElement> ___m_elements)
             {
-                if (!modEnabled.Value)
+                if (!modEnabled.Value || ___m_inventory == null)
                     return;
 
                 filterItemQuality.Clear();
@@ -274,15 +278,23 @@ namespace MyLittleUI
                     int index = item.m_gridPos.y * width + item.m_gridPos.x;
                     if (0 <= index && index < ___m_elements.Count)
                     {
-                        InventoryGrid.Element element = ___m_elements[index];
+                        InventoryElement element = ___m_elements[index];
+                        if (!element)
+                            continue;
+
                         UpdateItemIcon(element.m_durability, element.m_icon, element.m_equiped);
 
-                        if (HideEquipmentSlotsQuality(__instance, item) || (itemQualityHideLvl1.Value && item.m_quality < 2))
-                            element.m_quality.SetText("");
-                        else if (!IgnoreItemQuality(__instance, item))
-                            UpdateItemQuality(element.m_quality, item.m_quality);
+                        if (element.m_quality)
+                        {
+                            if (HideEquipmentSlotsQuality(__instance, item) || (itemQualityHideLvl1.Value && item.m_quality < 2))
+                                element.m_quality.SetText("");
+                            else if (!IgnoreItemQuality(__instance, item))
+                                UpdateItemQuality(element.m_quality, item.m_quality);
+                            else if (DefaultQualityStyle.initialized && DefaultQualityStyle.IsTextWasChanged(element.m_quality))
+                                DefaultQualityStyle.Load(element.m_quality);
+                        }
 
-                        if (inventoryHideLongStack.Value && element.m_amount.text.Length > 7 && element.m_amount.text.IndexOf('/') is int length && length > 0)
+                        if (inventoryHideLongStack.Value && element.m_amount && element.m_amount.text.Length > 7 && element.m_amount.text.IndexOf('/') is int length && length > 0)
                             element.m_amount.text = element.m_amount.text.Substring(0, length);
                     }
                 }
@@ -304,8 +316,8 @@ namespace MyLittleUI
 
                 foreach(HotkeyBar.ElementData element in __instance.m_elements)
                 {
-                    UpdateItemIcon(element.m_durability, element.m_icon, itemEquippedColor.Value != Color.clear ? element.m_equiped.GetComponent<Image>() : null);
-                    if (inventoryHideLongStack.Value && element.m_amount.text.Length > 9)
+                    UpdateItemIcon(element.m_durability, element.m_icon, element.m_equiped ? element.m_equiped.GetComponent<Image>() : null);
+                    if (inventoryHideLongStack.Value && element.m_amount && element.m_amount.text.Length > 9)
                         element.m_amount.text = element.m_stackText.ToFastString();
                 }
             }

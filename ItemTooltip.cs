@@ -22,7 +22,9 @@ namespace MyLittleUI
         private static readonly Dictionary<string, List<int>> tokenPositions = new Dictionary<string, List<int>>();
         private static readonly List<string> arrResult = new List<string>();
 
-        private static readonly Dictionary<int, string> tooltipCache = new Dictionary<int, string>();
+        private static readonly Dictionary<Tuple<ItemDrop.ItemData, int, bool, float, bool, string>, string> tooltipCache
+            = new Dictionary<Tuple<ItemDrop.ItemData, int, bool, float, bool, string>, string>();
+        private static bool buildingTooltip;
         private const int tooltipCachedEntriesMax = 200;
 
         public static void Initialize()
@@ -291,10 +293,9 @@ namespace MyLittleUI
             {
                 if (item.m_shared.m_scaleWeightByQuality != 0f)
                 {
-                    int currentQuality = item.m_quality;
-                    item.m_quality = m_quality - 1;
-                    string weight = item.GetWeight().ToString("0.0");
-                    item.m_quality = currentQuality;
+                    ItemDrop.ItemData comparison = item.Clone();
+                    comparison.m_quality = m_quality - 1;
+                    string weight = comparison.GetWeight().ToString("0.0");
                     
                     return statString.Insert(index, GetStringUpgradeFrom(weight));
                 }
@@ -341,7 +342,7 @@ namespace MyLittleUI
             if (!InventoryGui.instance || InventoryGui.instance.m_recipeDecription == null)
                 return;
 
-            InventoryGui.instance.m_recipeDecription.fontSizeMin = Math.Clamp(itemTooltipRecipeFontSize.Value, 1, InventoryGui.instance.m_recipeDecription.fontSizeMax);
+            InventoryGui.instance.m_recipeDecription.fontSizeMin = Mathf.Clamp(itemTooltipRecipeFontSize.Value, 1, InventoryGui.instance.m_recipeDecription.fontSizeMax);
         }
 
         [HarmonyPatch(typeof(InventoryGui), nameof(InventoryGui.Awake))]
@@ -350,122 +351,126 @@ namespace MyLittleUI
             private static void Postfix() => UpdateRecipeDescriptionFontSize();
         }
 
-        [HarmonyPatch(typeof(ItemDrop.ItemData), nameof(ItemDrop.ItemData.GetTooltip), typeof(ItemDrop.ItemData), typeof(int), typeof(bool), typeof(float), typeof(int))]
+        private static string RecolorTooltip(string text)
+        {
+            return text.Replace("<color=orange>", itemTooltipColored.Value ? "<color=#ffa500ff>" : "<color=#add8e6ff>")
+                .Replace("<color=yellow>", itemTooltipColored.Value ? "<color=#ffff00ff>" : "<color=#c0c0c0ff>")
+                .Replace("<color=silver>", "<color=#c0c0c0ff>")
+                .Replace("<color=lightblue>", "<color=#add8e6ff>")
+                .Replace("\n\n\n", "\n\n");
+        }
+
+        [HarmonyPatch(typeof(ItemDrop.ItemData), nameof(ItemDrop.ItemData.GetTooltip), typeof(ItemDrop.ItemData), typeof(int),
+            typeof(bool), typeof(float), typeof(int), typeof(bool))]
         private class ItemDropItemData_GetTooltip_ItemTooltip
         {
             [HarmonyPriority(Priority.First)]
-            private static void Postfix(ItemDrop.ItemData item, int qualityLevel, bool crafting, float worldLevel, ref string __result)
+            private static void Postfix(ItemDrop.ItemData item, int qualityLevel, bool crafting, float worldLevel, bool appending, ref string __result)
             {
-                if (!modEnabled.Value)
+                if (!modEnabled.Value || !itemTooltip.Value || buildingTooltip || item?.m_shared == null
+                    || !Player.m_localPlayer || string.IsNullOrEmpty(__result)
+                    || UnityInput.Current.GetKey(KeyCode.LeftAlt) || UnityInput.Current.GetKey(KeyCode.RightAlt))
                     return;
 
-                if (!itemTooltip.Value)
-                    return;
-
-                if (UnityInput.Current.GetKey(KeyCode.LeftAlt) || UnityInput.Current.GetKey(KeyCode.RightAlt))
-                    return;
-
-                if (tooltipCache.Count > tooltipCachedEntriesMax)
-                    tooltipCache.Clear();
-
-                int tooltipHash = __result.GetStableHashCode();
-                if (tooltipCache.ContainsKey(tooltipHash))
+                ItemDrop appended = item.m_shared.m_appendToolTip;
+                if (appending || (appended && appended.m_itemData.m_shared.m_food <= 0f
+                    && appended.m_itemData.m_shared.m_foodStamina <= 0f && appended.m_itemData.m_shared.m_foodEitr <= 0f))
                 {
-                    __result = tooltipCache[tooltipHash];
+                    // Recursive, non-food tooltips have no reliable boundary between their item sections.
+                    // Preserve the native layout instead of merging statistics from different items.
+                    __result = RecolorTooltip(__result);
                     return;
                 }
 
-                if (item == null)
+                var key = Tuple.Create(item, qualityLevel, crafting, worldLevel, itemTooltipColored.Value, __result);
+                if (!crafting && tooltipCache.TryGetValue(key, out string cached))
+                {
+                    __result = cached;
+                    return;
+                }
+                int descriptionEnd = __result.IndexOf("\n\n", StringComparison.Ordinal);
+                if (descriptionEnd < 0)
                     return;
 
-                int descriptionEnd = __result.IndexOf("\n\n", StringComparison.InvariantCulture);
-                if (descriptionEnd == -1)
-                    return;
-
-                sb.Clear();
-
-                // Decription is not needed to be touched, anything that is before first \n\n considered description
-                string description = __result.Substring(0, descriptionEnd + 2);
-                __result = __result.Substring(description.Length);
-                sb.Append(description);
-
-                // End of tooltip is not needed to be touched, anything that is after first status effect, EpicLoot magic tooltip or item set info
-                int footerIndex = -1;
-                string statusEffect = item.GetStatusEffectTooltip(qualityLevel, Player.m_localPlayer.GetSkillLevel(item.m_shared.m_skillType));
-                if (!String.IsNullOrEmpty(statusEffect))
-                    tails.Insert(0, "\n\n" + statusEffect.Substring(0, statusEffect.IndexOf("</color>\n", StringComparison.OrdinalIgnoreCase)));
-
-                foreach (string tailString in tails)
+                buildingTooltip = true;
+                try
                 {
-                    footerIndex = __result.IndexOf(tailString, StringComparison.InvariantCulture);
-                    if (footerIndex != -1)
-                        break;
-                }
+                    string description = __result.Substring(0, descriptionEnd + 2);
+                    string body = __result.Substring(description.Length);
+                    int footerIndex = body.Length;
+                    foreach (string tail in tails)
+                        FindFooter(tail);
 
-                if (!String.IsNullOrEmpty(statusEffect))
-                    tails.RemoveAt(0);
+                    float skill = Player.m_localPlayer.GetSkillLevel(item.m_shared.m_skillType);
+                    string statusEffect = item.GetStatusEffectTooltip(qualityLevel, skill);
+                    if (!string.IsNullOrEmpty(statusEffect))
+                        FindFooter("\n\n" + statusEffect);
+                    string chain = item.GetChainTooltip(qualityLevel, skill);
+                    if (!string.IsNullOrEmpty(chain))
+                        FindFooter("\n\n" + chain);
 
-                string footer = "";
-                if (footerIndex != -1)
-                {
-                    footer = __result.Substring(footerIndex);
-                    __result = __result.Substring(0, footerIndex);
-                }
-
-                tokenPositions.Clear();
-                arrResult.Clear();
-
-                // Result now stripped of description and footer and should only consist of tokens
-                arrResult.AddRange(__result.Split(new char[] { '\n' }, StringSplitOptions.None));
-
-                for (int i = 0; i < arrResult.Count; i++)
-                {
-                    if (arrResult[i] == "\n")
-                        continue;
-
-                    var localizedTokens = localizedTooltipTokens.Where(kvp => arrResult[i].IndexOf(kvp.Key) > -1).ToList();
-
-                    if (localizedTokens.Count() > 0)
+                    string footer = body.Substring(footerIndex);
+                    body = body.Substring(0, footerIndex);
+                    sb.Clear();
+                    sb.Append(description);
+                    tokenPositions.Clear();
+                    arrResult.Clear();
+                    arrResult.AddRange(body.Split(new[] { '\n' }, StringSplitOptions.None));
+                    string lastToken = null;
+                    for (int i = 0; i < arrResult.Count; i++)
                     {
-                        if (tokenPositions.ContainsKey(localizedTokens[0].Value))
-                            tokenPositions[localizedTokens[0].Value].Add(i);
-                        else
-                            tokenPositions.Add(localizedTokens[0].Value, new List<int> { i });
-                    }
-                    else
-                    {
-                        // if string doesn't have known token - add it to last added token
-                        if (tokenPositions.Count > 0)
-                            tokenPositions.Last().Value.Add(i);
-                        else
+                        if (string.IsNullOrWhiteSpace(arrResult[i]))
+                            continue;
+                        string token = localizedTooltipTokens.Keys.FirstOrDefault(value => arrResult[i].IndexOf(value, StringComparison.Ordinal) >= 0);
+                        if (token != null)
                         {
-                            // if there is no tokens yet - add it to resulting string directly
-                            sb.Append(arrResult[i]);
-                            sb.Append("\n");
-                            arrResult.RemoveAt(i);
-                            i--;
+                            if (!tokenPositions.TryGetValue(token, out List<int> positions))
+                            {
+                                positions = new List<int>();
+                                tokenPositions.Add(token, positions);
+                            }
+                            positions.Add(i);
+                            lastToken = token;
                         }
+                        else if (lastToken != null)
+                            tokenPositions[lastToken].Add(i);
+                        else
+                            sb.Append(arrResult[i]).Append('\n');
+                    }
+
+                    ReorderTooltip(item, qualityLevel, worldLevel,
+                        upgradingTooltip: crafting && qualityLevel > 1 && qualityLevel <= item.m_shared.m_maxQuality);
+                    sb.Append(footer);
+                    __result = RecolorTooltip(sb.ToString());
+                    if (!crafting)
+                    {
+                        if (tooltipCache.Count >= tooltipCachedEntriesMax)
+                            tooltipCache.Clear();
+                        tooltipCache[key] = __result;
+                    }
+
+                    void FindFooter(string marker)
+                    {
+                        if (string.IsNullOrEmpty(marker))
+                            return;
+                        int index = body.IndexOf(marker, StringComparison.Ordinal);
+                        if (index >= 0)
+                            footerIndex = Math.Min(footerIndex, index);
                     }
                 }
-
-                // Regroup tokens by new order respecting original string formats
-                ReorderTooltip(item, qualityLevel, worldLevel, upgradingTooltip: crafting && 1 < qualityLevel && qualityLevel <= item.m_shared.m_maxQuality);
-
-                if (footerIndex != -1)
-                    sb.Append(footer);
-
-                __result = sb.ToString();
-                
-                // Use hex code for EpicLoot to not change it to lightblue
-                __result = __result.Replace("<color=orange>", itemTooltipColored.Value ? "<color=#ffa500ff>" : "<color=#add8e6ff>")
-                                   .Replace("<color=yellow>", itemTooltipColored.Value ? "<color=#ffff00ff>" : "<color=#c0c0c0ff>")
-                                   .Replace("<color=silver>", "<color=#c0c0c0ff>")
-                                   .Replace("<color=lightblue>", "<color=#add8e6ff>")
-                                   .Replace("\n\n\n", "\n\n");
-
-                tooltipCache.Add(tooltipHash, __result);
+                finally
+                {
+                    buildingTooltip = false;
+                }
             }
         }
+
+        [HarmonyPatch(typeof(InventoryGui), nameof(InventoryGui.OnDestroy))]
+        private static class InventoryGui_OnDestroy_ClearTooltipCache
+        {
+            private static void Postfix() => tooltipCache.Clear();
+        }
+
 
     }
 }

@@ -32,12 +32,19 @@ namespace MyLittleUI
 
         private static void InitFilterField()
         {
-            if (AAA_Crafting || ZenUI)
+            if (AAA_Crafting || ZenUI || playerFilter)
                 return;
 
-            RectTransform recipeList = InventoryGui.instance.m_recipeListScroll.transform.parent as RectTransform;
+            InventoryGui gui = InventoryGui.instance;
+            if (!gui || !gui.m_recipeListScroll || !TextInput.instance || !TextInput.instance.m_inputField
+                || !gui.m_splitDialog || !gui.m_splitDialog.m_splitOkButton)
+                return;
 
-            // Add filter field on the bottom of crafting list
+            RectTransform recipeList = gui.m_recipeListScroll.transform.parent as RectTransform;
+            if (!recipeList)
+                return;
+
+            // Add filter field on the bottom of crafting list.
             GameObject filterField = UnityEngine.Object.Instantiate(TextInput.instance.m_inputField.gameObject, recipeList.parent);
             filterField.name = "MLUI_FilterField";
             filterField.transform.SetSiblingIndex(recipeList.GetSiblingIndex() + 1);
@@ -51,14 +58,14 @@ namespace MyLittleUI
 
             playerFilter = filterField.GetComponent<GuiInputField>();
             playerFilter.VirtualKeyboardTitle = "$menu_filter";
-            playerFilter.transform.Find("Text Area/Placeholder").GetComponent<TMP_Text>().SetText(Localization.instance.Localize("$menu_filter"));
-
+            playerFilter.transform.Find("Text Area/Placeholder")?.GetComponent<TMP_Text>()?.SetText(Localization.instance.Localize("$menu_filter"));
             playerFilter.restoreOriginalTextOnEscape = false;
 
-            Button clearButton = UnityEngine.Object.Instantiate(InventoryGui.instance.m_splitOkButton, filterField.transform);
+            Button clearButton = UnityEngine.Object.Instantiate(gui.m_splitDialog.m_splitOkButton, filterField.transform);
             clearButton.name = "ClearTextButton";
-            
-            clearButton.onClick.RemoveAllListeners();
+
+            // Do not retain persistent or runtime actions from the split dialog.
+            clearButton.onClick = new Button.ButtonClickedEvent();
             clearButton.onClick.AddListener(ClearText);
 
             RectTransform clearButtonRT = clearButton.GetComponent<RectTransform>();
@@ -67,11 +74,23 @@ namespace MyLittleUI
             clearButtonRT.sizeDelta = Vector2.one * 28f;
             clearButtonRT.anchoredPosition = new Vector2(-16f, 0f);
 
-            TextMeshProUGUI text = clearButton.transform.Find("Text").GetComponent<TextMeshProUGUI>();
-            text.SetText("✖");
-            text.margin = Vector4.one * -2f;
+            TMP_Text text = clearButton.GetComponentInChildren<TMP_Text>(true);
+            if (text)
+            {
+                text.SetText("✖");
+                text.margin = Vector4.one * -2f;
+            }
 
-            clearButton.transform.Find("gamepad_hint").localPosition = new Vector3(-0.75f, 23.8f, 0f);
+            UIGamePad gamepad = clearButton.GetComponent<UIGamePad>();
+            if (gamepad)
+            {
+                gamepad.m_zinputKey = "";
+                gamepad.m_keyCode = KeyCode.None;
+                gamepad.enabled = false;
+                if (gamepad.m_hint && gamepad.m_hint.transform.IsChildOf(clearButton.transform))
+                    gamepad.m_hint.SetActive(false);
+                gamepad.m_hint = null;
+            }
 
             playerFilter.onValueChanged.AddListener(delegate
             {
@@ -82,36 +101,48 @@ namespace MyLittleUI
 
         public static void UpdateVisibility()
         {
-            if (AAA_Crafting || ZenUI)
+            if (AAA_Crafting || ZenUI || !InventoryGui.instance)
                 return;
 
-            playerFilter?.gameObject?.SetActive(IsCraftingFilterEnabled);
+            if (playerFilter)
+            {
+                if (!IsCraftingFilterEnabled && playerFilter.isFocused)
+                    playerFilter.DeactivateInputField();
+                playerFilter.gameObject.SetActive(IsCraftingFilterEnabled);
+            }
 
             if (InventoryGui.instance.m_recipeListScroll)
             {
                 RectTransform recipeList = InventoryGui.instance.m_recipeListScroll.transform.parent as RectTransform;
+                if (!recipeList)
+                    return;
+
                 if (listAnchorMin.x == -1f)
                     listAnchorMin = recipeList.anchorMin;
 
-                recipeList.anchorMin = playerFilter?.isActiveAndEnabled == true ? listAnchorMin + new Vector2(0f, 0.05f) : listAnchorMin;
+                recipeList.anchorMin = playerFilter && playerFilter.isActiveAndEnabled ? listAnchorMin + new Vector2(0f, 0.05f) : listAnchorMin;
             }
         }
 
-        public static void UpdateFilterString() 
+        public static void UpdateFilterString()
         {
-            if (applyFilter = !string.IsNullOrWhiteSpace(playerFilter?.text))
-                filterString = playerFilter?.text.ToLower().Split(new char[] { ' ' }, StringSplitOptions.None);
+            applyFilter = !string.IsNullOrWhiteSpace(playerFilter?.text);
+            filterString = applyFilter ? playerFilter.text.ToLowerInvariant().Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries) : Array.Empty<string>();
         }
 
         public static void ClearText()
         {
             applyFilter = false;
+            filterString = Array.Empty<string>();
             if (playerFilter)
                 playerFilter.text = "";
         }
 
         private static string GetItemFullString(ItemDrop itemDrop)
         {
+            if (!itemDrop)
+                return "";
+
             sbItem.Clear();
             sbItem.Append(itemDrop.name);
             sbItem.Append(' ');
@@ -130,7 +161,7 @@ namespace MyLittleUI
 
         private static void CacheRecipe(Recipe recipe)
         {
-            if (recipeCache.ContainsKey(recipe))
+            if (!recipe || recipeCache.ContainsKey(recipe))
                 return;
 
             sb.Clear();
@@ -140,25 +171,32 @@ namespace MyLittleUI
             sb.Append(GetItemFullString(recipe.m_item));
             sb.Append(' ');
 
-            recipe.m_resources.Do(req => { sb.Append(GetItemFullString(req.m_resItem)); sb.Append(' '); });
+            foreach (Piece.Requirement requirement in recipe.m_resources)
+            {
+                if (requirement == null)
+                    continue;
 
-            recipeCache[recipe] = sb.ToString().ToLower();
+                sb.Append(GetItemFullString(requirement.m_resItem));
+                sb.Append(' ');
+            }
+
+            recipeCache[recipe] = sb.ToString().ToLowerInvariant();
         }
 
         private static bool FitsFilterString(Recipe recipe)
         {
-            return recipeCache.ContainsKey(recipe) && filterString.All(substr => recipeCache[recipe].Contains(substr));
+            return recipe && recipeCache.ContainsKey(recipe) && filterString.All(substr => recipeCache[recipe].Contains(substr));
         }
 
         private static void StartPanelUpdate()
         {
             instance.CancelInvoke("UpdateCraftingPanel");
-            instance.Invoke("UpdateCraftingPanel", recipeCache.Count == 0f ? 0.4f : 0.2f);
+            instance.Invoke("UpdateCraftingPanel", recipeCache.Count == 0 ? 0.4f : 0.2f);
         }
 
         public static void UpdateCraftingPanel()
         {
-            if (!InventoryGui.instance)
+            if (!InventoryGui.instance || !Player.m_localPlayer)
                 return;
 
             InventoryGui.instance.UpdateCraftingPanel(focusView: true);
@@ -190,7 +228,12 @@ namespace MyLittleUI
         {
             public static void Postfix()
             {
+                instance.CancelInvoke("UpdateCraftingPanel");
                 recipeCache.Clear();
+                playerFilter = null;
+                applyFilter = false;
+                filterString = Array.Empty<string>();
+                listAnchorMin = new Vector2(-1f, -1f);
             }
         }
 
@@ -209,22 +252,16 @@ namespace MyLittleUI
             [HarmonyPriority(Priority.Last)]
             public static void Postfix(ref List<Recipe> available)
             {
-                if (!IsCraftingFilterEnabled)
-                    return;
-
-                if (!applyFilter)
+                if (!IsCraftingFilterEnabled || !applyFilter)
                     return;
 
                 Stopwatch stopwatch = Stopwatch.StartNew();
-
                 available.Do(CacheRecipe);
-
                 LogInfo($"Recipe cache: verified {recipeCache.Count} in {(double)stopwatch.ElapsedTicks / Stopwatch.Frequency * 1000d:F2} ms");
-                
-                stopwatch.Reset();
 
-                LogInfo($"Recipe filter: removed {available.RemoveAll(recipe => !FitsFilterString(recipe))} in {(double)stopwatch.ElapsedTicks / Stopwatch.Frequency * 1000d:F2} ms");
-
+                stopwatch.Restart();
+                int removed = available.RemoveAll(recipe => !FitsFilterString(recipe));
+                LogInfo($"Recipe filter: removed {removed} in {(double)stopwatch.ElapsedTicks / Stopwatch.Frequency * 1000d:F2} ms");
                 stopwatch.Stop();
             }
         }
@@ -234,7 +271,7 @@ namespace MyLittleUI
         {
             public static void Postfix()
             {
-                if (!IsCraftingFilterEnabled)
+                if (!IsCraftingFilterEnabled || !playerFilter || !playerFilter.isActiveAndEnabled)
                     return;
 
                 bool flag = ZInput.InputLayout == InputLayout.Alternative1;

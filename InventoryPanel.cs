@@ -168,6 +168,7 @@ namespace MyLittleUI
 
             if ((bool)weight && weight.gameObject.activeInHierarchy)
             {
+                maxWeight = Mathf.FloorToInt(Player.m_localPlayer.GetMaxCarryWeight());
                 int currentWeight = showWeightLeft.Value ? maxWeight - totalWeight : totalWeight;
 
                 weightText?.SetText(maxWeight <= 0 ? currentWeight.ToFastString() : string.Format(GetFormatString(totalWeight > maxWeight), currentWeight, maxWeight));
@@ -208,7 +209,7 @@ namespace MyLittleUI
                 height = ExtraSlotsAPI.API.GetInventoryHeightPlayer();
 
             slotsAmount = width * height;
-            emptySlots = slotsAmount - Player.m_localPlayer.GetInventory().m_inventory.Where(item => item.m_gridPos.x < width && item.m_gridPos.y < height).Count();
+            emptySlots = slotsAmount - Player.m_localPlayer.GetInventory().m_inventory.Where(item => item.m_gridPos.x >= 0 && item.m_gridPos.y >= 0 && item.m_gridPos.x < width && item.m_gridPos.y < height).Count();
 
             if (AzuExtendedPlayerInventory.API.IsLoaded())
             {
@@ -234,9 +235,7 @@ namespace MyLittleUI
         {
             public static void Postfix()
             {
-                if (!modEnabled.Value)
-                    return;
-
+                totalWeight = maxWeight = emptySlots = maxSlots = 0;
                 weight = null;
                 slots = null;
 
@@ -314,16 +313,16 @@ namespace MyLittleUI
             }
         }
 
-        [HarmonyPatch(typeof(SEMan), nameof(SEMan.AddStatusEffect), typeof(StatusEffect), typeof(bool), typeof(int), typeof(float))]
+        [HarmonyPatch(typeof(SEMan), nameof(SEMan.AddStatusEffect), typeof(StatusEffect), typeof(bool), typeof(int), typeof(float), typeof(short))]
         public static class SEManAddStatusEffect_UpdateStats
         {
-            public static void Postfix(StatusEffect __result)
+            public static void Postfix(SEMan __instance, StatusEffect __result)
             {
-                if (!modEnabled.Value)
+                if (!modEnabled.Value || !Player.m_localPlayer || __instance != Player.m_localPlayer.GetSEMan())
                     return;
 
-                if (__result is SE_Stats se && se.m_addMaxCarryWeight > 0)
-                    UpdateVisuals();
+                if (__result is SE_Stats se && se.m_addMaxCarryWeight != 0f)
+                    UpdateStats();
             }
         }
     }
