@@ -38,10 +38,52 @@ namespace MyLittleUI
 
         private static Gradient gradient;
 
+        private static ConfigFile subscribedConfig;
+        private static bool layoutDirty = true;
+        private static bool statsDirty = true;
+        private static int gradientRevision;
+        private static readonly GradientColorKey[] gradientKeys = new GradientColorKey[4];
+        private static readonly PanelRenderState weightState = new PanelRenderState();
+        private static readonly PanelRenderState slotsState = new PanelRenderState();
+
+        private sealed class PanelRenderState
+        {
+            internal bool Valid;
+            internal int Current;
+            internal int Maximum;
+            internal int Value;
+            internal bool Blink;
+            internal int GradientRevision = -1;
+        }
+
+        private static void OnPanelSettingChanged(object sender, SettingChangedEventArgs args)
+        {
+            string section = args.ChangedSetting.Definition.Section;
+            if (!section.StartsWith("Info - Inventory", StringComparison.Ordinal) && section != "General")
+                return;
+            layoutDirty = true;
+            statsDirty = true;
+        }
+
+        private static void SubscribeSettings()
+        {
+            ConfigFile config = instance.Config;
+            if (ReferenceEquals(subscribedConfig, config))
+                return;
+            if (subscribedConfig != null)
+                subscribedConfig.SettingChanged -= OnPanelSettingChanged;
+            subscribedConfig = config;
+            subscribedConfig.SettingChanged += OnPanelSettingChanged;
+        }
+
         internal static void AddBlock(GameObject parentObject)
         {
             if (parentObject == null)
                 return;
+
+            SubscribeSettings();
+            layoutDirty = statsDirty = true;
+            weightState.Valid = slotsState.Valid = false;
 
             weight = new GameObject(objectWeightName, typeof(RectTransform))
             {
@@ -100,34 +142,44 @@ namespace MyLittleUI
             slotsBackground = slots.GetComponent<Image>();
         }
 
-        public static void UpdateStats()
+        // Inventory/equipment notifications can arrive in bursts. Resolve the final state
+        // once before rendering instead of rebuilding it for every intermediate notification.
+        public static void UpdateStats() => statsDirty = true;
+
+        private static void RefreshStats()
         {
             if (!Player.m_localPlayer)
                 return;
 
+            statsDirty = false;
             UpdateGradient();
-
             totalWeight = Mathf.FloorToInt(Player.m_localPlayer.GetInventory().GetTotalWeight());
-            maxWeight = Mathf.FloorToInt(Player.m_localPlayer.GetMaxCarryWeight());
-
             GetCurrentSlotsAmount(out emptySlots, out maxSlots);
         }
 
         public static void UpdateGradient()
         {
+            Color fine = weightSlotsFine.Value;
+            Color half = weightSlotsHalf.Value;
+            Color lot = weightSlotsALot.Value;
+            Color full = weightSlotsFull.Value;
+            if (gradient != null && gradientKeys[0].color == fine && gradientKeys[1].color == half
+                && gradientKeys[2].color == lot && gradientKeys[3].color == full)
+                return;
+
             gradient ??= new Gradient();
-            gradient.SetKeys(new GradientColorKey[4]
-                                {
-                                        new GradientColorKey(weightSlotsFine.Value, 0.0f),
-                                        new GradientColorKey(weightSlotsHalf.Value, 0.5f),
-                                        new GradientColorKey(weightSlotsALot.Value, 0.75f),
-                                        new GradientColorKey(weightSlotsFull.Value, 1.0f)
-                                },
-                             Array.Empty<GradientAlphaKey>());
+            gradientKeys[0] = new GradientColorKey(fine, 0f);
+            gradientKeys[1] = new GradientColorKey(half, 0.5f);
+            gradientKeys[2] = new GradientColorKey(lot, 0.75f);
+            gradientKeys[3] = new GradientColorKey(full, 1f);
+            gradient.SetKeys(gradientKeys, Array.Empty<GradientAlphaKey>());
+            gradientRevision++;
         }
 
         public static void UpdateConfigurableValues()
         {
+            layoutDirty = false;
+            weightState.Valid = slotsState.Valid = false;
             if (weightBackground)
                 weightBackground.color = weightBackgroundColor.Value;
 
@@ -161,42 +213,62 @@ namespace MyLittleUI
 
         public static void UpdateVisuals()
         {
-            if (!Player.m_localPlayer)
+            Player player = Player.m_localPlayer;
+            if (!player)
                 return;
 
-            UpdateConfigurableValues();
+            if (layoutDirty)
+                UpdateConfigurableValues();
+            bool weightVisible = weight && weight.gameObject.activeInHierarchy;
+            bool slotsVisible = slots && slots.gameObject.activeInHierarchy;
+            if (!weightVisible && !slotsVisible)
+                return;
 
-            if ((bool)weight && weight.gameObject.activeInHierarchy)
+            if (statsDirty)
+                RefreshStats();
+
+            if (weightVisible)
             {
-                maxWeight = Mathf.FloorToInt(Player.m_localPlayer.GetMaxCarryWeight());
-                int currentWeight = showWeightLeft.Value ? maxWeight - totalWeight : totalWeight;
+                // Carry capacity can change without Inventory.Changed (status effects and
+                // other mods), so keep this effective getter live rather than caching it.
+                maxWeight = Mathf.FloorToInt(player.GetMaxCarryWeight());
+                int current = showWeightLeft.Value ? maxWeight - totalWeight : totalWeight;
+                RenderPanel(weightState, weightText, weightBar, current, maxWeight, totalWeight, totalWeight > maxWeight, true);
+            }
+            if (slotsVisible)
+            {
+                int current = showSlotsTaken.Value ? maxSlots - emptySlots : emptySlots;
+                RenderPanel(slotsState, slotsText, slotsBar, current, maxSlots, maxSlots - emptySlots, emptySlots <= 0, false);
+            }
+        }
 
-                weightText?.SetText(maxWeight <= 0 ? currentWeight.ToFastString() : string.Format(GetFormatString(totalWeight > maxWeight), currentWeight, maxWeight));
-
-                if (weightBar)
+        private static void RenderPanel(PanelRenderState state, TMP_Text text, GuiBar bar, int current, int maximum, int value, bool warning, bool hideNonpositiveMaximum)
+        {
+            bool blink = warning && Mathf.Sin(Time.time * 10f) > 0f;
+            bool valueChanged = !state.Valid || state.Maximum != maximum || state.Value != value;
+            if (text && (!state.Valid || state.Current != current || state.Maximum != maximum || state.Blink != blink))
+            {
+                string formatted = hideNonpositiveMaximum && maximum <= 0 ? current.ToFastString()
+                    : blink ? $"<color=red>{current}</color>/{maximum}" : $"{current}/{maximum}";
+                text.SetText(formatted);
+            }
+            if (bar)
+            {
+                if (valueChanged)
                 {
-                    weightBar.SetMaxValue(maxWeight);
-                    weightBar.SetValue(totalWeight);
-
-                    if (gradient != null && weightBar.m_maxValue != 0f)
-                        weightBar.SetColor(gradient.Evaluate(Mathf.Clamp01(weightBar.m_value / weightBar.m_maxValue)));
+                    bar.SetMaxValue(maximum);
+                    bar.SetValue(value);
                 }
+                if ((valueChanged || state.GradientRevision != gradientRevision) && gradient != null && bar.m_maxValue != 0f)
+                    bar.SetColor(gradient.Evaluate(Mathf.Clamp01(bar.m_value / bar.m_maxValue)));
             }
 
-            if ((bool)slots && slots.gameObject.activeInHierarchy)
-            {
-                slotsText?.SetText(string.Format(GetFormatString(emptySlots <= 0), (showSlotsTaken.Value ? maxSlots - emptySlots : emptySlots).ToFastString(), maxSlots.ToFastString()));
-
-                if (slotsBar)
-                {
-                    slotsBar.SetMaxValue(maxSlots);
-                    slotsBar.SetValue(maxSlots - emptySlots);
-                    if (gradient != null && slotsBar.m_maxValue != 0f)
-                        slotsBar.SetColor(gradient.Evaluate(Mathf.Clamp01(slotsBar.m_value / slotsBar.m_maxValue)));
-                }
-            }
-
-            static string GetFormatString(bool condition) => condition && Mathf.Sin(Time.time * 10f) > 0f ? "<color=red>{0}</color>/{1}" : "{0}/{1}";
+            state.Valid = true;
+            state.Current = current;
+            state.Maximum = maximum;
+            state.Value = value;
+            state.Blink = blink;
+            state.GradientRevision = gradientRevision;
         }
 
         public static void GetCurrentSlotsAmount(out int emptySlots, out int slotsAmount)
@@ -209,7 +281,14 @@ namespace MyLittleUI
                 height = ExtraSlotsAPI.API.GetInventoryHeightPlayer();
 
             slotsAmount = width * height;
-            emptySlots = slotsAmount - Player.m_localPlayer.GetInventory().m_inventory.Where(item => item.m_gridPos.x >= 0 && item.m_gridPos.y >= 0 && item.m_gridPos.x < width && item.m_gridPos.y < height).Count();
+            emptySlots = slotsAmount;
+            List<ItemDrop.ItemData> items = Player.m_localPlayer.GetInventory().m_inventory;
+            for (int i = 0; i < items.Count; i++)
+            {
+                ItemDrop.ItemData item = items[i];
+                if (item != null && item.m_gridPos.x >= 0 && item.m_gridPos.y >= 0 && item.m_gridPos.x < width && item.m_gridPos.y < height)
+                    emptySlots--;
+            }
 
             if (AzuExtendedPlayerInventory.API.IsLoaded())
             {
@@ -235,6 +314,11 @@ namespace MyLittleUI
         {
             public static void Postfix()
             {
+                if (subscribedConfig != null)
+                    subscribedConfig.SettingChanged -= OnPanelSettingChanged;
+                subscribedConfig = null;
+                layoutDirty = statsDirty = true;
+                weightState.Valid = slotsState.Valid = false;
                 totalWeight = maxWeight = emptySlots = maxSlots = 0;
                 weight = null;
                 slots = null;
@@ -306,9 +390,6 @@ namespace MyLittleUI
         {
             public static void Postfix()
             {
-                if (!modEnabled.Value)
-                    return;
-
                 UpdateVisuals();
             }
         }

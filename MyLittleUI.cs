@@ -30,7 +30,7 @@ namespace MyLittleUI
     {
         public const string pluginID = "shudnal.MyLittleUI";
         public const string pluginName = "My Little UI";
-        public const string pluginVersion = "1.2.16";
+        public const string pluginVersion = "1.2.18";
 
         private readonly Harmony harmony = new Harmony(pluginID);
 
@@ -384,8 +384,14 @@ namespace MyLittleUI
             harmony.PatchAll();
         }
 
+        private void OnDisable()
+        {
+            StationRepair.StopWorker();
+        }
+
         private void OnDestroy()
         {
+            StationRepair.StopWorker();
             Config.Save();
             harmony?.UnpatchSelf();
         }
@@ -623,7 +629,7 @@ namespace MyLittleUI
 
             inventoryOpenCloseAnimationSpeed = config("Inventory", "Animation speed", defaultValue: 1f, "Inventory show/close animation speed");
             inventoryHideLongStack = config("Inventory", "Hide long stacks", defaultValue: true, "Hide max stack size if it is too long to show in inventory or hotbar");
-            inventoryEnableRepairOnHold = config("Inventory", "Enable repair on hold", defaultValue: true, "Hold Use key on crafting station to repair all items and close crafting station [Synced with Server]", synchronizedSetting: true);
+            inventoryEnableRepairOnHold = config("Inventory", "Enable repair on hold", defaultValue: true, "Hold the keyboard or controller interaction button at a crafting station to repair all eligible items and close the station. Also requires Hover - Stations / Hold to mass repair. [Synced with Server]", synchronizedSetting: true);
 
             inventoryOpenCloseAnimationSpeed.SettingChanged += (sender, args) => SetInventoryAnimationSpeed();
 
@@ -658,7 +664,7 @@ namespace MyLittleUI
             hoverCookingRemoveLastItem = config("Hover - Stations", "Cooking station Remove last item", defaultValue: true, "Add an option to remove last uncooked item. [Synced with Server]", synchronizedSetting: true);
             hoverStumpGrowerEnabled = config("Hover - Stations", "Stump Hover Enabled", defaultValue: true, "Enable Hover text for stumps when Advize_StumpsRegrow is installed. [Synced with Server]", synchronizedSetting: true);
             hoverStumpGrower = config("Hover - Stations", "Stump Hover", defaultValue: StationHover.Vanilla, "Hover text for stumps.");
-            hoverHoldToMassRepair = config("Hover - Stations", "Hold to mass repair", defaultValue: true, "Hold interaction button at a crafting station to repair every item and close station.");
+            hoverHoldToMassRepair = config("Hover - Stations", "Hold to mass repair", defaultValue: true, "Allow hold-to-repair on this client when Inventory / Enable repair on hold is enabled. Supports keyboard and controller interaction buttons.");
 
             hoverTame = config("Hover - Tameable", "Tameable Hover", defaultValue: StationHover.Vanilla, "Format of total needed time/percent to tame or to stay fed.");
             hoverTameTimeToTame = config("Hover - Tameable", "Show time to tame", defaultValue: true, "Show total needed time/percent to tame. [Synced with Server]", synchronizedSetting: true);

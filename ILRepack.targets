@@ -5,7 +5,7 @@
 		<ModName>MyLittleUI</ModName>
 	</PropertyGroup>
 
-	<Target Name="InitializePackagePublishProperties">
+	<Target Name="InitializePackageProperties">
 		<PropertyGroup>
 			<EffectiveModName Condition="'$(ModName)' != ''">$(ModName)</EffectiveModName>
 			<EffectiveModName Condition="'$(EffectiveModName)' == '' and '$(TargetName)' != ''">$(TargetName)</EffectiveModName>
@@ -14,19 +14,14 @@
 
 			<ThunderstorePackageDir>$(ProjectDir)package\thunderstore\$(EffectiveModName)\</ThunderstorePackageDir>
 			<ThunderstoreZipPath>$(ProjectDir)package\thunderstore\$(EffectiveModName).zip</ThunderstoreZipPath>
-
-			<NexusPackageDir>$(ProjectDir)package\nexus\</NexusPackageDir>
-			<NexusZipPath>$(ProjectDir)package\nexus\$(EffectiveModName).zip</NexusZipPath>
 		</PropertyGroup>
 
 		<Error Condition="'$(EffectiveModName)' == ''" Text="Mod name was not resolved. Set &lt;ModName&gt;MyLittleUI&lt;/ModName&gt; in ILRepack.targets." />
 		<Error Condition="'$(ThunderstorePackageDir)' == ''" Text="ThunderstorePackageDir was not resolved." />
 		<Error Condition="'$(ThunderstoreZipPath)' == ''" Text="ThunderstoreZipPath was not resolved." />
-		<Error Condition="'$(NexusPackageDir)' == ''" Text="NexusPackageDir was not resolved." />
-		<Error Condition="'$(NexusZipPath)' == ''" Text="NexusZipPath was not resolved." />
 	</Target>
 
-	<Target Name="ReadPackageVersion" AfterTargets="Build" DependsOnTargets="InitializePackagePublishProperties">
+	<Target Name="ReadPackageVersion" AfterTargets="Build" DependsOnTargets="InitializePackageProperties">
 		<GetAssemblyIdentity AssemblyFiles="$(TargetPath)">
 			<Output TaskParameter="Assemblies" ItemName="_PackageAssemblyIdentity" />
 		</GetAssemblyIdentity>
@@ -59,6 +54,7 @@
 
 	<Target Name="CopyDLLPackage" AfterTargets="ILRepacker">
 		<MakeDir Directories="$(ThunderstorePackageDir)" />
+		<Delete Files="$(ThunderstorePackageDir)$(TargetName).pdb" />
 
 		<Copy
 			SourceFiles="$(TargetPath)"
@@ -79,23 +75,6 @@
 			SourceDirectory="$(ThunderstorePackageDir)"
 			DestinationFile="$(ThunderstoreZipPath)"
 			Overwrite="true" />
-	</Target>
-
-	<Target Name="CopyThunderstoreZipToNexus" AfterTargets="ZipThunderstorePackage">
-		<MakeDir Directories="$(NexusPackageDir)" />
-
-		<Copy
-			SourceFiles="$(ThunderstoreZipPath)"
-			DestinationFiles="$(NexusZipPath)"
-			OverwriteReadOnlyFiles="true" />
-
-	</Target>
-
-	<Target Name="UpdateNexusManifest" AfterTargets="CopyThunderstoreZipToNexus">
-		<Error Condition="!Exists('$(ProjectDir)UpdateNexusManifest.ps1')" Text="UpdateNexusManifest.ps1 was not found in $(ProjectDir)." />
-		<Error Condition="!Exists('$(NexusPackageDir)manifest.json')" Text="Nexus manifest was not found: $(NexusPackageDir)manifest.json" />
-
-		<Exec Command="powershell -ExecutionPolicy Bypass -NoProfile -File &quot;$(ProjectDir)UpdateNexusManifest.ps1&quot; -ManifestPath &quot;$(NexusPackageDir)manifest.json&quot; -Version &quot;$(PackageVersion)&quot; -Name &quot;$(EffectiveModName)&quot;" />
 	</Target>
 
 	<Target Name="CopyDLLPlugins" AfterTargets="ILRepacker">

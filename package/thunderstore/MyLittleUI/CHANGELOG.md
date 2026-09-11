@@ -1,3 +1,14 @@
+# 1.2.18
+* Fixed hold-to-repair with the controller interaction action, including alternate controller layouts and remapped bindings.
+* Restored enforcement of the Enable repair on hold setting while preserving the separate local Hold to mass repair toggle.
+* Cancelled mass repair when its initiating button is released, the station window closes, or the player or station changes.
+* Removed upload automation and the separate Nexus package; local Thunderstore packaging no longer depends on external publishing scripts.
+
+# 1.2.17
+* Updated inventory panel layout only when its settings change and coalesced inventory notifications before rendering.
+* Avoided rebuilding identical weight/slot text, bar colors and gradients on every frame.
+* Kept carry-capacity checks and warning blinking responsive to live status and equipment changes.
+
 # 1.2.16
 * adaptation to game release version 1.0.7
 

@@ -20,7 +20,7 @@ Bunch of little UI tweaks. Tooltips for production timers, player status, items.
 * Present quality level as configurable symbols (star by default)
 * Configurable ammo and bait icons and amount for weapons using ammo
 * Craft list filter
-* Hold Use key on crafting station to repair items en masse
+* Hold the keyboard or controller interaction button at a crafting station to repair all eligible items and close the station. Requires both `Inventory / Enable repair on hold` and `Hover - Stations / Hold to mass repair`; releasing the button cancels the operation.
 * Panels for fast filtering and sorting in Crafting window
 
 ## Clock
@@ -84,9 +84,6 @@ extract MyLittleUI.dll folder to your BepInEx\Plugins\ folder.
 The best way to handle configs is [Configuration Manager](https://thunderstore.io/c/valheim/p/shudnal/ConfigurationManager/).
 
 Or [Official BepInEx Configuration Manager](https://valheim.thunderstore.io/package/Azumatt/Official_BepInEx_ConfigurationManager/).
-
-## Mirrors
-[Nexus](https://www.nexusmods.com/valheim/mods/2562)
 
 ## Donation
 [Buy Me a Coffee](https://buymeacoffee.com/shudnal)
