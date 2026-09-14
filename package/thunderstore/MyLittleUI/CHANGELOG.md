@@ -3,7 +3,6 @@
 * Added an optional, disabled-by-default setting to suppress the standard radial menu while hovering an object when no contextual radial is opened.
 * Removed cooking-station next-item previews and station item-removal actions; item selection is now handled by Valheim's contextual radial menu.
 * Added Seasons-aware plant, pickable, and beehive timers directly in the existing My Little UI hover formatters by calling Seasons' own timing methods.
-* Preserved hold-to-add support for smelters whose interaction switches are not parented under the station.
 
 # 1.2.18
 * Fixed hold-to-repair with the controller interaction action, including alternate controller layouts and remapped bindings.

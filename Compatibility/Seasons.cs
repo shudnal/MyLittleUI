@@ -1,4 +1,3 @@
-using BepInEx;
 using BepInEx.Bootstrap;
 using BepInEx.Configuration;
 using HarmonyLib;
@@ -47,15 +46,18 @@ namespace MyLittleUI
             if (!Chainloader.PluginInfos.TryGetValue(GUID, out seasonsPlugin) || seasonsPlugin?.Instance == null)
                 return false;
 
-            Assembly assembly = Assembly.GetAssembly(seasonsPlugin.Instance.GetType());
-            seasonsType = assembly?.GetType("Seasons.Seasons");
-            seasonStateField = seasonsType?.GetField("seasonState", BindingFlags.Public | BindingFlags.Static);
+            seasonsType = AccessTools.TypeByName("Seasons.Seasons");
+            seasonStateField = seasonsType == null ? null : AccessTools.Field(seasonsType, "seasonState");
             seasonsConfig = seasonsPlugin.Instance.Config;
             return seasonsType != null && seasonStateField != null;
         }
 
         private static ConfigEntryBase GetSeasonsConfigEntry(string fieldName)
-            => seasonsType?.GetField(fieldName, BindingFlags.Public | BindingFlags.Static)?.GetValue(null) as ConfigEntryBase;
+        {
+            return seasonsType == null
+                ? null
+                : AccessTools.Field(seasonsType, fieldName)?.GetValue(null) as ConfigEntryBase;
+        }
 
         private static void EnforceVanilla(ConfigEntryBase entry)
         {
@@ -142,24 +144,18 @@ namespace MyLittleUI
             try
             {
                 Type type = state.GetType();
-                MethodInfo honeyMethod = type.GetMethod(
-                    "GetSecondsToMakeHoney",
-                    BindingFlags.Instance | BindingFlags.Public,
-                    null,
-                    new[] { typeof(Beehive), typeof(int), typeof(float) },
-                    null);
-                MethodInfo plantMethod = type.GetMethod(
-                    "GetSecondsToGrowPlant",
-                    BindingFlags.Instance | BindingFlags.Public,
-                    null,
-                    new[] { typeof(Plant) },
-                    null);
-                MethodInfo pickableMethod = type.GetMethod(
-                    "GetSecondsToRespawnPickable",
-                    BindingFlags.Instance | BindingFlags.Public,
-                    null,
-                    new[] { typeof(Pickable) },
-                    null);
+                MethodInfo honeyMethod = AccessTools.Method(
+                    type,
+                    nameof(GetSecondsToMakeHoney),
+                    new[] { typeof(Beehive), typeof(int), typeof(float) });
+                MethodInfo plantMethod = AccessTools.Method(
+                    type,
+                    nameof(GetSecondsToGrowPlant),
+                    new[] { typeof(Plant) });
+                MethodInfo pickableMethod = AccessTools.Method(
+                    type,
+                    nameof(GetSecondsToRespawnPickable),
+                    new[] { typeof(Pickable) });
 
                 if (honeyMethod == null || plantMethod == null || pickableMethod == null)
                     throw new MissingMethodException("Required Seasons hover timing methods were not found.");

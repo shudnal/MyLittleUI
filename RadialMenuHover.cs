@@ -50,7 +50,12 @@ namespace MyLittleUI
 
                     HoverMenuTypes.Add(type);
 
-                    MethodInfo hoverText = AccessTools.Method(type, "GetHoverText", Type.EmptyTypes);
+                    MethodInfo hoverText = type.GetMethod(
+                        nameof(Hoverable.GetHoverText),
+                        BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
+                        binder: null,
+                        types: Type.EmptyTypes,
+                        modifiers: null);
                     if (hoverText != null
                         && !hoverText.IsStatic
                         && !hoverText.IsAbstract
