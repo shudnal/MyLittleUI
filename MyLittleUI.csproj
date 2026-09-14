@@ -39,6 +39,7 @@
     <Compile Include="AmmoCountIcon.cs" />
     <Compile Include="ChestHoverText.cs" />
     <Compile Include="RadialMenuHover.cs" />
+    <Compile Include="RadialMenuItemReceiver.cs" />
     <Compile Include="Crafting\CraftFilter.cs" />
     <Compile Include="Crafting\CraftNew.cs" />
     <Compile Include="Crafting\CraftSort.cs" />

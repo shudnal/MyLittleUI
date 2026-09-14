@@ -55,6 +55,13 @@ namespace MyLittleUI
 
             try
             {
+                RadialMenuItemReceiver receiver = hoverObject.GetComponentInParent<RadialMenuItemReceiver>();
+                if (receiver)
+                {
+                    hoverMenuType = receiver.GetType();
+                    return receiver.IsActive && receiver.CanUseItems(player, sendErrorMessage: false);
+                }
+
                 if (hoverObject.TryGetComponentInParent(out IHasHoverMenu hoverMenu))
                 {
                     hoverMenuType = hoverMenu.GetType();
@@ -161,6 +168,7 @@ namespace MyLittleUI
             return methods
                 .Where(method => method != null)
                 .Concat(GetArmorStandHoverMethods())
+                .Concat(RadialMenuItemReceiver.GetHoverTextMethods())
                 .Distinct();
         }
 
@@ -238,6 +246,48 @@ namespace MyLittleUI
             [HarmonyPriority(Priority.Last)]
             [HarmonyAfter("Azumatt.MinimalUI")]
             private static void Postfix(Hud __instance) => ApplyHoverTextWidth(__instance);
+        }
+
+        [HarmonyPatch(typeof(OpenRadialConfig), nameof(OpenRadialConfig.TryOpenNonDefaultRadials))]
+        private static class OpenRadialConfig_TryOpenNonDefaultRadials_PreferRegisteredReceiver
+        {
+            [HarmonyPriority(Priority.First)]
+            private static bool Prefix(OpenRadialConfig __instance, RadialBase radial, ref bool __result)
+            {
+                if (!MyLittleUI.modEnabled.Value)
+                    return true;
+
+                Player player = Player.m_localPlayer;
+                GameObject hoverObject = player ? player.GetHoverObject() : null;
+                if (!player || !CanOpenContextualRadial(hoverObject))
+                    return true;
+
+                RadialMenuItemReceiver receiver = hoverObject.GetComponentInParent<RadialMenuItemReceiver>();
+                if (!receiver || !receiver.IsActive)
+                    return true;
+
+                if (!receiver.TryGetItems(player, out List<string> items))
+                    return true;
+
+                if (items == null || items.Count <= 0)
+                {
+                    if (RadialData.SO.OpenNormalRadialWhenHoverMenuFails)
+                    {
+                        __result = false;
+                    }
+                    else
+                    {
+                        radial?.QueuedClose();
+                        __result = true;
+                    }
+
+                    return false;
+                }
+
+                __instance.OpenItemMenu(radial, player, items, hoverObject);
+                __result = true;
+                return false;
+            }
         }
 
         [HarmonyPatch(typeof(OpenRadialConfig), nameof(OpenRadialConfig.TryOpenNonDefaultRadials))]
