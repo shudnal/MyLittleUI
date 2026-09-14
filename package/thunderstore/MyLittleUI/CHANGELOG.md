@@ -1,5 +1,6 @@
 # 1.2.19
 * Added contextual Open Radial hints for stations that can currently accept items through Valheim's radial item selector.
+* Added contextual radial item selection for fermenters, showing only mead bases accepted by the hovered fermenter.
 * Added a configurable width for crosshair hover text and placed contextual radial hints immediately after the first Use action.
 * Added a configurable initial mouse cursor distance for radial menus, measured from the radial menu center toward the initially selected element.
 * Added an optional, disabled-by-default setting to suppress the standard radial menu while hovering an object when no contextual radial is opened.
