@@ -28,13 +28,20 @@ namespace MyLittleUI
                 Enabled = enabled;
                 GetItems = getItems;
                 CanUseItems = canUseItems;
-                HoverTextMethods = hoverTextMethods ?? Array.Empty<MethodBase>();
+                HoverTextMethods = hoverTextMethods;
             }
         }
 
-        private static readonly List<ReceiverDefinition> Definitions = new List<ReceiverDefinition>();
+        private static readonly ReceiverDefinition[] Definitions =
+        {
+            Create<Fermenter>(
+                () => MyLittleUI.radialMenuFermenterItemSelection?.Value == true,
+                GetFermenterItems,
+                CanUseFermenterItems,
+                AccessTools.Method(typeof(Fermenter), nameof(Fermenter.GetHoverText)))
+        };
+
         private static readonly HashSet<Type> ErrorTypes = new HashSet<Type>();
-        private static bool initialized;
 
         private Component target;
         private ReceiverDefinition definition;
@@ -44,54 +51,32 @@ namespace MyLittleUI
             && MyLittleUI.modEnabled?.Value == true
             && definition.Enabled();
 
-        private static void Initialize()
-        {
-            if (initialized || MyLittleUI.instance == null)
-                return;
-
-            initialized = true;
-
-            Register(
-                () => MyLittleUI.radialMenuFermenterItemSelection?.Value == true,
-                GetFermenterItems,
-                CanUseFermenterItems,
-                AccessTools.Method(typeof(Fermenter), nameof(Fermenter.GetHoverText)));
-        }
-
-        private static void Register<T>(
+        private static ReceiverDefinition Create<T>(
             Func<bool> enabled,
             Func<T, Player, IEnumerable<string>> getItems,
             Func<T, Player, bool, bool> canUseItems,
             params MethodBase[] hoverTextMethods)
             where T : Component
         {
-            Definitions.Add(new ReceiverDefinition(
+            return new ReceiverDefinition(
                 typeof(T),
                 enabled,
                 (component, player) => getItems((T)component, player),
                 (component, player, sendErrorMessage) => canUseItems((T)component, player, sendErrorMessage),
-                hoverTextMethods?.Where(method => method != null).ToArray()));
+                hoverTextMethods?.Where(method => method != null).ToArray() ?? Array.Empty<MethodBase>());
         }
 
         internal static IEnumerable<MethodBase> GetHoverTextMethods()
-        {
-            Initialize();
-            return Definitions.SelectMany(receiver => receiver.HoverTextMethods).Distinct();
-        }
+            => Definitions.SelectMany(receiver => receiver.HoverTextMethods).Distinct();
 
         private static IEnumerable<MethodBase> GetTargetAwakeMethods()
-        {
-            Initialize();
-
-            return Definitions
+            => Definitions
                 .Select(receiver => AccessTools.Method(receiver.TargetType, "Awake", Type.EmptyTypes))
                 .Where(method => method != null)
                 .Distinct();
-        }
 
         private static void TryAttach(Component targetComponent)
         {
-            Initialize();
             if (!targetComponent)
                 return;
 
@@ -106,9 +91,8 @@ namespace MyLittleUI
                 return;
             }
 
-            RadialMenuItemReceiver receiverComponent = components.OfType<RadialMenuItemReceiver>().FirstOrDefault();
-            if (!receiverComponent)
-                receiverComponent = targetComponent.gameObject.AddComponent<RadialMenuItemReceiver>();
+            RadialMenuItemReceiver receiverComponent = components.OfType<RadialMenuItemReceiver>().FirstOrDefault()
+                ?? targetComponent.gameObject.AddComponent<RadialMenuItemReceiver>();
 
             receiverComponent.target = targetComponent;
             receiverComponent.definition = targetDefinition;
@@ -145,8 +129,6 @@ namespace MyLittleUI
 
         public bool CanUseItems(Player player, bool sendErrorMessage = true)
         {
-            // Stay transparent when this adapter is disabled so Valheim's original
-            // hard-coded hover-menu behavior keeps working unchanged.
             if (!IsActive)
                 return true;
 
@@ -171,17 +153,14 @@ namespace MyLittleUI
             }
         }
 
-        private static IEnumerable<string> GetFermenterItems(Fermenter fermenter, Player player)
+        private static IEnumerable<string> GetFermenterItems(Fermenter fermenter, Player _)
         {
             if (!fermenter || fermenter.m_conversion == null)
                 yield break;
 
             foreach (Fermenter.ItemConversion conversion in fermenter.m_conversion)
             {
-                if (conversion?.m_from == null)
-                    continue;
-
-                string itemName = conversion.m_from.m_itemData.m_shared.m_name;
+                string itemName = conversion?.m_from?.m_itemData?.m_shared?.m_name;
                 if (!string.IsNullOrWhiteSpace(itemName))
                     yield return itemName;
             }
