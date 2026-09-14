@@ -677,7 +677,7 @@ namespace MyLittleUI
             hoverTextWidth.SettingChanged += (sender, args) => RadialMenuHover.ApplyHoverTextWidth();
 
             radialMenuInitialCursorDistance = config("Hover - Radial menu", "Initial cursor distance", defaultValue: 0.5f,
-                new ConfigDescription("Position of the mouse cursor along the line from the screen center to the initially selected radial element. 0 is the screen center, 1 is the selected element, and 2 is twice the selected-element distance.", new AcceptableValueRange<float>(0f, 2f)));
+                new ConfigDescription("Position of the mouse cursor along the line from the radial menu center (ElementInfo title position) to the initially selected radial element. 0 is the radial center, 1 is the selected element, and 2 is twice the selected-element distance.", new AcceptableValueRange<float>(0f, 2f)));
 
             hoverRadialMenuHint = config("Hover - Radial menu", "Show radial menu hint", defaultValue: true, "Show the Open Radial action in hover text when the hovered object can currently accept an item through its contextual radial menu.");
             hoverRadialMenuSuppressDefault = config("Hover - Radial menu", "Suppress default radial while hovering", defaultValue: false, "Prevent the standard radial menu from opening while the player is hovering an object, even when no contextual radial menu was opened.");

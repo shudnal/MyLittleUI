@@ -31,7 +31,8 @@ namespace MyLittleUI
             new[] { typeof(Vector2) });
         private static readonly MethodInfo SetInitialMousePositionMethod = AccessTools.Method(
             typeof(RadialMenuHover),
-            nameof(SetInitialMousePosition));
+            nameof(SetInitialMousePosition),
+            new[] { typeof(Vector2), typeof(RadialBase) });
 
         private static bool CanOpenContextualRadial(GameObject hoverObject)
         {
@@ -116,13 +117,15 @@ namespace MyLittleUI
             return localization.Localize(AddRadialHint(hoverText));
         }
 
-        private static void SetInitialMousePosition(Vector2 selectedPosition)
+        private static void SetInitialMousePosition(Vector2 selectedPosition, RadialBase radial)
         {
             float distance = MyLittleUI.modEnabled.Value && MyLittleUI.radialMenuInitialCursorDistance != null
                 ? Mathf.Clamp(MyLittleUI.radialMenuInitialCursorDistance.Value, 0f, 2f)
                 : 1f;
-            Vector2 screenCenter = new Vector2(Screen.width * 0.5f, Screen.height * 0.5f);
-            ZInput.SetMousePosition(Vector2.LerpUnclamped(screenCenter, selectedPosition, distance));
+            Vector2 radialCenter = radial && radial.m_elementInfo && radial.m_elementInfo.m_title
+                ? (Vector2)radial.m_elementInfo.m_title.transform.position
+                : selectedPosition;
+            ZInput.SetMousePosition(Vector2.LerpUnclamped(radialCenter, selectedPosition, distance));
         }
 
         private static IEnumerable<MethodInfo> GetArmorStandHoverMethods()
@@ -215,6 +218,11 @@ namespace MyLittleUI
                         && SetInitialMousePositionMethod != null
                         && instruction.Calls(SetMousePositionMethod))
                     {
+                        CodeInstruction loadRadial = new CodeInstruction(OpCodes.Ldarg_0);
+                        loadRadial.labels.AddRange(instruction.labels);
+                        instruction.labels.Clear();
+                        yield return loadRadial;
+
                         instruction.opcode = OpCodes.Call;
                         instruction.operand = SetInitialMousePositionMethod;
                     }
