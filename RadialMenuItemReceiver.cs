@@ -1,4 +1,3 @@
-using BepInEx.Configuration;
 using HarmonyLib;
 using System;
 using System.Collections.Generic;
@@ -33,8 +32,6 @@ namespace MyLittleUI
             }
         }
 
-        private const string ConfigSection = "Radial Menu";
-
         private static readonly List<ReceiverDefinition> Definitions = new List<ReceiverDefinition>();
         private static readonly HashSet<Type> ErrorTypes = new HashSet<Type>();
         private static bool initialized;
@@ -54,21 +51,15 @@ namespace MyLittleUI
 
             initialized = true;
 
-            ConfigEntry<bool> fermenterItemSelection = MyLittleUI.instance.Config.Bind(
-                ConfigSection,
-                "Fermenter item selection",
-                true,
-                "Enable contextual radial item selection for fermenters and show only mead bases accepted by the hovered fermenter.");
-
             Register(
-                fermenterItemSelection,
+                () => MyLittleUI.radialMenuFermenterItemSelection?.Value == true,
                 GetFermenterItems,
                 CanUseFermenterItems,
                 AccessTools.Method(typeof(Fermenter), nameof(Fermenter.GetHoverText)));
         }
 
         private static void Register<T>(
-            ConfigEntry<bool> enabled,
+            Func<bool> enabled,
             Func<T, Player, IEnumerable<string>> getItems,
             Func<T, Player, bool, bool> canUseItems,
             params MethodBase[] hoverTextMethods)
@@ -76,7 +67,7 @@ namespace MyLittleUI
         {
             Definitions.Add(new ReceiverDefinition(
                 typeof(T),
-                () => enabled.Value,
+                enabled,
                 (component, player) => getItems((T)component, player),
                 (component, player, sendErrorMessage) => canUseItems((T)component, player, sendErrorMessage),
                 hoverTextMethods?.Where(method => method != null).ToArray()));
