@@ -534,7 +534,7 @@ namespace MyLittleUI
             windsPositionSpacingNomap.SettingChanged += (sender, args) => WeatherForecast.UpdateNextWinds(forceRebuildList: true);
 
             ammoCountEnabled = config("Item - Ammo icon and count", "Ammo count Enabled", defaultValue: true, "Show amount of available ammo and ammo icon for weapon in hotbar  [Synced with Server]", synchronizedSetting: true);
-            ammoCountColor = config("Item - Ammo icon and count", "Ammo count Color", defaultValue: Color.clear, "Color of amount of available ammo for weapon in hotbar");
+            ammoCountColor = config("Item - Ammo icon and count", "Ammo count Color", defaultValue: Color.clear, "Color of available ammo for weapon in hotbar");
             ammoCountPosition = config("Item - Ammo icon and count", "Ammo count Position", defaultValue: new Vector2(0f, -14f), "Position of available ammo for weapon in hotbar");
             ammoCountFontSize = config("Item - Ammo icon and count", "Ammo count FontSize", defaultValue: 14, "Show amount of available ammo and ammo icon for weapon in hotbar");
             ammoCountAlignment = config("Item - Ammo icon and count", "Ammo count Alignment", defaultValue: HorizontalAlignmentOptions.Center, "Text horizontal alignment of available ammo for weapon in hotbar");
