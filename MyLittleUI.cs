@@ -179,6 +179,7 @@ namespace MyLittleUI
         public static ConfigEntry<StationHover> hoverStumpGrower;
         public static ConfigEntry<bool> hoverHoldToMassRepair;
 
+        public static ConfigEntry<float> hoverTextWidth;
         public static ConfigEntry<bool> hoverRadialMenuHint;
         public static ConfigEntry<bool> hoverRadialMenuSuppressDefault;
 
@@ -377,7 +378,6 @@ namespace MyLittleUI
                 epicLootAssembly ??= Assembly.GetAssembly(epicLootPlugin.Instance.GetType());
 
             ItemTooltip.Initialize();
-            RadialMenuHover.Initialize();
 
             LoadIcons();
 
@@ -420,7 +420,7 @@ namespace MyLittleUI
             disableMinimap = config("General", "Disable minimap", defaultValue: false, "Disable the small minimap while keeping the large map available. Does nothing when the world is in nomap mode.");
             fixStatusEffectAndForecastPosition = config("General", "Status effects and forecast position fix", defaultValue: true, "If status effect position was not changed prior to 1.0.11 version - fix status effect list position for forecast.");
 
-            modEnabled.SettingChanged += (s, e) => { InfoBlocks.UpdateVisibility(); CustomStatusEffectsList.InitializeStatusEffectTemplate(); CustomStatusEffectsList.ChangeSailingIndicator(); ZInput_GetBoundKeyString_NonlocalizedButtons.OnChange(); };
+            modEnabled.SettingChanged += (s, e) => { InfoBlocks.UpdateVisibility(); CustomStatusEffectsList.InitializeStatusEffectTemplate(); CustomStatusEffectsList.ChangeSailingIndicator(); ZInput_GetBoundKeyString_NonlocalizedButtons.OnChange(); RadialMenuHover.ApplyHoverTextWidth(); };
             disableMinimap.SettingChanged += (s, e) => { InfoBlocks.ApplyMinimapToggle(); InfoBlocks.UpdateVisibility(); InfoBlocks.UpdateWindsBlock(forceRebuildList: true); CustomStatusEffectsList.UpdateStatusEffectList(); };
             nonlocalizedButtons.SettingChanged += (s, e) => ZInput_GetBoundKeyString_NonlocalizedButtons.OnChange();
 
@@ -670,6 +670,10 @@ namespace MyLittleUI
             hoverStumpGrowerEnabled = config("Hover - Stations", "Stump Hover Enabled", defaultValue: true, "Enable Hover text for stumps when Advize_StumpsRegrow is installed. [Synced with Server]", synchronizedSetting: true);
             hoverStumpGrower = config("Hover - Stations", "Stump Hover", defaultValue: StationHover.Vanilla, "Hover text for stumps.");
             hoverHoldToMassRepair = config("Hover - Stations", "Hold to mass repair", defaultValue: true, "Allow hold-to-repair on this client when Inventory / Enable repair on hold is enabled. Supports keyboard and controller interaction buttons.");
+
+            hoverTextWidth = config("Hover - General", "Hover text width", defaultValue: 500f,
+                new ConfigDescription("Width of the hover text shown next to the crosshair.", new AcceptableValueRange<float>(200f, 1000f)));
+            hoverTextWidth.SettingChanged += (sender, args) => RadialMenuHover.ApplyHoverTextWidth();
 
             hoverRadialMenuHint = config("Hover - Radial menu", "Show radial menu hint", defaultValue: true, "Show the Open Radial action in hover text when the hovered object can currently accept an item through its contextual radial menu.");
             hoverRadialMenuSuppressDefault = config("Hover - Radial menu", "Suppress default radial while hovering", defaultValue: false, "Prevent the standard radial menu from opening while the player is hovering an object, even when no contextual radial menu was opened.");
@@ -1082,7 +1086,7 @@ namespace MyLittleUI
                     return;
 
                 if ((bool)__instance.m_addFoodSwitch && __instance.m_addFoodSwitch.m_onHover == null)
-                    __instance.m_addFoodSwitch.m_hoverText = CookingStation_HoverText_ExtendedHover.HoverText(__instance, __instance.m_name, __instance.m_addItemTooltip);
+                    __instance.m_addFoodSwitch.m_hoverText = CookingStation_HoverText_ExtendedHover.HoverText(__instance, __instance.m_name, __instance.m_addItemTooltip, addRadialHint: false);
             }
         }
 
@@ -1113,7 +1117,7 @@ namespace MyLittleUI
             }
 
 
-            public static string HoverText(CookingStation __instance, string m_name, string m_addItemTooltip)
+            public static string HoverText(CookingStation __instance, string m_name, string m_addItemTooltip, bool addRadialHint = true)
             {
                 sb.Clear();
 
@@ -1165,7 +1169,11 @@ namespace MyLittleUI
                         sb.Append("</color>");
                 }
 
-                return Localization.instance.Localize(sb.ToString());
+                string hoverText = sb.ToString();
+                if (addRadialHint)
+                    hoverText = RadialMenuHover.AddRadialHint(hoverText);
+
+                return Localization.instance.Localize(hoverText);
             }
 
             private static void Postfix(CookingStation __instance, ref string __result)
@@ -1223,7 +1231,7 @@ namespace MyLittleUI
                     sb.Append(FromSeconds((___m_fuelPerProduct == 0 || (fuel / ___m_fuelPerProduct) >= queueSize) ? (estTime - __instance.GetBakeTimer()) / power : ___m_secPerProduct * fuel / ___m_fuelPerProduct));
                 }
 
-                __result = Localization.instance.Localize(sb.ToString());
+                __result = Localization.instance.Localize(RadialMenuHover.AddRadialHint(sb.ToString()));
             }
         }
 
@@ -1335,7 +1343,7 @@ namespace MyLittleUI
 
                 }
 
-                __result = Localization.instance.Localize(sb.ToString());
+                __result = Localization.instance.Localize(RadialMenuHover.AddRadialHint(sb.ToString()));
             }
         }
         
@@ -1380,7 +1388,7 @@ namespace MyLittleUI
                     sb.Append(FromSeconds((___m_fuelPerProduct == 0 || (fuel / ___m_fuelPerProduct) >= queueSize) ? (estTime - __instance.GetBakeTimer()) / power : ___m_secPerProduct * fuel / ___m_fuelPerProduct));
                 }
 
-                __result = Localization.instance.Localize(sb.ToString());
+                __result = Localization.instance.Localize(RadialMenuHover.AddRadialHint(sb.ToString()));
             }
         }
 

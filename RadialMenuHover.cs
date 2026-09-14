@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Reflection.Emit;
 using UnityEngine;
 using Valheim.UI;
 
@@ -10,93 +11,25 @@ namespace MyLittleUI
 {
     internal static class RadialMenuHover
     {
-        private const char LineBreak = (char)10;
-        private const string ActionMarkup = "<color=yellow><b>";
+        private const string UseKey = "$KEY_Use";
+        private const string RadialKey = "$KEY_OpenRadial";
         private const string RadialHint = "[<color=yellow><b>$KEY_OpenRadial</b></color>] $settings_open_radial";
 
-        private static readonly string LineBreakText = LineBreak.ToString();
-        private static readonly HashSet<Type> HoverMenuTypes = new HashSet<Type>();
         private static readonly HashSet<Type> CanUseErrorTypes = new HashSet<Type>();
-        private static readonly List<MethodBase> HoverTextMethods = new List<MethodBase>();
-
-        private static bool initialized;
-
-        internal static void Initialize()
-        {
-            if (initialized)
-                return;
-
-            CacheHoverMenuTypes();
-            initialized = true;
-        }
-
-        private static void CacheHoverMenuTypes()
-        {
-            HoverMenuTypes.Clear();
-            HoverTextMethods.Clear();
-
-            foreach (Assembly assembly in AppDomain.CurrentDomain.GetAssemblies())
-            {
-                foreach (Type type in GetLoadableTypes(assembly))
-                {
-                    if (type == null
-                        || type.IsAbstract
-                        || !typeof(Component).IsAssignableFrom(type)
-                        || (!typeof(IHasHoverMenu).IsAssignableFrom(type)
-                            && !typeof(IHasHoverMenuExtended).IsAssignableFrom(type)))
-                    {
-                        continue;
-                    }
-
-                    HoverMenuTypes.Add(type);
-
-                    MethodInfo hoverText = type.GetMethod(
-                        nameof(Hoverable.GetHoverText),
-                        BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
-                        binder: null,
-                        types: Type.EmptyTypes,
-                        modifiers: null);
-                    if (hoverText != null
-                        && !hoverText.IsStatic
-                        && !hoverText.IsAbstract
-                        && hoverText.ReturnType == typeof(string)
-                        && !HoverTextMethods.Contains(hoverText))
-                    {
-                        HoverTextMethods.Add(hoverText);
-                    }
-                }
-            }
-        }
-
-        private static IEnumerable<Type> GetLoadableTypes(Assembly assembly)
-        {
-            try
-            {
-                return assembly.GetTypes();
-            }
-            catch (ReflectionTypeLoadException exception)
-            {
-                return exception.Types.Where(type => type != null).Cast<Type>();
-            }
-            catch
-            {
-                return Array.Empty<Type>();
-            }
-        }
-
-        internal static IEnumerable<MethodBase> GetHoverTextMethods()
-        {
-            Initialize();
-            return HoverTextMethods;
-        }
-
-        private static bool IsKnownHoverMenu(object hoverMenu)
-        {
-            return hoverMenu != null && HoverMenuTypes.Contains(hoverMenu.GetType());
-        }
+        private static float? originalHoverTextWidth;
+        private static readonly MethodInfo LocalizeMethod = AccessTools.Method(
+            typeof(Localization),
+            nameof(Localization.Localize),
+            new[] { typeof(string) });
+        private static readonly MethodInfo LocalizeHoverTextMethod = AccessTools.Method(
+            typeof(RadialMenuHover),
+            nameof(LocalizeHoverText));
 
         private static bool CanOpenContextualRadial(GameObject hoverObject)
         {
+            if (!hoverObject)
+                return false;
+
             bool requiresSwitch = hoverObject.TryGetComponentInParent(out Catapult _)
                 || hoverObject.TryGetComponentInParent(out ShieldGenerator _)
                 || hoverObject.TryGetComponentInParent(out Chair _);
@@ -113,15 +46,13 @@ namespace MyLittleUI
 
             try
             {
-                if (hoverObject.TryGetComponentInParent(out IHasHoverMenu hoverMenu)
-                    && IsKnownHoverMenu(hoverMenu))
+                if (hoverObject.TryGetComponentInParent(out IHasHoverMenu hoverMenu))
                 {
                     hoverMenuType = hoverMenu.GetType();
                     return hoverMenu.CanUseItems(player, sendErrorMessage: false);
                 }
 
-                if (hoverObject.TryGetComponentInParent(out IHasHoverMenuExtended extendedHoverMenu)
-                    && IsKnownHoverMenu(extendedHoverMenu))
+                if (hoverObject.TryGetComponentInParent(out IHasHoverMenuExtended extendedHoverMenu))
                 {
                     hoverMenuType = extendedHoverMenu.GetType();
                     return extendedHoverMenu.CanUseItems(
@@ -142,114 +73,126 @@ namespace MyLittleUI
             return false;
         }
 
-        private static bool IsCurrentHoverSource(Component hoverSource, GameObject hoverObject)
+        internal static string AddRadialHint(string hoverText)
         {
-            if (!hoverSource || !hoverObject)
-                return false;
-
-            return hoverSource.gameObject == hoverObject
-                || hoverObject.transform.IsChildOf(hoverSource.transform);
-        }
-
-        private static string InsertHint(string hoverText, string hint)
-        {
-            int titleEnd = hoverText.IndexOf(LineBreak);
-            if (titleEnd < 0)
-                return hoverText + LineBreakText + hint;
-
-            int insertAfter = titleEnd;
-            int lineStart = titleEnd + 1;
-
-            while (lineStart < hoverText.Length)
-            {
-                int lineEnd = hoverText.IndexOf(LineBreak, lineStart);
-                if (lineEnd < 0)
-                    lineEnd = hoverText.Length;
-
-                int lineLength = lineEnd - lineStart;
-                if (hoverText.IndexOf(ActionMarkup, lineStart, lineLength, StringComparison.Ordinal) < 0)
-                    break;
-
-                insertAfter = lineEnd;
-                if (lineEnd == hoverText.Length)
-                    break;
-
-                lineStart = lineEnd + 1;
-            }
-
-            if (insertAfter == hoverText.Length)
-                return hoverText + LineBreakText + hint;
-
-            return hoverText.Insert(insertAfter + 1, hint + LineBreakText);
-        }
-
-        internal static void AddHint(Component hoverSource, ref string hoverText)
-        {
-            Initialize();
             if (!MyLittleUI.modEnabled.Value
                 || MyLittleUI.hoverRadialMenuHint?.Value != true
-                || string.IsNullOrWhiteSpace(hoverText))
+                || string.IsNullOrWhiteSpace(hoverText)
+                || hoverText.IndexOf(RadialKey, StringComparison.Ordinal) >= 0)
             {
-                return;
+                return hoverText;
             }
 
             Player player = Player.m_localPlayer;
             GameObject hoverObject = player ? player.GetHoverObject() : null;
-            if (!IsCurrentHoverSource(hoverSource, hoverObject)
-                || !CanOpenContextualRadial(hoverObject))
-            {
-                return;
-            }
-
-            string hint = Localization.instance.Localize(RadialHint);
-            if (hoverText.IndexOf(hint, StringComparison.Ordinal) >= 0
+            if (!player
+                || !CanOpenContextualRadial(hoverObject)
                 || !CanUseHoveredItems(player, hoverObject))
             {
-                return;
+                return hoverText;
             }
 
-            hoverText = InsertHint(hoverText, hint);
+            int useKeyIndex = hoverText.IndexOf(UseKey, StringComparison.Ordinal);
+            if (useKeyIndex < 0)
+                return hoverText;
+
+            int lineEnd = hoverText.IndexOf('\n', useKeyIndex);
+            if (lineEnd < 0)
+                return hoverText + "\n" + RadialHint;
+
+            return hoverText.Insert(lineEnd + 1, RadialHint + "\n");
+        }
+
+        private static string LocalizeHoverText(Localization localization, string hoverText)
+        {
+            return localization.Localize(AddRadialHint(hoverText));
+        }
+
+        private static IEnumerable<MethodInfo> GetArmorStandHoverMethods()
+        {
+            const BindingFlags flags = BindingFlags.Instance
+                | BindingFlags.Static
+                | BindingFlags.Public
+                | BindingFlags.NonPublic
+                | BindingFlags.DeclaredOnly;
+
+            IEnumerable<Type> nestedTypes = typeof(ArmorStand).GetNestedTypes(BindingFlags.Public | BindingFlags.NonPublic);
+            return typeof(ArmorStand).GetMethods(flags)
+                .Concat(nestedTypes.SelectMany(type => type.GetMethods(flags)))
+                .Where(method => method.Name.IndexOf("<Awake>", StringComparison.Ordinal) >= 0
+                    && method.ReturnType == typeof(string)
+                    && method.GetParameters().Length == 0);
+        }
+
+        private static IEnumerable<MethodBase> GetKnownHoverMethods()
+        {
+            MethodBase[] methods =
+            {
+                AccessTools.Method(typeof(Fireplace), nameof(Fireplace.GetHoverText)),
+                AccessTools.Method(typeof(CookingStation), nameof(CookingStation.GetHoverText)),
+                AccessTools.Method(typeof(CookingStation), nameof(CookingStation.OnHoverFuelSwitch)),
+                AccessTools.Method(typeof(Smelter), nameof(Smelter.OnHoverAddFuel)),
+                AccessTools.Method(typeof(Smelter), nameof(Smelter.OnHoverAddOre)),
+                AccessTools.Method(typeof(ShieldGenerator), nameof(ShieldGenerator.OnHoverAddFuel)),
+                AccessTools.Method(typeof(Turret), nameof(Turret.GetHoverText)),
+                AccessTools.Method(typeof(Switch), nameof(Switch.GetHoverText)),
+            };
+
+            return methods
+                .Where(method => method != null)
+                .Concat(GetArmorStandHoverMethods())
+                .Distinct();
+        }
+
+        private static IEnumerable<CodeInstruction> ReplaceLocalizationCall(IEnumerable<CodeInstruction> instructions)
+        {
+            foreach (CodeInstruction instruction in instructions)
+            {
+                if (LocalizeMethod != null
+                    && LocalizeHoverTextMethod != null
+                    && instruction.Calls(LocalizeMethod))
+                {
+                    instruction.opcode = OpCodes.Call;
+                    instruction.operand = LocalizeHoverTextMethod;
+                }
+
+                yield return instruction;
+            }
+        }
+
+        internal static void ApplyHoverTextWidth(Hud hud = null)
+        {
+            hud ??= Hud.instance;
+            if (!hud || !hud.m_hoverName || MyLittleUI.hoverTextWidth == null)
+                return;
+
+            RectTransform rectTransform = hud.m_hoverName.rectTransform;
+            originalHoverTextWidth ??= rectTransform.rect.width;
+            rectTransform.SetSizeWithCurrentAnchors(
+                RectTransform.Axis.Horizontal,
+                MyLittleUI.modEnabled.Value ? MyLittleUI.hoverTextWidth.Value : originalHoverTextWidth.Value);
         }
 
         [HarmonyPatch]
-        private static class HoverMenu_GetHoverText_AddRadialHint
+        private static class KnownHoverMethods_Localize_AddRadialHint
         {
-            private static bool Prepare()
-            {
-                Initialize();
-                return HoverTextMethods.Count > 0;
-            }
+            private static IEnumerable<MethodBase> TargetMethods() => GetKnownHoverMethods();
 
-            private static IEnumerable<MethodBase> TargetMethods() => GetHoverTextMethods();
-
-            [HarmonyPriority(Priority.Last)]
-            private static void Postfix(object __instance, ref string __result)
-                => AddHint(__instance as Component, ref __result);
+            private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
+                => ReplaceLocalizationCall(instructions);
         }
 
-        [HarmonyPatch(typeof(Switch), nameof(Switch.GetHoverText))]
-        private static class Switch_GetHoverText_AddRadialHint
+        [HarmonyPatch(typeof(Hud), nameof(Hud.Awake))]
+        private static class Hud_Awake_ApplyHoverTextWidth
         {
-            private static bool Prepare()
-            {
-                Initialize();
-                return true;
-            }
-
             [HarmonyPriority(Priority.Last)]
-            private static void Postfix(Switch __instance, ref string __result)
-                => AddHint(__instance, ref __result);
+            [HarmonyAfter("Azumatt.MinimalUI")]
+            private static void Postfix(Hud __instance) => ApplyHoverTextWidth(__instance);
         }
 
         [HarmonyPatch(typeof(OpenRadialConfig), nameof(OpenRadialConfig.TryOpenNonDefaultRadials))]
         private static class OpenRadialConfig_TryOpenNonDefaultRadials_SuppressDefaultRadial
         {
-            private static bool Prepare()
-            {
-                Initialize();
-                return true;
-            }
-
             [HarmonyPriority(Priority.Last)]
             private static void Postfix(RadialBase radial, ref bool __result)
             {
