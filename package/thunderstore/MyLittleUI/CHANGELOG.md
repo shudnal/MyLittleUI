@@ -1,6 +1,7 @@
 # 1.2.19
 * Added contextual Open Radial hints for stations that can currently accept items through Valheim's radial item selector.
 * Added a configurable width for crosshair hover text and placed contextual radial hints immediately after the first Use action.
+* Added a configurable initial mouse cursor distance for radial menus, measured from the screen center toward the initially selected element.
 * Added an optional, disabled-by-default setting to suppress the standard radial menu while hovering an object when no contextual radial is opened.
 * Removed cooking-station next-item previews and station item-removal actions; item selection is now handled by Valheim's contextual radial menu.
 * Added Seasons-aware plant, pickable, and beehive timers directly in the existing My Little UI hover formatters by calling Seasons' own timing methods.

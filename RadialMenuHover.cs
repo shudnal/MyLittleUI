@@ -25,6 +25,13 @@ namespace MyLittleUI
         private static readonly MethodInfo LocalizeHoverTextMethod = AccessTools.Method(
             typeof(RadialMenuHover),
             nameof(LocalizeHoverText));
+        private static readonly MethodInfo SetMousePositionMethod = AccessTools.Method(
+            typeof(ZInput),
+            nameof(ZInput.SetMousePosition),
+            new[] { typeof(Vector2) });
+        private static readonly MethodInfo SetInitialMousePositionMethod = AccessTools.Method(
+            typeof(RadialMenuHover),
+            nameof(SetInitialMousePosition));
 
         private static bool CanOpenContextualRadial(GameObject hoverObject)
         {
@@ -109,6 +116,15 @@ namespace MyLittleUI
             return localization.Localize(AddRadialHint(hoverText));
         }
 
+        private static void SetInitialMousePosition(Vector2 selectedPosition)
+        {
+            float distance = MyLittleUI.modEnabled.Value && MyLittleUI.radialMenuInitialCursorDistance != null
+                ? Mathf.Clamp(MyLittleUI.radialMenuInitialCursorDistance.Value, 0f, 2f)
+                : 1f;
+            Vector2 screenCenter = new Vector2(Screen.width * 0.5f, Screen.height * 0.5f);
+            ZInput.SetMousePosition(Vector2.LerpUnclamped(screenCenter, selectedPosition, distance));
+        }
+
         private static IEnumerable<MethodInfo> GetArmorStandHoverMethods()
         {
             const BindingFlags flags = BindingFlags.Instance
@@ -186,6 +202,26 @@ namespace MyLittleUI
 
             private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
                 => ReplaceLocalizationCall(instructions);
+        }
+
+        [HarmonyPatch(typeof(RadialBase), nameof(RadialBase.SelectStartElement))]
+        private static class RadialBase_SelectStartElement_AdjustInitialMousePosition
+        {
+            private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
+            {
+                foreach (CodeInstruction instruction in instructions)
+                {
+                    if (SetMousePositionMethod != null
+                        && SetInitialMousePositionMethod != null
+                        && instruction.Calls(SetMousePositionMethod))
+                    {
+                        instruction.opcode = OpCodes.Call;
+                        instruction.operand = SetInitialMousePositionMethod;
+                    }
+
+                    yield return instruction;
+                }
+            }
         }
 
         [HarmonyPatch(typeof(Hud), nameof(Hud.Awake))]
