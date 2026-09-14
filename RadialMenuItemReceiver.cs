@@ -57,14 +57,12 @@ namespace MyLittleUI
             Func<T, Player, bool, bool> canUseItems,
             params MethodBase[] hoverTextMethods)
             where T : Component
-        {
-            return new ReceiverDefinition(
+            => new ReceiverDefinition(
                 typeof(T),
                 enabled,
                 (component, player) => getItems((T)component, player),
                 (component, player, sendErrorMessage) => canUseItems((T)component, player, sendErrorMessage),
                 hoverTextMethods?.Where(method => method != null).ToArray() ?? Array.Empty<MethodBase>());
-        }
 
         internal static IEnumerable<MethodBase> GetHoverTextMethods()
             => Definitions.SelectMany(receiver => receiver.HoverTextMethods).Distinct();
@@ -109,15 +107,10 @@ namespace MyLittleUI
                 if (!definition.CanUseItems(target, player, true))
                     return true;
 
-                IEnumerable<string> availableItems = definition.GetItems(target, player);
-                if (availableItems != null)
-                {
-                    items = availableItems
-                        .Where(item => !string.IsNullOrWhiteSpace(item))
-                        .Distinct()
-                        .ToList();
-                }
-
+                items = (definition.GetItems(target, player) ?? Enumerable.Empty<string>())
+                    .Where(item => !string.IsNullOrWhiteSpace(item))
+                    .Distinct()
+                    .ToList();
                 return true;
             }
             catch (Exception exception)
@@ -160,9 +153,8 @@ namespace MyLittleUI
 
             foreach (Fermenter.ItemConversion conversion in fermenter.m_conversion)
             {
-                string itemName = conversion?.m_from?.m_itemData?.m_shared?.m_name;
-                if (!string.IsNullOrWhiteSpace(itemName))
-                    yield return itemName;
+                if (conversion?.m_from != null)
+                    yield return conversion.m_from.m_itemData.m_shared.m_name;
             }
         }
 
@@ -199,13 +191,7 @@ namespace MyLittleUI
                 return false;
             }
 
-            Inventory inventory = player.GetInventory();
-            bool hasProcessableItem = inventory != null
-                && fermenter.m_conversion != null
-                && fermenter.m_conversion.Any(conversion => conversion?.m_from != null
-                    && inventory.HaveItem(conversion.m_from.m_itemData.m_shared.m_name));
-
-            if (hasProcessableItem)
+            if (fermenter.FindCookableItem(player.GetInventory()) != null)
                 return true;
 
             if (sendErrorMessage)
