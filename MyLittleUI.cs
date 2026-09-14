@@ -1086,7 +1086,7 @@ namespace MyLittleUI
                     return;
 
                 if ((bool)__instance.m_addFoodSwitch && __instance.m_addFoodSwitch.m_onHover == null)
-                    __instance.m_addFoodSwitch.m_hoverText = CookingStation_HoverText_ExtendedHover.HoverText(__instance, __instance.m_name, __instance.m_addItemTooltip, addRadialHint: false);
+                    __instance.m_addFoodSwitch.m_hoverText = CookingStation_HoverText_ExtendedHover.BuildHoverText(__instance, __instance.m_name, __instance.m_addItemTooltip);
             }
         }
 
@@ -1117,7 +1117,7 @@ namespace MyLittleUI
             }
 
 
-            public static string HoverText(CookingStation __instance, string m_name, string m_addItemTooltip, bool addRadialHint = true)
+            public static string BuildHoverText(CookingStation __instance, string m_name, string m_addItemTooltip)
             {
                 sb.Clear();
 
@@ -1169,12 +1169,11 @@ namespace MyLittleUI
                         sb.Append("</color>");
                 }
 
-                string hoverText = sb.ToString();
-                if (addRadialHint)
-                    hoverText = RadialMenuHover.AddRadialHint(hoverText);
-
-                return Localization.instance.Localize(hoverText);
+                return sb.ToString();
             }
+
+            public static string HoverText(CookingStation __instance, string m_name, string m_addItemTooltip)
+                => Localization.instance.Localize(RadialMenuHover.AddRadialHint(BuildHoverText(__instance, m_name, m_addItemTooltip)));
 
             private static void Postfix(CookingStation __instance, ref string __result)
             {

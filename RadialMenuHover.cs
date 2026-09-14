@@ -16,7 +16,8 @@ namespace MyLittleUI
         private const string RadialHint = "[<color=yellow><b>$KEY_OpenRadial</b></color>] $settings_open_radial";
 
         private static readonly HashSet<Type> CanUseErrorTypes = new HashSet<Type>();
-        private static float? originalHoverTextWidth;
+        private static RectTransform hoverTextTransform;
+        private static float originalHoverTextWidth;
         private static readonly MethodInfo LocalizeMethod = AccessTools.Method(
             typeof(Localization),
             nameof(Localization.Localize),
@@ -167,10 +168,15 @@ namespace MyLittleUI
                 return;
 
             RectTransform rectTransform = hud.m_hoverName.rectTransform;
-            originalHoverTextWidth ??= rectTransform.rect.width;
+            if (hoverTextTransform != rectTransform)
+            {
+                hoverTextTransform = rectTransform;
+                originalHoverTextWidth = rectTransform.rect.width;
+            }
+
             rectTransform.SetSizeWithCurrentAnchors(
                 RectTransform.Axis.Horizontal,
-                MyLittleUI.modEnabled.Value ? MyLittleUI.hoverTextWidth.Value : originalHoverTextWidth.Value);
+                MyLittleUI.modEnabled.Value ? MyLittleUI.hoverTextWidth.Value : originalHoverTextWidth);
         }
 
         [HarmonyPatch]
