@@ -183,6 +183,7 @@ namespace MyLittleUI
         public static ConfigEntry<float> radialMenuInitialCursorDistance;
         public static ConfigEntry<bool> hoverRadialMenuHint;
         public static ConfigEntry<bool> hoverRadialMenuSuppressDefault;
+        public static ConfigEntry<bool> radialMenuFermenterItemSelection;
 
         public static ConfigEntry<StationHover> hoverCharacter;
         public static ConfigEntry<bool> hoverCharacterGrowth;
@@ -533,7 +534,7 @@ namespace MyLittleUI
             windsPositionSpacingNomap.SettingChanged += (sender, args) => WeatherForecast.UpdateNextWinds(forceRebuildList: true);
 
             ammoCountEnabled = config("Item - Ammo icon and count", "Ammo count Enabled", defaultValue: true, "Show amount of available ammo and ammo icon for weapon in hotbar  [Synced with Server]", synchronizedSetting: true);
-            ammoCountColor = config("Item - Ammo icon and count", "Ammo count Color", defaultValue: Color.clear, "Color of available ammo for weapon in hotbar");
+            ammoCountColor = config("Item - Ammo icon and count", "Ammo count Color", defaultValue: Color.clear, "Color of amount of available ammo for weapon in hotbar");
             ammoCountPosition = config("Item - Ammo icon and count", "Ammo count Position", defaultValue: new Vector2(0f, -14f), "Position of available ammo for weapon in hotbar");
             ammoCountFontSize = config("Item - Ammo icon and count", "Ammo count FontSize", defaultValue: 14, "Show amount of available ammo and ammo icon for weapon in hotbar");
             ammoCountAlignment = config("Item - Ammo icon and count", "Ammo count Alignment", defaultValue: HorizontalAlignmentOptions.Center, "Text horizontal alignment of available ammo for weapon in hotbar");
@@ -676,11 +677,11 @@ namespace MyLittleUI
                 new ConfigDescription("Width of the hover text shown next to the crosshair.", new AcceptableValueRange<float>(200f, 1000f)));
             hoverTextWidth.SettingChanged += (sender, args) => RadialMenuHover.ApplyHoverTextWidth();
 
-            radialMenuInitialCursorDistance = config("Hover - Radial menu", "Initial cursor distance", defaultValue: 0.5f,
+            radialMenuInitialCursorDistance = config("Radial Menu", "Initial cursor distance", defaultValue: 0.5f,
                 new ConfigDescription("Position of the mouse cursor along the line from the radial menu center (ElementInfo title position) to the initially selected radial element. 0 is the radial center, 1 is the selected element, and 2 is twice the selected-element distance.", new AcceptableValueRange<float>(0f, 2f)));
-
-            hoverRadialMenuHint = config("Hover - Radial menu", "Show radial menu hint", defaultValue: true, "Show the Open Radial action in hover text when the hovered object can currently accept an item through its contextual radial menu.");
-            hoverRadialMenuSuppressDefault = config("Hover - Radial menu", "Suppress default radial while hovering", defaultValue: false, "Prevent the standard radial menu from opening while the player is hovering an object, even when no contextual radial menu was opened.");
+            hoverRadialMenuHint = config("Radial Menu", "Show radial menu hint", defaultValue: true, "Show the Open Radial action in hover text when the hovered object can currently accept an item through its contextual radial menu.");
+            hoverRadialMenuSuppressDefault = config("Radial Menu", "Suppress default radial while hovering", defaultValue: false, "Prevent the standard radial menu from opening while the player is hovering an object, even when no contextual radial menu was opened.");
+            radialMenuFermenterItemSelection = config("Radial Menu", "Fermenter item selection", defaultValue: true, "Enable contextual radial item selection for fermenters and show only mead bases accepted by the hovered fermenter.");
 
             hoverTame = config("Hover - Tameable", "Tameable Hover", defaultValue: StationHover.Vanilla, "Format of total needed time/percent to tame or to stay fed.");
             hoverTameTimeToTame = config("Hover - Tameable", "Show time to tame", defaultValue: true, "Show total needed time/percent to tame. [Synced with Server]", synchronizedSetting: true);
