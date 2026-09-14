@@ -1,3 +1,10 @@
+# 1.2.19
+* Added contextual Open Radial hints for stations that can currently accept items through Valheim's radial item selector.
+* Added an optional, disabled-by-default setting to suppress the standard radial menu while hovering an object when no contextual radial is opened.
+* Removed cooking-station next-item previews and station item-removal actions; item selection is now handled by Valheim's contextual radial menu.
+* Added Seasons-aware plant, pickable, and beehive timers directly in the existing My Little UI hover formatters by calling Seasons' own timing methods.
+* Preserved hold-to-add support for smelters whose interaction switches are not parented under the station.
+
 # 1.2.18
 * Fixed hold-to-repair with the controller interaction action, including alternate controller layouts and remapped bindings.
 * Restored enforcement of the Enable repair on hold setting while preserving the separate local Hold to mass repair toggle.
@@ -126,7 +133,7 @@
 * fixed random but nasty bug with inventory panel
 
 # 1.1.23
-* new config option to hide max stack size if it is too long
+* new config option to hide max stack size if it is too long to show
 
 # 1.1.22
 * new visual type for stations hover: Bar

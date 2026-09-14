@@ -30,7 +30,7 @@ namespace MyLittleUI
     {
         public const string pluginID = "shudnal.MyLittleUI";
         public const string pluginName = "My Little UI";
-        public const string pluginVersion = "1.2.18";
+        public const string pluginVersion = "1.2.19";
 
         private readonly Harmony harmony = new Harmony(pluginID);
 
@@ -175,11 +175,12 @@ namespace MyLittleUI
         public static ConfigEntry<StationHover> hoverCooking;
         public static ConfigEntry<StationHover> hoverBeeHive;
         public static ConfigEntry<bool> hoverBeeHiveTotal;
-        public static ConfigEntry<bool> hoverCookingNextItem;
-        public static ConfigEntry<bool> hoverCookingRemoveLastItem;
         public static ConfigEntry<bool> hoverStumpGrowerEnabled;
         public static ConfigEntry<StationHover> hoverStumpGrower;
         public static ConfigEntry<bool> hoverHoldToMassRepair;
+
+        public static ConfigEntry<bool> hoverRadialMenuHint;
+        public static ConfigEntry<bool> hoverRadialMenuSuppressDefault;
 
         public static ConfigEntry<StationHover> hoverCharacter;
         public static ConfigEntry<bool> hoverCharacterGrowth;
@@ -376,6 +377,7 @@ namespace MyLittleUI
                 epicLootAssembly ??= Assembly.GetAssembly(epicLootPlugin.Instance.GetType());
 
             ItemTooltip.Initialize();
+            RadialMenuHover.Initialize();
 
             LoadIcons();
 
@@ -400,6 +402,11 @@ namespace MyLittleUI
         {
             if (loggingEnabled.Value)
                 instance.Logger.LogInfo(data);
+        }
+
+        internal static void LogWarning(object data)
+        {
+            instance.Logger.LogWarning(data);
         }
 
         internal static bool UseNomapLayout() => Game.m_noMap || (disableMinimap?.Value ?? false);
@@ -660,11 +667,12 @@ namespace MyLittleUI
             hoverCooking = config("Hover - Stations", "Cooking stations Hover", defaultValue: StationHover.Vanilla, "Hover text for cooking stations.");
             hoverBeeHive = config("Hover - Stations", "Bee Hive Hover", defaultValue: StationHover.Vanilla, "Hover text for bee hive.");
             hoverBeeHiveTotal = config("Hover - Stations", "Bee Hive Show total", defaultValue: true, "Show total needed time/percent for bee hive.");
-            hoverCookingNextItem = config("Hover - Stations", "Cooking station next item", defaultValue: true, "Show next item to be added to cooking station. Player inventory only.");
-            hoverCookingRemoveLastItem = config("Hover - Stations", "Cooking station Remove last item", defaultValue: true, "Add an option to remove last uncooked item. [Synced with Server]", synchronizedSetting: true);
             hoverStumpGrowerEnabled = config("Hover - Stations", "Stump Hover Enabled", defaultValue: true, "Enable Hover text for stumps when Advize_StumpsRegrow is installed. [Synced with Server]", synchronizedSetting: true);
             hoverStumpGrower = config("Hover - Stations", "Stump Hover", defaultValue: StationHover.Vanilla, "Hover text for stumps.");
             hoverHoldToMassRepair = config("Hover - Stations", "Hold to mass repair", defaultValue: true, "Allow hold-to-repair on this client when Inventory / Enable repair on hold is enabled. Supports keyboard and controller interaction buttons.");
+
+            hoverRadialMenuHint = config("Hover - Radial menu", "Show radial menu hint", defaultValue: true, "Show the Open Radial action in hover text when the hovered object can currently accept an item through its contextual radial menu.");
+            hoverRadialMenuSuppressDefault = config("Hover - Radial menu", "Suppress default radial while hovering", defaultValue: false, "Prevent the standard radial menu from opening while the player is hovering an object, even when no contextual radial menu was opened.");
 
             hoverTame = config("Hover - Tameable", "Tameable Hover", defaultValue: StationHover.Vanilla, "Format of total needed time/percent to tame or to stay fed.");
             hoverTameTimeToTame = config("Hover - Tameable", "Show time to tame", defaultValue: true, "Show total needed time/percent to tame. [Synced with Server]", synchronizedSetting: true);
@@ -856,6 +864,28 @@ namespace MyLittleUI
             return ts.ToString(ts.Hours > 0 ? @"h\:mm\:ss" : @"m\:ss");
         }
 
+        internal static string FromRemainingSeconds(double seconds)
+        {
+            if (double.IsPositiveInfinity(seconds))
+                return "∞";
+
+            if (double.IsNaN(seconds) || double.IsNegativeInfinity(seconds))
+                seconds = 0d;
+
+            return FromSeconds(Math.Max(0d, seconds));
+        }
+
+        internal static double GetProgressRatio(double elapsedSeconds, double totalSeconds)
+        {
+            if (double.IsPositiveInfinity(totalSeconds))
+                return 0d;
+
+            if (double.IsNaN(totalSeconds) || totalSeconds <= 0d)
+                return elapsedSeconds > 0d ? 1d : 0d;
+
+            return elapsedSeconds / totalSeconds;
+        }
+
         internal static string FromPercent(double percent) => GetBar(Mathf.RoundToInt((float)percent * 10), 10);
         
         private static string GetBar(int amount, int total, char symbol = '▀') => $"<sup><alpha=#ff>{new string(symbol, total)}<alpha=#ff></sup>".Insert(Mathf.Clamp(amount, 0, total) + 16, "<alpha=#33>");
@@ -911,12 +941,20 @@ namespace MyLittleUI
                 if (__instance.GetStatus() != Plant.Status.Healthy)
                     return;
 
+                double timeSincePlanted = __instance.TimeSincePlanted();
+                double growTime = __instance.GetGrowTime();
+
                 if (hoverPlant.Value == StationHover.Percentage)
-                    __result += $"\n{__instance.TimeSincePlanted() / __instance.GetGrowTime():P0}";
+                    __result += $"\n{timeSincePlanted / growTime:P0}";
                 else if (hoverPlant.Value == StationHover.Bar)
-                    __result += $"\n{FromPercent(__instance.TimeSincePlanted() / __instance.GetGrowTime())}";
+                    __result += $"\n{FromPercent(timeSincePlanted / growTime)}";
                 else if (hoverPlant.Value == StationHover.MinutesSeconds)
-                    __result += $"\n{FromSeconds(__instance.GetGrowTime() - __instance.TimeSincePlanted())}";
+                {
+                    double secondsLeft = SeasonsHoverCompatibility.GetSecondsToGrowPlant(
+                        __instance,
+                        growTime - timeSincePlanted);
+                    __result += $"\n{FromRemainingSeconds(secondsLeft)}";
+                }
             }
         }
 
@@ -941,14 +979,18 @@ namespace MyLittleUI
                 if (string.IsNullOrWhiteSpace(__result))
                     __result = Localization.instance.Localize(__instance.GetHoverName());
 
-                TimeSpan timeSpan = ZNet.instance.GetTime() - new DateTime(pickedTime);
+                double elapsedSeconds = (ZNet.instance.GetTime() - new DateTime(pickedTime)).TotalSeconds;
+                double respawnSeconds = SeasonsHoverCompatibility.GetSecondsToRespawnPickable(
+                    __instance,
+                    __instance.m_respawnTimeMinutes * 60d);
+                double progress = GetProgressRatio(elapsedSeconds, respawnSeconds);
 
                 if (hoverPickable.Value == StationHover.Percentage)
-                    __result += $"\n{timeSpan.TotalSeconds / (double)(__instance.m_respawnTimeMinutes * 60):P0}";
+                    __result += $"\n{progress:P0}";
                 else if (hoverPickable.Value == StationHover.Bar)
-                    __result += $"\n{FromPercent(timeSpan.TotalSeconds / (__instance.m_respawnTimeMinutes * 60))}";
+                    __result += $"\n{FromPercent(progress)}";
                 else if (hoverPickable.Value == StationHover.MinutesSeconds)
-                    __result += $"\n{FromSeconds((double)(__instance.m_respawnTimeMinutes * 60) - timeSpan.TotalSeconds)}";
+                    __result += $"\n{FromRemainingSeconds(respawnSeconds - elapsedSeconds)}";
             }
         }
 
@@ -971,14 +1013,21 @@ namespace MyLittleUI
                 if (!PrivateArea.CheckAccess(__instance.transform.position, 0f, flash: false) || honeyLevel == __instance.m_maxHoney)
                     return;
 
-                float product = __instance.m_nview.GetZDO().GetFloat("product");
+                float product = __instance.m_nview.GetZDO().GetFloat(ZDOVars.s_product);
 
                 if (hoverBeeHive.Value == StationHover.Percentage)
                     __result += $"\n{product / __instance.m_secPerUnit:P0}";
                 else if (hoverBeeHive.Value == StationHover.Bar)
                     __result += $"\n{FromPercent(product / __instance.m_secPerUnit)}";
                 else if (hoverBeeHive.Value == StationHover.MinutesSeconds)
-                    __result += $"\n{FromSeconds(__instance.m_secPerUnit - product)}";
+                {
+                    double secondsToNext = SeasonsHoverCompatibility.GetSecondsToMakeHoney(
+                        __instance,
+                        1,
+                        product,
+                        __instance.m_secPerUnit - product);
+                    __result += $"\n{FromRemainingSeconds(secondsToNext)}";
+                }
 
                 if (hoverBeeHiveTotal.Value && honeyLevel < 3)
                     if (hoverBeeHive.Value == StationHover.Percentage)
@@ -986,7 +1035,16 @@ namespace MyLittleUI
                     else if (hoverBeeHive.Value == StationHover.Bar)
                         __result += $"\n{FromPercent((product + __instance.m_secPerUnit * honeyLevel) / (__instance.m_secPerUnit * __instance.m_maxHoney))}";
                     else if (hoverBeeHive.Value == StationHover.MinutesSeconds)
-                        __result += $"\n{FromSeconds((__instance.m_secPerUnit * __instance.m_maxHoney) - (product + (__instance.m_secPerUnit * honeyLevel)))}";
+                    {
+                        double vanillaSecondsToFull = (__instance.m_secPerUnit * __instance.m_maxHoney)
+                            - (product + (__instance.m_secPerUnit * honeyLevel));
+                        double secondsToFull = SeasonsHoverCompatibility.GetSecondsToMakeHoney(
+                            __instance,
+                            __instance.m_maxHoney - honeyLevel,
+                            product,
+                            vanillaSecondsToFull);
+                        __result += $"\n{FromRemainingSeconds(secondsToFull)}";
+                    }
             }
         }
 
@@ -1054,17 +1112,6 @@ namespace MyLittleUI
                 return itemName;
             }
 
-            public static ItemDrop.ItemData FindCookableItem(CookingStation __instance, Inventory inventory)
-            {
-                foreach (CookingStation.ItemConversion item2 in __instance.m_conversion)
-                {
-                    ItemDrop.ItemData item = inventory.GetItem(item2.m_from.m_itemData.m_shared.m_name);
-                    if (item != null)
-                        return item;
-                }
-
-                return null;
-            }
 
             public static string HoverText(CookingStation __instance, string m_name, string m_addItemTooltip)
             {
@@ -1074,21 +1121,6 @@ namespace MyLittleUI
                 sb.Append("\n[<color=yellow><b>$KEY_Use</b></color>] ");
                 sb.Append(m_addItemTooltip);
 
-                if (hoverCookingNextItem.Value && Player.m_localPlayer != null && FindCookableItem(__instance, Player.m_localPlayer.GetInventory()) is ItemDrop.ItemData itemToCook)
-                    sb.Append($" (<color=#add8e6ff>{itemToCook.m_shared.m_name}</color>)");
-
-                if (hoverCookingRemoveLastItem.Value && __instance.m_nview?.IsValid() == true &&  __instance.GetFreeSlot() != 0)
-                {
-                    if (CookingStationRemoveItem.GetSlotToRemove(__instance, out string itemName, out _) != -1)
-                    {
-                        if (!ZInput.IsNonClassicFunctionality() || !ZInput.IsGamepadActive())
-                            sb.Append($"\n[<color=yellow><b>$KEY_AltPlace + $KEY_Use</b></color>] $hud_remove");
-                        else
-                            sb.Append($"\n[<color=yellow><b>$KEY_JoyAltKeys + $KEY_Use</b></color>] $hud_remove");
-
-                        sb.Append($" (<color=#add8e6ff>{ObjectDB.instance.GetItemPrefab(itemName)?.GetComponent<ItemDrop>()?.m_itemData.m_shared.m_name}</color>)");
-                    }
-                }
 
                 if (!ZInput.GamepadActive)
                 {

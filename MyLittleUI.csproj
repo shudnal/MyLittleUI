@@ -38,7 +38,7 @@
   <ItemGroup>
     <Compile Include="AmmoCountIcon.cs" />
     <Compile Include="ChestHoverText.cs" />
-    <Compile Include="CookingStationRemoveItem.cs" />
+    <Compile Include="RadialMenuHover.cs" />
     <Compile Include="Crafting\CraftFilter.cs" />
     <Compile Include="Crafting\CraftNew.cs" />
     <Compile Include="Crafting\CraftSort.cs" />
@@ -170,6 +170,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Compatibility\Advize_StumpsRegrow.cs" />
+    <Compile Include="Compatibility\Seasons.cs" />
     <None Include="ILRepack.targets" />
   </ItemGroup>
   <ItemGroup>
