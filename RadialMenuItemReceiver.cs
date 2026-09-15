@@ -123,7 +123,7 @@ namespace MyLittleUI
         public bool CanUseItems(Player player, bool sendErrorMessage = true)
         {
             if (!IsActive)
-                return true;
+                return false;
 
             try
             {
