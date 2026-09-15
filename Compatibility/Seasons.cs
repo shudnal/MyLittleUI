@@ -60,6 +60,41 @@ namespace MyLittleUI
             EnsureDelegates();
         }
 
+        internal static void Shutdown()
+        {
+            if (!initialized)
+                return;
+
+            if (seasonsConfigHandlerBound && seasonsConfig != null)
+            {
+                seasonsConfig.SettingChanged -= OnSeasonsConfigSettingChanged;
+                seasonsConfigHandlerBound = false;
+            }
+
+            if (myLittleUIConfigHandlerBound && MyLittleUI.instance?.Config != null)
+            {
+                MyLittleUI.instance.Config.SettingChanged -= OnMyLittleUIConfigSettingChanged;
+                myLittleUIConfigHandlerBound = false;
+            }
+
+            if (hoverOwnerships != null)
+            {
+                foreach (HoverOwnership ownership in hoverOwnerships)
+                {
+                    if (!ownership.Owned)
+                        continue;
+
+                    object releasedValue = ownership.ReleasedValue;
+                    ownership.ReleasedValue = null;
+                    ownership.Owned = false;
+                    SetSeasonsHoverValue(ownership.Entry, releasedValue);
+                }
+            }
+
+            hoverOwnerships = null;
+            initialized = false;
+        }
+
         private static bool DetectSeasons()
         {
             if (!Chainloader.PluginInfos.TryGetValue(GUID, out seasonsPlugin) || seasonsPlugin?.Instance == null)
@@ -387,6 +422,13 @@ namespace MyLittleUI
         private static class FejdStartup_Awake_Initialize
         {
             private static void Postfix() => Initialize();
+        }
+
+        [HarmonyPatch(typeof(MyLittleUI), "OnDestroy")]
+        private static class MyLittleUI_OnDestroy_Shutdown
+        {
+            [HarmonyPrefix]
+            private static void Prefix() => Shutdown();
         }
     }
 }
