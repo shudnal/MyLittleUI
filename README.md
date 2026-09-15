@@ -54,8 +54,9 @@ Bunch of little UI tweaks. Tooltips for production timers, player status, items.
 ## Hovers
 * Fermenter (time to end, percent, current mead)
 * Plants (time to full grow)
-* Cooking stations (time to cook/coal for each cooking item, see what item will be added, remove last added item)
-* Oven (time to bake/coal for each baking item, see what item will be added, remove last added item)
+* Contextual radial menu hint for stations that can currently accept an item
+* Cooking stations (time to cook/coal for each cooking item)
+* Oven (time to bake/coal for each baking item)
 * Windmill (time to produce everything, depends on current wind force)
 * Spinning wheel (time to end)
 * Smelters (show ore and fuel on both sides, time to end, queued items in order, hold E to add ore/fuel faster)

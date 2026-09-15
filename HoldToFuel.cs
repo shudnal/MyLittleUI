@@ -1,4 +1,5 @@
 ﻿using HarmonyLib;
+using System;
 using System.Collections;
 using UnityEngine;
 using static MyLittleUI.MyLittleUI;
@@ -11,6 +12,27 @@ namespace MyLittleUI
         private const float delay = 0.4f;
         private static IEnumerator worker;
         private static Switch activeSwitch;
+
+        private static Smelter GetSmelter(Switch sw)
+        {
+            if (!sw)
+                return null;
+
+            if (sw.m_onUse != null)
+            {
+                foreach (Delegate callback in sw.m_onUse.GetInvocationList())
+                {
+                    if (callback.Target is Smelter smelter
+                        && (smelter.m_addOreSwitch == sw || smelter.m_addWoodSwitch == sw))
+                    {
+                        return smelter;
+                    }
+                }
+            }
+
+            Smelter parent = sw.GetComponentInParent<Smelter>();
+            return parent && (parent.m_addOreSwitch == sw || parent.m_addWoodSwitch == sw) ? parent : null;
+        }
 
         public static IEnumerator AddOnHold(Switch addOreFuelSwitch, Smelter smelter, Humanoid human)
         {
@@ -60,7 +82,9 @@ namespace MyLittleUI
                 if (!modEnabled.Value || !hoverSmelterHoldToAddSeveral.Value || !hold || !__runOriginal
                     || worker != null || !character || character != Player.m_localPlayer)
                     return;
-                if (__instance.m_onUse != null && __instance.GetComponentInParent<Smelter>() is Smelter smelter
+
+                Smelter smelter = GetSmelter(__instance);
+                if (__instance.m_onUse != null && smelter
                     && (__instance == smelter.m_addOreSwitch || __instance == smelter.m_addWoodSwitch))
                 {
                     activeSwitch = __instance;
