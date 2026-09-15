@@ -60,10 +60,40 @@ namespace MyLittleUI
                 : AccessTools.Field(seasonsType, fieldName)?.GetValue(null) as ConfigEntryBase;
         }
 
+        private static bool ShouldOwnHover(ConfigEntryBase entry)
+        {
+            if (MyLittleUI.modEnabled?.Value != true || entry == null)
+                return false;
+
+            if (ReferenceEquals(entry, seasonsHoverBeeHive))
+            {
+                return MyLittleUI.hoverBeeHiveEnabled?.Value == true
+                    && MyLittleUI.hoverBeeHive?.Value != MyLittleUI.StationHover.Vanilla;
+            }
+
+            if (ReferenceEquals(entry, seasonsHoverPlant))
+            {
+                return MyLittleUI.hoverPlantEnabled?.Value == true
+                    && MyLittleUI.hoverPlant?.Value != MyLittleUI.StationHover.Vanilla;
+            }
+
+            if (ReferenceEquals(entry, seasonsHoverPickable))
+            {
+                return MyLittleUI.hoverPickableEnabled?.Value == true
+                    && MyLittleUI.hoverPickable?.Value != MyLittleUI.StationHover.Vanilla;
+            }
+
+            return false;
+        }
+
         private static void EnforceVanilla(ConfigEntryBase entry)
         {
-            if (entry == null || entry.BoxedValue == null || entry.BoxedValue.ToString() == "Vanilla")
+            if (!ShouldOwnHover(entry)
+                || entry.BoxedValue == null
+                || entry.BoxedValue.ToString() == "Vanilla")
+            {
                 return;
+            }
 
             MyLittleUI.LogWarning(
                 $"Seasons hover '{entry.Definition.Key}' was reset to Vanilla because My Little UI controls this hover.");
