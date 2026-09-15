@@ -4,12 +4,27 @@ using BepInEx.Configuration;
 using HarmonyLib;
 using System;
 using System.Reflection;
+using UnityEngine;
 
 namespace MyLittleUI
 {
     internal static class SeasonsHoverCompatibility
     {
         internal const string GUID = "shudnal.Seasons";
+
+        private sealed class HoverOwnership
+        {
+            internal ConfigEntryBase Entry { get; }
+            internal Func<bool> ShouldOwn { get; }
+            internal object ReleasedValue { get; set; }
+            internal bool Owned { get; set; }
+
+            internal HoverOwnership(ConfigEntryBase entry, Func<bool> shouldOwn)
+            {
+                Entry = entry;
+                ShouldOwn = shouldOwn;
+            }
+        }
 
         private static PluginInfo seasonsPlugin;
         private static Type seasonsType;
@@ -20,14 +35,17 @@ namespace MyLittleUI
         private static Func<Beehive, int, float, double> getSecondsToMakeHoney;
         private static Func<Plant, double> getSecondsToGrowPlant;
         private static Func<Pickable, double> getSecondsToRespawnPickable;
+        private static Func<Vector3, bool> isProtectedPosition;
 
         private static ConfigEntryBase seasonsHoverBeeHive;
         private static ConfigEntryBase seasonsHoverPlant;
         private static ConfigEntryBase seasonsHoverPickable;
         private static ConfigFile seasonsConfig;
+        private static HoverOwnership[] hoverOwnerships;
 
         private static bool initialized;
-        private static bool configHandlerBound;
+        private static bool seasonsConfigHandlerBound;
+        private static bool myLittleUIConfigHandlerBound;
         private static bool suppressSettingHandler;
         private static bool delegateErrorLogged;
         private static bool invocationErrorLogged;
@@ -60,48 +78,15 @@ namespace MyLittleUI
                 : AccessTools.Field(seasonsType, fieldName)?.GetValue(null) as ConfigEntryBase;
         }
 
-        private static bool ShouldOwnHover(ConfigEntryBase entry)
+        private static void SetSeasonsHoverValue(ConfigEntryBase entry, object value)
         {
-            if (MyLittleUI.modEnabled?.Value != true || entry == null)
-                return false;
-
-            if (ReferenceEquals(entry, seasonsHoverBeeHive))
-            {
-                return MyLittleUI.hoverBeeHiveEnabled?.Value == true
-                    && MyLittleUI.hoverBeeHive?.Value != MyLittleUI.StationHover.Vanilla;
-            }
-
-            if (ReferenceEquals(entry, seasonsHoverPlant))
-            {
-                return MyLittleUI.hoverPlantEnabled?.Value == true
-                    && MyLittleUI.hoverPlant?.Value != MyLittleUI.StationHover.Vanilla;
-            }
-
-            if (ReferenceEquals(entry, seasonsHoverPickable))
-            {
-                return MyLittleUI.hoverPickableEnabled?.Value == true
-                    && MyLittleUI.hoverPickable?.Value != MyLittleUI.StationHover.Vanilla;
-            }
-
-            return false;
-        }
-
-        private static void EnforceVanilla(ConfigEntryBase entry)
-        {
-            if (!ShouldOwnHover(entry)
-                || entry.BoxedValue == null
-                || entry.BoxedValue.ToString() == "Vanilla")
-            {
+            if (entry == null || value == null || Equals(entry.BoxedValue, value))
                 return;
-            }
-
-            MyLittleUI.LogWarning(
-                $"Seasons hover '{entry.Definition.Key}' was reset to Vanilla because My Little UI controls this hover.");
 
             try
             {
                 suppressSettingHandler = true;
-                entry.BoxedValue = Enum.Parse(entry.SettingType, "Vanilla");
+                entry.BoxedValue = value;
             }
             finally
             {
@@ -109,18 +94,99 @@ namespace MyLittleUI
             }
         }
 
+        private static void EnforceVanilla(ConfigEntryBase entry)
+        {
+            if (entry == null || entry.BoxedValue == null || entry.BoxedValue.ToString() == "Vanilla")
+                return;
+
+            MyLittleUI.LogWarning(
+                $"Seasons hover '{entry.Definition.Key}' was reset to Vanilla because My Little UI controls this hover.");
+
+            SetSeasonsHoverValue(entry, Enum.Parse(entry.SettingType, "Vanilla"));
+        }
+
+        private static void ReconcileHoverOwnership(HoverOwnership ownership)
+        {
+            if (ownership?.Entry == null)
+                return;
+
+            bool shouldOwn = MyLittleUI.modEnabled?.Value == true && ownership.ShouldOwn();
+            if (shouldOwn)
+            {
+                if (!ownership.Owned)
+                {
+                    ownership.ReleasedValue = ownership.Entry.BoxedValue;
+                    ownership.Owned = true;
+                }
+
+                EnforceVanilla(ownership.Entry);
+                return;
+            }
+
+            if (!ownership.Owned)
+                return;
+
+            object releasedValue = ownership.ReleasedValue;
+            ownership.ReleasedValue = null;
+            ownership.Owned = false;
+            SetSeasonsHoverValue(ownership.Entry, releasedValue);
+        }
+
+        private static void ReconcileHoverOwnerships()
+        {
+            if (hoverOwnerships == null)
+                return;
+
+            foreach (HoverOwnership ownership in hoverOwnerships)
+                ReconcileHoverOwnership(ownership);
+        }
+
+        private static HoverOwnership FindHoverOwnership(ConfigEntryBase entry)
+        {
+            if (entry == null || hoverOwnerships == null)
+                return null;
+
+            foreach (HoverOwnership ownership in hoverOwnerships)
+            {
+                if (ReferenceEquals(entry, ownership.Entry))
+                    return ownership;
+            }
+
+            return null;
+        }
+
+        private static bool IsMyLittleUIOwnershipSetting(ConfigEntryBase entry)
+        {
+            return ReferenceEquals(entry, MyLittleUI.modEnabled)
+                || ReferenceEquals(entry, MyLittleUI.hoverBeeHiveEnabled)
+                || ReferenceEquals(entry, MyLittleUI.hoverBeeHive)
+                || ReferenceEquals(entry, MyLittleUI.hoverPlantEnabled)
+                || ReferenceEquals(entry, MyLittleUI.hoverPlant)
+                || ReferenceEquals(entry, MyLittleUI.hoverPickableEnabled)
+                || ReferenceEquals(entry, MyLittleUI.hoverPickable);
+        }
+
         private static void OnSeasonsConfigSettingChanged(object sender, SettingChangedEventArgs args)
         {
             if (suppressSettingHandler || args?.ChangedSetting == null)
                 return;
 
-            ConfigEntryBase entry = args.ChangedSetting;
-            if (ReferenceEquals(entry, seasonsHoverBeeHive)
-                || ReferenceEquals(entry, seasonsHoverPlant)
-                || ReferenceEquals(entry, seasonsHoverPickable))
-            {
-                EnforceVanilla(entry);
-            }
+            HoverOwnership ownership = FindHoverOwnership(args.ChangedSetting);
+            if (ownership == null)
+                return;
+
+            if (ownership.Owned)
+                ownership.ReleasedValue = ownership.Entry.BoxedValue;
+
+            ReconcileHoverOwnership(ownership);
+        }
+
+        private static void OnMyLittleUIConfigSettingChanged(object sender, SettingChangedEventArgs args)
+        {
+            if (args?.ChangedSetting == null || !IsMyLittleUIOwnershipSetting(args.ChangedSetting))
+                return;
+
+            ReconcileHoverOwnerships();
         }
 
         private static void EnsureHoverOwnership()
@@ -129,21 +195,35 @@ namespace MyLittleUI
             seasonsHoverPlant ??= GetSeasonsConfigEntry("hoverPlant");
             seasonsHoverPickable ??= GetSeasonsConfigEntry("hoverPickable");
 
-            EnforceVanilla(seasonsHoverBeeHive);
-            EnforceVanilla(seasonsHoverPlant);
-            EnforceVanilla(seasonsHoverPickable);
-
-            if (configHandlerBound
-                || seasonsConfig == null
-                || seasonsHoverBeeHive == null
-                || seasonsHoverPlant == null
-                || seasonsHoverPickable == null)
+            hoverOwnerships ??= new[]
             {
-                return;
+                new HoverOwnership(
+                    seasonsHoverBeeHive,
+                    () => MyLittleUI.hoverBeeHiveEnabled?.Value == true
+                        && MyLittleUI.hoverBeeHive?.Value != MyLittleUI.StationHover.Vanilla),
+                new HoverOwnership(
+                    seasonsHoverPlant,
+                    () => MyLittleUI.hoverPlantEnabled?.Value == true
+                        && MyLittleUI.hoverPlant?.Value != MyLittleUI.StationHover.Vanilla),
+                new HoverOwnership(
+                    seasonsHoverPickable,
+                    () => MyLittleUI.hoverPickableEnabled?.Value == true
+                        && MyLittleUI.hoverPickable?.Value != MyLittleUI.StationHover.Vanilla)
+            };
+
+            ReconcileHoverOwnerships();
+
+            if (!seasonsConfigHandlerBound && seasonsConfig != null)
+            {
+                seasonsConfig.SettingChanged += OnSeasonsConfigSettingChanged;
+                seasonsConfigHandlerBound = true;
             }
 
-            seasonsConfig.SettingChanged += OnSeasonsConfigSettingChanged;
-            configHandlerBound = true;
+            if (!myLittleUIConfigHandlerBound && MyLittleUI.instance?.Config != null)
+            {
+                MyLittleUI.instance.Config.SettingChanged += OnMyLittleUIConfigSettingChanged;
+                myLittleUIConfigHandlerBound = true;
+            }
         }
 
         private static bool EnsureDelegates()
@@ -161,7 +241,8 @@ namespace MyLittleUI
             if (ReferenceEquals(boundSeasonState, state)
                 && getSecondsToMakeHoney != null
                 && getSecondsToGrowPlant != null
-                && getSecondsToRespawnPickable != null)
+                && getSecondsToRespawnPickable != null
+                && isProtectedPosition != null)
             {
                 return true;
             }
@@ -171,6 +252,7 @@ namespace MyLittleUI
             getSecondsToMakeHoney = null;
             getSecondsToGrowPlant = null;
             getSecondsToRespawnPickable = null;
+            isProtectedPosition = null;
 
             try
             {
@@ -187,9 +269,18 @@ namespace MyLittleUI
                     type,
                     nameof(GetSecondsToRespawnPickable),
                     new[] { typeof(Pickable) });
+                MethodInfo protectedPositionMethod = AccessTools.Method(
+                    seasonsType,
+                    "IsProtectedPosition",
+                    new[] { typeof(Vector3) });
 
-                if (honeyMethod == null || plantMethod == null || pickableMethod == null)
+                if (honeyMethod == null
+                    || plantMethod == null
+                    || pickableMethod == null
+                    || protectedPositionMethod == null)
+                {
                     throw new MissingMethodException("Required Seasons hover timing methods were not found.");
+                }
 
                 getSecondsToMakeHoney = (Func<Beehive, int, float, double>)Delegate.CreateDelegate(
                     typeof(Func<Beehive, int, float, double>), state, honeyMethod);
@@ -197,6 +288,8 @@ namespace MyLittleUI
                     typeof(Func<Plant, double>), state, plantMethod);
                 getSecondsToRespawnPickable = (Func<Pickable, double>)Delegate.CreateDelegate(
                     typeof(Func<Pickable, double>), state, pickableMethod);
+                isProtectedPosition = (Func<Vector3, bool>)Delegate.CreateDelegate(
+                    typeof(Func<Vector3, bool>), protectedPositionMethod);
 
                 delegateErrorLogged = false;
                 invocationErrorLogged = false;
@@ -267,7 +360,22 @@ namespace MyLittleUI
 
             try
             {
-                return getSecondsToRespawnPickable(pickable);
+                if (isProtectedPosition(pickable.transform.position))
+                    return fallback;
+
+                double secondsRemaining = getSecondsToRespawnPickable(pickable);
+                if (double.IsNaN(secondsRemaining) || secondsRemaining < 0d)
+                    return fallback;
+
+                if (double.IsPositiveInfinity(secondsRemaining))
+                    return secondsRemaining;
+
+                long pickedTime = pickable.m_nview.GetZDO().GetLong(ZDOVars.s_pickedTime, 0L);
+                if (pickedTime <= 1)
+                    return fallback;
+
+                double elapsedSeconds = (ZNet.instance.GetTime() - new DateTime(pickedTime)).TotalSeconds;
+                return Math.Max(0d, elapsedSeconds) + secondsRemaining;
             }
             catch (Exception exception)
             {
