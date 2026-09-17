@@ -30,7 +30,7 @@ namespace MyLittleUI
     {
         public const string pluginID = "shudnal.MyLittleUI";
         public const string pluginName = "My Little UI";
-        public const string pluginVersion = "1.2.19";
+        public const string pluginVersion = "1.2.20";
 
         private readonly Harmony harmony = new Harmony(pluginID);
 
@@ -46,6 +46,7 @@ namespace MyLittleUI
         public static ConfigEntry<bool> fixStatusEffectAndForecastPosition;
 
         public static ConfigEntry<bool> clockShowDay;
+        public static ConfigEntry<bool> clockShowDayAtDawn;
         public static ConfigEntry<bool> clockShowTime;
         public static ConfigEntry<bool> clockTimeFormat24h;
         public static ConfigEntry<bool> clockShowBackground;
@@ -427,6 +428,7 @@ namespace MyLittleUI
             nonlocalizedButtons.SettingChanged += (s, e) => ZInput_GetBoundKeyString_NonlocalizedButtons.OnChange();
 
             clockShowDay = config("Info - Clock", "Show day", defaultValue: true, "Enable day number [Synced with Server]", synchronizedSetting: true);
+            clockShowDayAtDawn = config("Info - Clock", "Show day at dawn", defaultValue: true, "Show the centered day number message at dawn.");
             clockShowTime = config("Info - Clock", "Show time", defaultValue: true, "Enable time [Synced with Server]", synchronizedSetting: true);
             clockTimeFormat24h = config("Info - Clock", "Time format 24h", defaultValue: true, "Show time in HH:mm format");
             clockShowBackground = config("Info - Clock", "Background enabled", defaultValue: false, "Show clock background");
@@ -893,6 +895,23 @@ namespace MyLittleUI
                 return elapsedSeconds > 0d ? 1d : 0d;
 
             return elapsedSeconds / totalSeconds;
+        }
+
+        private static bool envManOnMorning;
+
+        [HarmonyPatch(typeof(EnvMan), nameof(EnvMan.OnMorning))]
+        private static class EnvMan_OnMorning_DayMessage
+        {
+            private static void Prefix() => envManOnMorning = true;
+
+            private static void Postfix() => envManOnMorning = false;
+        }
+
+        [HarmonyPatch(typeof(Player), nameof(Player.Message))]
+        private static class Player_Message_DayMessage
+        {
+            private static bool Prefix()
+                => !envManOnMorning || !modEnabled.Value || clockShowDayAtDawn.Value;
         }
 
         internal static string FromPercent(double percent) => GetBar(Mathf.RoundToInt((float)percent * 10), 10);

@@ -1,3 +1,6 @@
+# 1.2.20
+* Added an option to hide the centered day number message shown at dawn.
+
 # 1.2.19
 * Added contextual Open Radial hints for stations that can currently accept items through Valheim's radial item selector.
 * Added contextual radial item selection for fermenters, showing only mead bases accepted by the hovered fermenter.
