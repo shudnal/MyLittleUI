@@ -1,3 +1,6 @@
+# 1.2.21
+* Added contextual radial fuel selection for shield generators and prevented unavailable-fuel messages from being triggered by hover checks.
+
 # 1.2.20
 * Added an option to hide the centered day number message shown at dawn.
 

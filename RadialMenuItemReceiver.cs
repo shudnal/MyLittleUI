@@ -16,19 +16,22 @@ namespace MyLittleUI
             internal Func<Component, Player, IEnumerable<string>> GetItems { get; }
             internal Func<Component, Player, bool, bool> CanUseItems { get; }
             internal MethodBase[] HoverTextMethods { get; }
+            internal bool OverrideTargetHoverMenu { get; }
 
             internal ReceiverDefinition(
                 Type targetType,
                 Func<bool> enabled,
                 Func<Component, Player, IEnumerable<string>> getItems,
                 Func<Component, Player, bool, bool> canUseItems,
-                MethodBase[] hoverTextMethods)
+                MethodBase[] hoverTextMethods,
+                bool overrideTargetHoverMenu)
             {
                 TargetType = targetType;
                 Enabled = enabled;
                 GetItems = getItems;
                 CanUseItems = canUseItems;
                 HoverTextMethods = hoverTextMethods;
+                OverrideTargetHoverMenu = overrideTargetHoverMenu;
             }
         }
 
@@ -38,7 +41,13 @@ namespace MyLittleUI
                 () => MyLittleUI.radialMenuFermenterItemSelection?.Value == true,
                 GetFermenterItems,
                 CanUseFermenterItems,
-                AccessTools.Method(typeof(Fermenter), nameof(Fermenter.GetHoverText)))
+                AccessTools.Method(typeof(Fermenter), nameof(Fermenter.GetHoverText))),
+            Create<ShieldGenerator>(
+                () => MyLittleUI.radialMenuShieldGeneratorItemSelection?.Value == true,
+                GetShieldGeneratorItems,
+                CanUseShieldGeneratorItems,
+                true,
+                AccessTools.Method(typeof(ShieldGenerator), nameof(ShieldGenerator.OnHoverAddFuel)))
         };
 
         private static readonly HashSet<Type> ErrorTypes = new HashSet<Type>();
@@ -57,19 +66,30 @@ namespace MyLittleUI
             Func<T, Player, bool, bool> canUseItems,
             params MethodBase[] hoverTextMethods)
             where T : Component
+            => Create(enabled, getItems, canUseItems, false, hoverTextMethods);
+
+        private static ReceiverDefinition Create<T>(
+            Func<bool> enabled,
+            Func<T, Player, IEnumerable<string>> getItems,
+            Func<T, Player, bool, bool> canUseItems,
+            bool overrideTargetHoverMenu,
+            params MethodBase[] hoverTextMethods)
+            where T : Component
             => new ReceiverDefinition(
                 typeof(T),
                 enabled,
                 (component, player) => getItems((T)component, player),
                 (component, player, sendErrorMessage) => canUseItems((T)component, player, sendErrorMessage),
-                hoverTextMethods?.Where(method => method != null).ToArray() ?? Array.Empty<MethodBase>());
+                hoverTextMethods?.Where(method => method != null).ToArray() ?? Array.Empty<MethodBase>(),
+                overrideTargetHoverMenu);
 
         internal static IEnumerable<MethodBase> GetHoverTextMethods()
             => Definitions.SelectMany(receiver => receiver.HoverTextMethods).Distinct();
 
-        private static IEnumerable<MethodBase> GetTargetAwakeMethods()
+        private static IEnumerable<MethodBase> GetTargetInitializationMethods()
             => Definitions
-                .Select(receiver => AccessTools.Method(receiver.TargetType, "Awake", Type.EmptyTypes))
+                .Select(receiver => AccessTools.Method(receiver.TargetType, "Awake", Type.EmptyTypes)
+                    ?? AccessTools.Method(receiver.TargetType, "Start", Type.EmptyTypes))
                 .Where(method => method != null)
                 .Distinct();
 
@@ -84,7 +104,8 @@ namespace MyLittleUI
 
             MonoBehaviour[] components = targetComponent.GetComponents<MonoBehaviour>();
             if (components.Any(component => !(component is RadialMenuItemReceiver)
-                && (component is IHasHoverMenu || component is IHasHoverMenuExtended)))
+                && (component is IHasHoverMenu || component is IHasHoverMenuExtended)
+                && (!targetDefinition.OverrideTargetHoverMenu || component != targetComponent)))
             {
                 return;
             }
@@ -200,10 +221,52 @@ namespace MyLittleUI
             return false;
         }
 
-        [HarmonyPatch]
-        private static class RegisteredReceiver_Awake_AttachAdapter
+        private static IEnumerable<string> GetShieldGeneratorItems(ShieldGenerator shieldGenerator, Player _)
         {
-            private static IEnumerable<MethodBase> TargetMethods() => GetTargetAwakeMethods();
+            if (!shieldGenerator || shieldGenerator.m_fuelItems == null)
+                yield break;
+
+            foreach (ItemDrop fuelItem in shieldGenerator.m_fuelItems)
+            {
+                if (fuelItem != null)
+                    yield return fuelItem.m_itemData.m_shared.m_name;
+            }
+        }
+
+        private static bool CanUseShieldGeneratorItems(ShieldGenerator shieldGenerator, Player player, bool sendErrorMessage)
+        {
+            if (!shieldGenerator
+                || !player
+                || shieldGenerator.m_nview == null
+                || !shieldGenerator.m_nview.IsValid())
+            {
+                return false;
+            }
+
+            if (shieldGenerator.GetFuel() > shieldGenerator.m_maxFuel - 1f)
+            {
+                if (sendErrorMessage)
+                    player.Message(MessageHud.MessageType.Center, "$msg_itsfull");
+                return false;
+            }
+
+            if (shieldGenerator.m_fuelItems != null
+                && shieldGenerator.m_fuelItems.Any(item => item != null
+                    && player.GetInventory().HaveItem(item.m_itemData.m_shared.m_name)))
+            {
+                return true;
+            }
+
+            if (sendErrorMessage)
+                player.Message(MessageHud.MessageType.Center, "$msg_donthaveany $piece_shieldgenerator_fuelname");
+
+            return false;
+        }
+
+        [HarmonyPatch]
+        private static class RegisteredReceiver_Initialize_AttachAdapter
+        {
+            private static IEnumerable<MethodBase> TargetMethods() => GetTargetInitializationMethods();
 
             [HarmonyPriority(Priority.Last)]
             private static void Postfix(object __instance)

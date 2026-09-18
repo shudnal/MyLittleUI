@@ -30,7 +30,7 @@ namespace MyLittleUI
     {
         public const string pluginID = "shudnal.MyLittleUI";
         public const string pluginName = "My Little UI";
-        public const string pluginVersion = "1.2.20";
+        public const string pluginVersion = "1.2.21";
 
         private readonly Harmony harmony = new Harmony(pluginID);
 
@@ -185,6 +185,7 @@ namespace MyLittleUI
         public static ConfigEntry<bool> hoverRadialMenuHint;
         public static ConfigEntry<bool> hoverRadialMenuSuppressDefault;
         public static ConfigEntry<bool> radialMenuFermenterItemSelection;
+        public static ConfigEntry<bool> radialMenuShieldGeneratorItemSelection;
 
         public static ConfigEntry<StationHover> hoverCharacter;
         public static ConfigEntry<bool> hoverCharacterGrowth;
@@ -684,6 +685,7 @@ namespace MyLittleUI
             hoverRadialMenuHint = config("Radial Menu", "Show radial menu hint", defaultValue: true, "Show the Open Radial action in hover text when the hovered object can currently accept an item through its contextual radial menu.");
             hoverRadialMenuSuppressDefault = config("Radial Menu", "Suppress default radial while hovering", defaultValue: false, "Prevent the standard radial menu from opening while the player is hovering an object, even when no contextual radial menu was opened.");
             radialMenuFermenterItemSelection = config("Radial Menu", "Fermenter item selection", defaultValue: true, "Enable contextual radial item selection for fermenters and show only mead bases accepted by the hovered fermenter.");
+            radialMenuShieldGeneratorItemSelection = config("Radial Menu", "Shield generator item selection", defaultValue: true, "Enable contextual radial item selection for shield generators and show only fuel accepted by the hovered generator.");
 
             hoverTame = config("Hover - Tameable", "Tameable Hover", defaultValue: StationHover.Vanilla, "Format of total needed time/percent to tame or to stay fed.");
             hoverTameTimeToTame = config("Hover - Tameable", "Show time to tame", defaultValue: true, "Show total needed time/percent to tame. [Synced with Server]", synchronizedSetting: true);
