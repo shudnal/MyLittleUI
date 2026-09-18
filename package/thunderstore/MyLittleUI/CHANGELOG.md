@@ -1,3 +1,6 @@
+# 1.2.22
+* fixed warning on starup with certain mods installed
+
 # 1.2.21
 * Added contextual radial fuel selection for shield generators and prevented unavailable-fuel messages from being triggered by hover checks.
 

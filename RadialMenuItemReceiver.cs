@@ -88,10 +88,18 @@ namespace MyLittleUI
 
         private static IEnumerable<MethodBase> GetTargetInitializationMethods()
             => Definitions
-                .Select(receiver => AccessTools.Method(receiver.TargetType, "Awake", Type.EmptyTypes)
-                    ?? AccessTools.Method(receiver.TargetType, "Start", Type.EmptyTypes))
+                .Select(receiver => GetLifecycleMethod(receiver.TargetType, "Awake")
+                    ?? GetLifecycleMethod(receiver.TargetType, "Start"))
                 .Where(method => method != null)
                 .Distinct();
+
+        private static MethodInfo GetLifecycleMethod(Type type, string name)
+            => type.GetMethod(
+                name,
+                BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
+                binder: null,
+                types: Type.EmptyTypes,
+                modifiers: null);
 
         private static void TryAttach(Component targetComponent)
         {
