@@ -55,27 +55,12 @@ namespace MyLittleUI
 
             try
             {
-                RadialMenuItemReceiver receiver = hoverObject.GetComponentInParent<RadialMenuItemReceiver>();
-                if (receiver)
-                {
-                    hoverMenuType = receiver.GetType();
-                    return receiver.IsActive && receiver.CanUseItems(player, sendErrorMessage: false);
-                }
-
-                if (hoverObject.TryGetComponentInParent(out IHasHoverMenu hoverMenu))
-                {
-                    hoverMenuType = hoverMenu.GetType();
-                    return hoverMenu.CanUseItems(player, sendErrorMessage: false);
-                }
-
-                if (hoverObject.TryGetComponentInParent(out IHasHoverMenuExtended extendedHoverMenu))
-                {
-                    hoverMenuType = extendedHoverMenu.GetType();
-                    return extendedHoverMenu.CanUseItems(
-                        player,
-                        hoverObject.GetComponent<Switch>(),
-                        sendErrorMessage: false);
-                }
+                MonoBehaviour hoverMenu = hoverObject
+                    ? hoverObject.GetComponentsInParent<MonoBehaviour>()
+                        .FirstOrDefault(component => component is IHasHoverMenu || component is IHasHoverMenuExtended)
+                    : null;
+                hoverMenuType = hoverMenu?.GetType();
+                return RadialMenuItemSearch.CanUseItems(player, hoverObject, sendErrorMessage: false);
             }
             catch (Exception exception)
             {
@@ -249,7 +234,7 @@ namespace MyLittleUI
         }
 
         [HarmonyPatch(typeof(OpenRadialConfig), nameof(OpenRadialConfig.TryOpenNonDefaultRadials))]
-        private static class OpenRadialConfig_TryOpenNonDefaultRadials_PreferRegisteredReceiver
+        private static class OpenRadialConfig_TryOpenNonDefaultRadials_UseSafeItemSearch
         {
             [HarmonyPriority(Priority.First)]
             private static bool Prefix(OpenRadialConfig __instance, RadialBase radial, ref bool __result)
@@ -259,15 +244,22 @@ namespace MyLittleUI
 
                 Player player = Player.m_localPlayer;
                 GameObject hoverObject = player ? player.GetHoverObject() : null;
-                if (!player || !CanOpenContextualRadial(hoverObject))
+                if (!player
+                    || !CanOpenContextualRadial(hoverObject)
+                    || !RadialMenuItemSearch.IsSearchTarget(hoverObject))
+                {
                     return true;
+                }
 
-                RadialMenuItemReceiver receiver = hoverObject.GetComponentInParent<RadialMenuItemReceiver>();
-                if (!receiver || !receiver.IsActive)
-                    return true;
-
-                if (!receiver.TryGetItems(player, out List<string> items))
-                    return true;
+                if (!RadialMenuItemSearch.TryGetItems(
+                    player,
+                    hoverObject,
+                    out List<string> items,
+                    sendErrorMessage: true))
+                {
+                    __result = false;
+                    return false;
+                }
 
                 if (items == null || items.Count <= 0)
                 {
@@ -287,6 +279,35 @@ namespace MyLittleUI
                 __instance.OpenItemMenu(radial, player, items, hoverObject);
                 __result = true;
                 return false;
+            }
+        }
+
+        [HarmonyPatch(typeof(ItemGroupConfig), nameof(ItemGroupConfig.AddElement))]
+        private static class ItemGroupConfig_AddElement_UseSafeHoverCloseCheck
+        {
+            private static void Postfix(List<RadialMenuElement> elements, RadialBase radial)
+            {
+                if (radial == null
+                    || !radial.IsHoverMenu
+                    || !radial.HoverObject
+                    || !RadialMenuItemSearch.IsSearchTarget(radial.HoverObject)
+                    || elements == null
+                    || elements.Count == 0
+                    || !(elements[elements.Count - 1] is ItemElement itemElement))
+                {
+                    return;
+                }
+
+                itemElement.AdvancedCloseOnInteract = (currentRadial, _) =>
+                {
+                    Player player = Player.m_localPlayer;
+                    return !player
+                        || !currentRadial.HoverObject
+                        || !RadialMenuItemSearch.CanUseItems(
+                            player,
+                            currentRadial.HoverObject,
+                            sendErrorMessage: false);
+                };
             }
         }
 

@@ -1,3 +1,8 @@
+# 1.2.23
+* Contextual radial item discovery now uses side-effect-free player-inventory checks by default, preventing crafting-from-containers lookup patches from consuming or reserving items during UI probes.
+* Added a server-controlled Conditional option to use native Valheim hover-menu item lookup methods when a modpack explicitly requires them.
+* Added public RadialMenuItemSearch compatibility patch points for mods that intentionally provide additional radial item sources.
+
 # 1.2.22
 * fixed warning on starup with certain mods installed
 

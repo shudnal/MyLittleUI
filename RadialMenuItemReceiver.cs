@@ -126,6 +126,9 @@ namespace MyLittleUI
         }
 
         public bool TryGetItems(Player player, out List<string> items)
+            => TryGetItems(player, sendErrorMessage: true, out items);
+
+        internal bool TryGetItems(Player player, bool sendErrorMessage, out List<string> items)
         {
             items = new List<string>();
             if (!IsActive)
@@ -133,7 +136,7 @@ namespace MyLittleUI
 
             try
             {
-                if (!definition.CanUseItems(target, player, true))
+                if (!definition.CanUseItems(target, player, sendErrorMessage))
                     return true;
 
                 items = (definition.GetItems(target, player) ?? Enumerable.Empty<string>())
@@ -220,8 +223,14 @@ namespace MyLittleUI
                 return false;
             }
 
-            if (fermenter.FindCookableItem(player.GetInventory()) != null)
+            if (RadialMenuItemSearch.HasAnyInventoryItem(
+                player,
+                fermenter.m_conversion
+                    .Where(conversion => conversion?.m_from != null)
+                    .Select(conversion => conversion.m_from.m_itemData.m_shared.m_name)))
+            {
                 return true;
+            }
 
             if (sendErrorMessage)
                 player.Message(MessageHud.MessageType.Center, "$msg_noprocessableitems");

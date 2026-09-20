@@ -30,7 +30,7 @@ namespace MyLittleUI
     {
         public const string pluginID = "shudnal.MyLittleUI";
         public const string pluginName = "My Little UI";
-        public const string pluginVersion = "1.2.22";
+        public const string pluginVersion = "1.2.23";
 
         private readonly Harmony harmony = new Harmony(pluginID);
 
@@ -186,6 +186,7 @@ namespace MyLittleUI
         public static ConfigEntry<bool> hoverRadialMenuSuppressDefault;
         public static ConfigEntry<bool> radialMenuFermenterItemSelection;
         public static ConfigEntry<bool> radialMenuShieldGeneratorItemSelection;
+        public static ConfigEntry<bool> radialMenuUseNativeItemSearch;
 
         public static ConfigEntry<StationHover> hoverCharacter;
         public static ConfigEntry<bool> hoverCharacterGrowth;
@@ -686,6 +687,12 @@ namespace MyLittleUI
             hoverRadialMenuSuppressDefault = config("Radial Menu", "Suppress default radial while hovering", defaultValue: false, "Prevent the standard radial menu from opening while the player is hovering an object, even when no contextual radial menu was opened.");
             radialMenuFermenterItemSelection = config("Radial Menu", "Fermenter item selection", defaultValue: true, "Enable contextual radial item selection for fermenters and show only mead bases accepted by the hovered fermenter.");
             radialMenuShieldGeneratorItemSelection = config("Radial Menu", "Shield generator item selection", defaultValue: true, "Enable contextual radial item selection for shield generators and show only fuel accepted by the hovered generator.");
+            radialMenuUseNativeItemSearch = config(
+                "Radial Menu",
+                "Use native item search",
+                defaultValue: false,
+                "Use Valheim's native IHasHoverMenu/IHasHoverMenuExtended item lookup methods instead of My Little UI's inventory-only side-effect-free search. My Little UI cannot guarantee that methods patched by other mods remain side-effect-free; enabling this setting opts into their behavior and may cause item loss or other compatibility issues. Enable it only when the server/modpack explicitly requires native lookup behavior.",
+                synchronizedSetting: true);
 
             hoverTame = config("Hover - Tameable", "Tameable Hover", defaultValue: StationHover.Vanilla, "Format of total needed time/percent to tame or to stay fed.");
             hoverTameTimeToTame = config("Hover - Tameable", "Show time to tame", defaultValue: true, "Show total needed time/percent to tame. [Synced with Server]", synchronizedSetting: true);
