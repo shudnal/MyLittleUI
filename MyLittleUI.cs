@@ -272,6 +272,8 @@ namespace MyLittleUI
         public static ConfigEntry<Color> weightFontColor;
         public static ConfigEntry<Color> slotsFontColor;
 
+        public static ConfigEntry<KeyboardShortcut> chatItemLinkModifier;
+
         public static ConfigEntry<bool> inworldTextChanges;
         public static ConfigEntry<Color> inworldDefaultColor;
         public static ConfigEntry<Color> inworldWhisperColor;
@@ -819,6 +821,8 @@ namespace MyLittleUI
             if (slotsPosition.Value == new Vector2(-898f, -209.9f))
                 slotsPosition.Value = (Vector2)slotsPosition.DefaultValue;
             
+            chatItemLinkModifier = config("Chat - Item links", "Link item modifier", defaultValue: new KeyboardShortcut(KeyCode.LeftAlt), "Hold this shortcut while clicking an inventory item to send it as a localized item link to Normal chat. Set it to None to disable item linking.");
+
             inworldTextChanges = config("Chat - Inworld text", "Enabled", defaultValue: false, "Enable changes of inworld floating texts.");
             inworldDefaultColor = config("Chat - Inworld text", "Default font color", defaultValue: Color.white, "Font color.");
             inworldWhisperColor = config("Chat - Inworld text", "Whisper font color", defaultValue: new Color(1f, 1f, 1f, 0.75f), "Font color.");

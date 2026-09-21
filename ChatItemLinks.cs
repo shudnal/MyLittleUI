@@ -1,3 +1,4 @@
+using BepInEx.Configuration;
 using HarmonyLib;
 using System;
 using System.Collections.Generic;
@@ -313,6 +314,15 @@ namespace MyLittleUI
         private static string EscapeRichText(string text)
             => (text ?? string.Empty).Replace("<", "‹").Replace(">", "›");
 
+        private static bool IsLinkModifierHeld()
+        {
+            if (MyLittleUI.chatItemLinkModifier == null)
+                return false;
+
+            KeyboardShortcut shortcut = MyLittleUI.chatItemLinkModifier.Value;
+            return shortcut.MainKey != KeyCode.None && shortcut.IsPressed();
+        }
+
         private static bool TryParseTmpLink(string linkId, out int itemLinkId)
         {
             itemLinkId = 0;
@@ -402,6 +412,31 @@ namespace MyLittleUI
             private void OnDisable() => HideTooltip();
 
             private void OnDestroy() => HideTooltip();
+        }
+
+        [HarmonyPatch(typeof(InventoryGrid), nameof(InventoryGrid.OnLeftDown))]
+        private static class InventoryGrid_OnLeftDown_LinkItem
+        {
+            private static bool Prefix(InventoryGrid __instance, UIInputHandler clickHandler)
+            {
+                if (!MyLittleUI.modEnabled.Value
+                    || !IsLinkModifierHeld()
+                    || clickHandler == null
+                    || __instance.m_inventory == null)
+                {
+                    return true;
+                }
+
+                Vector2i position = __instance.GetButtonPos(clickHandler.gameObject);
+                if (position.x < 0 || position.y < 0)
+                    return true;
+
+                ItemDrop.ItemData item = __instance.m_inventory.GetItemAt(position.x, position.y);
+                if (item == null)
+                    return true;
+
+                return !TrySendItemLink(item);
+            }
         }
 
         [HarmonyPatch(typeof(Talker), nameof(Talker.Awake))]
