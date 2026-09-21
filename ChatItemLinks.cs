@@ -24,7 +24,10 @@ namespace MyLittleUI
         internal static bool TrySendItemLink(ItemDrop.ItemData item)
         {
             Player player = Player.m_localPlayer;
-            if (!MyLittleUI.modEnabled.Value || !player || item == null)
+            if (!MyLittleUI.modEnabled.Value
+                || MyLittleUI.chatItemLinksEnabled?.Value != true
+                || !player
+                || item == null)
                 return false;
 
             Talker talker = player.GetComponent<Talker>();
@@ -196,7 +199,9 @@ namespace MyLittleUI
                 return;
 
             string message = fallbackText;
-            if (MyLittleUI.modEnabled.Value && TryDeserializeItem(payload, out ItemDrop.ItemData item))
+            if (MyLittleUI.modEnabled.Value
+                && MyLittleUI.chatItemLinksEnabled?.Value == true
+                && TryDeserializeItem(payload, out ItemDrop.ItemData item))
             {
                 int linkId = StoreLinkedItem(item);
                 message = BuildMessageMarker(linkId);
@@ -301,7 +306,47 @@ namespace MyLittleUI
         {
             string name = EscapeRichText(Localization.instance.Localize(item.m_shared.m_name));
             string amount = item.m_stack > 1 ? $" x{item.m_stack}" : string.Empty;
-            return $"<link=\"{LinkIdPrefix}{linkId}\"><color=#ffbf00><u>[{name}]</u></color></link>{amount}";
+
+            Color linkColor = MyLittleUI.chatItemLinkColor?.Value ?? new Color(1f, 0.75f, 0f, 1f);
+            Color bracketsColor = MyLittleUI.chatItemLinkBracketsColor?.Value ?? linkColor;
+            string linkColorHtml = ColorUtility.ToHtmlStringRGBA(linkColor);
+            string bracketsColorHtml = ColorUtility.ToHtmlStringRGBA(bracketsColor);
+
+            string linkText =
+                $"<color=#{bracketsColorHtml}>[</color>" +
+                $"<color=#{linkColorHtml}>{name}</color>" +
+                $"<color=#{bracketsColorHtml}>]</color>";
+
+            return $"<link=\"{LinkIdPrefix}{linkId}\">{ApplyLinkStyle(linkText)}</link>{amount}";
+        }
+
+        private static string ApplyLinkStyle(string text)
+        {
+            MyLittleUI.ChatItemLinkStyle style =
+                MyLittleUI.chatItemLinkStyle?.Value ?? MyLittleUI.ChatItemLinkStyle.Underline;
+
+            string prefix = string.Empty;
+            string suffix = string.Empty;
+
+            if ((style & MyLittleUI.ChatItemLinkStyle.Bold) != 0)
+            {
+                prefix += "<b>";
+                suffix = "</b>" + suffix;
+            }
+
+            if ((style & MyLittleUI.ChatItemLinkStyle.Italic) != 0)
+            {
+                prefix += "<i>";
+                suffix = "</i>" + suffix;
+            }
+
+            if ((style & MyLittleUI.ChatItemLinkStyle.Underline) != 0)
+            {
+                prefix += "<u>";
+                suffix = "</u>" + suffix;
+            }
+
+            return prefix + text + suffix;
         }
 
         private static string BuildPlainDisplay(ItemDrop.ItemData item)
@@ -344,7 +389,10 @@ namespace MyLittleUI
 
             private void LateUpdate()
             {
-                if (!MyLittleUI.modEnabled.Value || !output || !output.gameObject.activeInHierarchy)
+                if (!MyLittleUI.modEnabled.Value
+                    || MyLittleUI.chatItemLinksEnabled?.Value != true
+                    || !output
+                    || !output.gameObject.activeInHierarchy)
                 {
                     HideTooltip();
                     return;
@@ -420,6 +468,7 @@ namespace MyLittleUI
             private static bool Prefix(InventoryGrid __instance, UIInputHandler clickHandler)
             {
                 if (!MyLittleUI.modEnabled.Value
+                    || MyLittleUI.chatItemLinksEnabled?.Value != true
                     || !IsLinkModifierHeld()
                     || clickHandler == null
                     || __instance.m_inventory == null)

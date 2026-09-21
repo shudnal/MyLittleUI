@@ -272,7 +272,11 @@ namespace MyLittleUI
         public static ConfigEntry<Color> weightFontColor;
         public static ConfigEntry<Color> slotsFontColor;
 
+        public static ConfigEntry<bool> chatItemLinksEnabled;
         public static ConfigEntry<KeyboardShortcut> chatItemLinkModifier;
+        public static ConfigEntry<Color> chatItemLinkColor;
+        public static ConfigEntry<Color> chatItemLinkBracketsColor;
+        public static ConfigEntry<ChatItemLinkStyle> chatItemLinkStyle;
 
         public static ConfigEntry<bool> inworldTextChanges;
         public static ConfigEntry<Color> inworldDefaultColor;
@@ -379,6 +383,15 @@ namespace MyLittleUI
             BottomLeft,
             Left,
             Middle
+        }
+
+        [Flags]
+        public enum ChatItemLinkStyle
+        {
+            None = 0,
+            Bold = 1,
+            Italic = 2,
+            Underline = 4
         }
 
         private void Awake()
@@ -821,7 +834,11 @@ namespace MyLittleUI
             if (slotsPosition.Value == new Vector2(-898f, -209.9f))
                 slotsPosition.Value = (Vector2)slotsPosition.DefaultValue;
             
-            chatItemLinkModifier = config("Chat - Item links", "Link item modifier", defaultValue: new KeyboardShortcut(KeyCode.LeftAlt), "Hold this shortcut while clicking an inventory item to send it as a localized item link to Normal chat. Set it to None to disable item linking.");
+            chatItemLinksEnabled = config("Chat - Item links", "Enabled", defaultValue: true, "Enable localized item links in chat.");
+            chatItemLinkModifier = config("Chat - Item links", "Link item modifier", defaultValue: new KeyboardShortcut(KeyCode.LeftAlt), "Hold this shortcut while clicking an inventory item to send it as a localized item link to Normal chat. Set it to None to disable the shortcut.");
+            chatItemLinkColor = config("Chat - Item links", "Link color", defaultValue: new Color(1f, 0.75f, 0f, 1f), "Color of the localized item name in chat links.");
+            chatItemLinkBracketsColor = config("Chat - Item links", "Brackets color", defaultValue: new Color(1f, 0.75f, 0f, 1f), "Color of the square brackets around item links.");
+            chatItemLinkStyle = config("Chat - Item links", "Text style", defaultValue: ChatItemLinkStyle.Underline, "Text style for item links. Bold, Italic and Underline can be combined.");
 
             inworldTextChanges = config("Chat - Inworld text", "Enabled", defaultValue: false, "Enable changes of inworld floating texts.");
             inworldDefaultColor = config("Chat - Inworld text", "Default font color", defaultValue: Color.white, "Font color.");
