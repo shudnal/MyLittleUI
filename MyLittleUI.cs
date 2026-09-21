@@ -24,17 +24,24 @@ namespace MyLittleUI
     [BepInDependency("Azumatt.AzuAntiArthriticCrafting", BepInDependency.DependencyFlags.SoftDependency)]
     [BepInDependency("org.bepinex.plugins.jewelcrafting", BepInDependency.DependencyFlags.SoftDependency)]
     [BepInDependency(Advize_StumpsRegrow_Compat.GUID, BepInDependency.DependencyFlags.SoftDependency)]
-    [BepInDependency("_shudnal.ConditionalConfigSync", BepInDependency.DependencyFlags.HardDependency)]
+    [BepInDependency("_shudnal.ConditionalConfigSync", "1.0.9")]
     [BepInIncompatibility("randyknapp.mods.auga")]
     public class MyLittleUI : BaseUnityPlugin
     {
         public const string pluginID = "shudnal.MyLittleUI";
         public const string pluginName = "My Little UI";
-        public const string pluginVersion = "1.2.23";
+        public const string pluginVersion = "1.2.24";
 
         private readonly Harmony harmony = new Harmony(pluginID);
 
-        internal static readonly ConfigSync configSync = new ConfigSync(pluginID) { DisplayName = pluginName, CurrentVersion = pluginVersion, MinimumRequiredVersion = pluginVersion, ModRequired = false };
+        internal static readonly ConfigSync configSync = new ConfigSync(pluginID)
+        {
+            DisplayName = pluginName,
+            CurrentVersion = pluginVersion,
+            MinimumRequiredVersion = "1.2.24",
+            ModRequired = false,
+            ModRequirementMode = ModRequirementMode.Conditional
+        };
         
         public static MyLittleUI instance;
 
@@ -265,6 +272,13 @@ namespace MyLittleUI
         public static ConfigEntry<Color> weightFontColor;
         public static ConfigEntry<Color> slotsFontColor;
 
+        public static ConfigEntry<bool> chatItemLinksEnabled;
+        public static ConfigEntry<KeyboardShortcut> chatItemLinkModifier;
+        public static ConfigEntry<KeyboardShortcut> chatItemLinkInspectModifier;
+        public static ConfigEntry<Color> chatItemLinkColor;
+        public static ConfigEntry<Color> chatItemLinkBracketsColor;
+        public static ConfigEntry<ChatItemLinkStyle> chatItemLinkStyle;
+
         public static ConfigEntry<bool> inworldTextChanges;
         public static ConfigEntry<Color> inworldDefaultColor;
         public static ConfigEntry<Color> inworldWhisperColor;
@@ -370,6 +384,15 @@ namespace MyLittleUI
             BottomLeft,
             Left,
             Middle
+        }
+
+        [Flags]
+        public enum ChatItemLinkStyle
+        {
+            None = 0,
+            Bold = 1,
+            Italic = 2,
+            Underline = 4
         }
 
         private void Awake()
@@ -812,6 +835,13 @@ namespace MyLittleUI
             if (slotsPosition.Value == new Vector2(-898f, -209.9f))
                 slotsPosition.Value = (Vector2)slotsPosition.DefaultValue;
             
+            chatItemLinksEnabled = config("Chat - Item links", "Enabled", defaultValue: true, "Enable localized item links in chat.");
+            chatItemLinkModifier = config("Chat - Item links", "Link item modifier", defaultValue: new KeyboardShortcut(KeyCode.LeftAlt), "Hold this shortcut while clicking an inventory item to send it as a localized item link to Normal chat. Set it to None to disable the shortcut.");
+            chatItemLinkInspectModifier = config("Chat - Item links", "Inspect chat modifier", defaultValue: new KeyboardShortcut(KeyCode.LeftAlt), "Hold this shortcut to keep chat visible, unlock the mouse cursor and block camera look so item link tooltips can be inspected. Set it to None to disable chat inspection.");
+            chatItemLinkColor = config("Chat - Item links", "Link color", defaultValue: new Color(1f, 0.75f, 0f, 1f), "Color of the localized item name in chat links.");
+            chatItemLinkBracketsColor = config("Chat - Item links", "Brackets color", defaultValue: new Color(1f, 0.75f, 0f, 1f), "Color of the square brackets around item links.");
+            chatItemLinkStyle = config("Chat - Item links", "Text style", defaultValue: ChatItemLinkStyle.Underline, "Text style for item links. Bold, Italic and Underline can be combined.");
+
             inworldTextChanges = config("Chat - Inworld text", "Enabled", defaultValue: false, "Enable changes of inworld floating texts.");
             inworldDefaultColor = config("Chat - Inworld text", "Default font color", defaultValue: Color.white, "Font color.");
             inworldWhisperColor = config("Chat - Inworld text", "Whisper font color", defaultValue: new Color(1f, 1f, 1f, 0.75f), "Font color.");
