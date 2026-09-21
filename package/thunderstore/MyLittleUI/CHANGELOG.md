@@ -1,3 +1,8 @@
+# 1.2.24
+* Added localized chat item links: hold a configurable modifier and click an inventory item to share it in Normal chat.
+* Compatible My Little UI clients display item links in square brackets with their own localized item name and a full hover tooltip; other clients receive plain text.
+* Updated ConditionalConfigSync requirement to 1.0.9 and enabled optional peer capability discovery for item-link delivery.
+
 # 1.2.23
 * Contextual radial item discovery now uses side-effect-free player-inventory checks by default, preventing crafting-from-containers lookup patches from consuming or reserving items during UI probes.
 * Added a server-controlled Conditional option to use native Valheim hover-menu item lookup methods when a modpack explicitly requires them.
