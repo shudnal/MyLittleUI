@@ -20,6 +20,7 @@ namespace MyLittleUI
         private static readonly Dictionary<int, ItemDrop.ItemData> linkedItems = new Dictionary<int, ItemDrop.ItemData>();
         private static readonly Queue<int> linkedItemOrder = new Queue<int>();
         private static int nextLinkId;
+        private static bool chatInspectionWasActive;
 
         internal static bool TrySendItemLink(ItemDrop.ItemData item)
         {
@@ -368,6 +369,28 @@ namespace MyLittleUI
             return shortcut.MainKey != KeyCode.None && shortcut.IsPressed();
         }
 
+        private static bool IsChatInspectionHeld()
+        {
+            if (!MyLittleUI.modEnabled.Value
+                || MyLittleUI.chatItemLinksEnabled?.Value != true
+                || MyLittleUI.chatItemLinkInspectModifier == null)
+            {
+                return false;
+            }
+
+            KeyboardShortcut shortcut = MyLittleUI.chatItemLinkInspectModifier.Value;
+            if (shortcut.MainKey == KeyCode.None || !ZInput.GetKey(shortcut.MainKey))
+                return false;
+
+            foreach (KeyCode modifier in shortcut.Modifiers)
+            {
+                if (!ZInput.GetKey(modifier))
+                    return false;
+            }
+
+            return true;
+        }
+
         private static bool TryParseTmpLink(string linkId, out int itemLinkId)
         {
             itemLinkId = 0;
@@ -509,12 +532,61 @@ namespace MyLittleUI
             private static void Postfix(Chat __instance)
             {
                 ResetLinks();
+                chatInspectionWasActive = false;
 
                 if (!__instance.m_output)
                     return;
 
                 if (!__instance.m_output.GetComponent<ChatItemLinkHover>())
                     __instance.m_output.gameObject.AddComponent<ChatItemLinkHover>();
+            }
+        }
+
+        [HarmonyPatch(typeof(Chat), nameof(Chat.Update))]
+        private static class Chat_Update_InspectItemLinks
+        {
+            [HarmonyPriority(Priority.Last)]
+            private static void Postfix(Chat __instance)
+            {
+                bool inspectionActive = IsChatInspectionHeld();
+                if (inspectionActive)
+                {
+                    __instance.m_hideTimer = 0f;
+                    if (__instance.m_chatWindow)
+                        __instance.m_chatWindow.gameObject.SetActive(true);
+                }
+                else if (chatInspectionWasActive && !__instance.HasFocus())
+                {
+                    __instance.Hide();
+                    if (__instance.m_chatWindow)
+                        __instance.m_chatWindow.gameObject.SetActive(false);
+                }
+
+                chatInspectionWasActive = inspectionActive;
+            }
+        }
+
+        [HarmonyPatch(typeof(GameCamera), nameof(GameCamera.UpdateMouseCapture))]
+        private static class GameCamera_UpdateMouseCapture_InspectItemLinks
+        {
+            [HarmonyPriority(Priority.Last)]
+            private static void Postfix()
+            {
+                if (!IsChatInspectionHeld())
+                    return;
+
+                ZCursor.LockState = CursorLockMode.None;
+                ZCursor.Show();
+            }
+        }
+
+        [HarmonyPatch(typeof(PlayerController), nameof(PlayerController.TakeInput), new Type[] { typeof(bool) })]
+        private static class PlayerController_TakeInput_InspectItemLinks
+        {
+            private static void Postfix(bool look, ref bool __result)
+            {
+                if (look && IsChatInspectionHeld())
+                    __result = false;
             }
         }
 

@@ -2,6 +2,7 @@
 * Added localized chat item links: hold a configurable modifier and click an inventory item to share it in Normal chat.
 * Compatible My Little UI clients display item links in square brackets with their own localized item name and a full hover tooltip; other clients receive plain text.
 * Added local settings to disable item links and customize link/bracket colors plus Bold, Italic and Underline text styles.
+* Added a configurable chat inspection modifier that keeps chat visible, unlocks the cursor and blocks camera look while held so item link tooltips can be inspected.
 * Updated ConditionalConfigSync requirement to 1.0.9 and enabled optional peer capability discovery for item-link delivery.
 
 # 1.2.23
