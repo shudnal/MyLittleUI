@@ -38,6 +38,7 @@
   <ItemGroup>
     <Compile Include="AmmoCountIcon.cs" />
     <Compile Include="ChestHoverText.cs" />
+    <Compile Include="ChatItemLinks.cs" />
     <Compile Include="RadialMenuHover.cs" />
     <Compile Include="RadialMenuItemReceiver.cs" />
     <Compile Include="RadialMenuItemSearch.cs" />
