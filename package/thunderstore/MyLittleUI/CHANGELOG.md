@@ -1,3 +1,6 @@
+# 1.2.25
+* changed default hotkey for item link chat inspection
+
 # 1.2.24
 * Added localized chat item links: hold a configurable modifier and click an inventory item to share it in Normal chat.
 * Compatible My Little UI clients display item links in square brackets with their own localized item name and a full hover tooltip; other clients receive plain text.
