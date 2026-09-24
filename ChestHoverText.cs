@@ -25,8 +25,13 @@ namespace MyLittleUI
 
     internal static class ChestHoverText
     {
+        private const string PlanBuildTotemPrefab = "piece_plan_totem";
+
         private static Container textInputForContainer;
         private static readonly Dictionary<string, string> hoverTextCache = new Dictionary<string, string>();
+
+        private static bool IsPlanBuildTotem(Container container)
+            => container && Utils.GetPrefabName(container.gameObject) == PlanBuildTotemPrefab;
 
         internal static void ResetCache(Container container)
         {
@@ -183,9 +188,15 @@ namespace MyLittleUI
                 }
             }
 
-            private static void Postfix(Container __instance, ref string __result, bool ___m_checkGuardStone, string ___m_name, Inventory ___m_inventory)
+            private static void Postfix(Container __instance, ref string __result, bool ___m_checkGuardStone, string ___m_name, Inventory ___m_inventory, bool __runOriginal)
             {
+                if (!__runOriginal)
+                    return;
+
                 if (!modEnabled.Value)
+                    return;
+
+                if (IsPlanBuildTotem(__instance))
                     return;
 
                 if (chestHoverName.Value == ChestNameHover.Vanilla && chestHoverItems.Value == ChestItemsHover.Vanilla)
@@ -265,12 +276,16 @@ namespace MyLittleUI
         [HarmonyPatch(typeof(Container), nameof(Container.Interact))]
         private class Container_Interact_ChestRename
         {
+            [HarmonyPriority(Priority.Last)]
             private static bool Prefix(Container __instance, Humanoid character, bool hold, bool alt, bool ___m_checkGuardStone, bool __runOriginal)
             {
                 if (!__runOriginal)
                     return false;
 
                 if (!modEnabled.Value)
+                    return true;
+
+                if (IsPlanBuildTotem(__instance))
                     return true;
 
                 if (!chestCustomName.Value)

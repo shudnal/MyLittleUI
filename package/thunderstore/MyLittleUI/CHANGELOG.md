@@ -1,3 +1,6 @@
+# 1.2.26
+* Added compatibility with PlanBuild Plan Totem hover and interactions.
+
 # 1.2.25
 * changed default hotkey for item link chat inspection
 
