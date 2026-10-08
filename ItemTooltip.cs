@@ -74,6 +74,8 @@ namespace MyLittleUI
                 "$item_staminause",
                 "$item_eitruse",
                 "$item_healthuse",
+                "$item_healthhitreturn",
+                "$item_eitrhitreturn",
                 "$item_staminahold",
                 "$item_knockback",
                 "$item_backstab",
@@ -86,6 +88,15 @@ namespace MyLittleUI
                 "$item_movement_modifier",
                 "$item_eitrregen_modifier",
                 "$base_item_modifier",
+                "$item_heat_modifier",
+                "$se_jumpstamina",
+                "$se_attackstamina",
+                "$se_blockstamina",
+                "$se_dodgestamina",
+                "$se_swimstamina",
+                "$se_sneakstamina",
+                "$se_runstamina",
+                "$item_maxadrenaline",
                 "$item_seteffect",
                 "$inventory_dmgmod",
                 "$inventory_damage",
@@ -179,6 +190,8 @@ namespace MyLittleUI
             tokens.Add("$item_staminause");
             tokens.Add("$item_eitruse");
             tokens.Add("$item_healthuse");
+            tokens.Add("$item_healthhitreturn");
+            tokens.Add("$item_eitrhitreturn");
             tokens.Add("$item_staminahold");
             tokens.Add("$item_damagemultipliertotal");
             tokens.Add("$item_damagemultiplierhp");
@@ -206,8 +219,17 @@ namespace MyLittleUI
             tokens.Add("");
 
             tokens.Add("$item_movement_modifier");
-            tokens.Add("$item_eitrregen_modifier");
             tokens.Add("$base_item_modifier");
+            tokens.Add("$item_heat_modifier");
+            tokens.Add("$se_jumpstamina");
+            tokens.Add("$se_attackstamina");
+            tokens.Add("$se_blockstamina");
+            tokens.Add("$se_dodgestamina");
+            tokens.Add("$se_swimstamina");
+            tokens.Add("$se_sneakstamina");
+            tokens.Add("$se_runstamina");
+            tokens.Add("$item_eitrregen_modifier");
+            tokens.Add("$item_maxadrenaline");
 
             tokens.Add("");
 

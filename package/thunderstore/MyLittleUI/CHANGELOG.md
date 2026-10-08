@@ -1,3 +1,7 @@
+# 1.2.29
+* Added support for new Valheim item tooltip tokens: health and eitr return on hit, heat and stamina-related equipment modifiers, and maximum adrenaline.
+* Updated tooltip token grouping and ordering; unknown lines continue to stay attached to the preceding recognized token.
+
 # 1.2.28
 * Keep normal-sized quality numbers and scale only the symbol using TextMeshPro size tags in mixed quality labels (e.g. 9 ★); symbol-only grids retain their configured font size.
 * Respect __runOriginal in the Container.GetHoverText postfix so other mods can override container hover text without My Little UI replacing it.

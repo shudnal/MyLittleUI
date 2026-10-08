@@ -168,7 +168,7 @@ namespace MyLittleUI
             string symbol = GetQualitySymbol().ToString();
             quality.text = useSymbols
                 ? symbols
-                : $"{m_quality} <size={symbolSize.ToString(CultureInfo.InvariantCulture)}>{symbol}</size>";
+                : $"{m_quality}<size={symbolSize.ToString(CultureInfo.InvariantCulture)}>{symbol}</size>";
             quality.textWrappingMode = TextWrappingModes.PreserveWhitespaceNoWrap;
             quality.fontSize = useSymbols ? symbolSize : DefaultQualityStyle.fontSize;
             quality.richText = useSymbols ? DefaultQualityStyle.richText : true;
