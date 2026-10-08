@@ -1,10 +1,10 @@
 {
     "name":  "MyLittleUI",
-    "version_number":  "1.2.26",
+    "version_number":  "1.2.28",
     "website_url":  "https://github.com/shudnal/MyLittleUI",
     "description":  "Bunch of little UI tweaks. Tooltips for production timers, player status, items. Custom chest names, buff list, multicraft, weather forecast, crafting sorting, filtering and so on.",
     "dependencies":  [
-                         "denikson-BepInExPack_Valheim-5.4.2350",
+                         "denikson-BepInExPack_Valheim-5.4.2351",
                          "shudnal-ConditionalConfigSync-1.0.9"
                      ]
 }

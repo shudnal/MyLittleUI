@@ -2,6 +2,7 @@
 using HarmonyLib;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Text;
 using TMPro;
 using UnityEngine;
@@ -86,7 +87,8 @@ namespace MyLittleUI
 
             qualityCache.Clear();
             int columns = Math.Max(1, itemQualityColumns.Value);
-            int maxSymbols = (int)Math.Min(Math.Max(0, itemQualityMax.Value), (long)columns * Math.Max(0, itemQualityRows.Value));
+            int maxSymbols = (int)Math.Min(Math.Min(Math.Max(0, itemQualityMax.Value), Math.Max(0, itemQualityNumericThreshold.Value)),
+                (long)columns * Math.Max(0, itemQualityRows.Value));
             for (int i = 1; i <= maxSymbols; i++)
             {
                 sb.Append(GetQualitySymbol());
@@ -103,6 +105,7 @@ namespace MyLittleUI
             public static bool initialized = false;
             public static TextWrappingModes textWrappingMode;
             public static float fontSize;
+            public static bool richText;
             public static Color color;
             public static bool isRightToLeftText;
             public static float lineSpacing;
@@ -113,6 +116,7 @@ namespace MyLittleUI
                 initialized = true;
                 textWrappingMode = quality.textWrappingMode;
                 fontSize = quality.fontSize;
+                richText = quality.richText;
                 color = quality.color;
                 isRightToLeftText = quality.isRightToLeftText;
                 lineSpacing = quality.lineSpacing;
@@ -123,6 +127,7 @@ namespace MyLittleUI
             {
                 quality.textWrappingMode = textWrappingMode;
                 quality.fontSize = fontSize;
+                quality.richText = richText;
                 quality.color = color;
                 quality.isRightToLeftText = isRightToLeftText;
                 quality.lineSpacing = lineSpacing;
@@ -133,6 +138,7 @@ namespace MyLittleUI
             {
                 return quality.textWrappingMode != textWrappingMode
                      || quality.fontSize != fontSize
+                     || quality.richText != richText
                      || quality.color != color
                      || quality.isRightToLeftText != isRightToLeftText
                      || quality.lineSpacing != lineSpacing
@@ -148,18 +154,26 @@ namespace MyLittleUI
             if (!DefaultQualityStyle.initialized)
                 DefaultQualityStyle.Save(quality);
 
-            if (!itemQuality.Value || !qualityCache.ContainsKey(m_quality))
+            if (!itemQuality.Value || m_quality <= 0)
             {
+                if (m_quality <= 0 && itemQuality.Value)
+                    quality.text = string.Empty;
                 if (DefaultQualityStyle.IsTextWasChanged(quality))
                     DefaultQualityStyle.Load(quality);
                 return;
             }
 
-            quality.text = qualityCache[m_quality];
+            bool useSymbols = qualityCache.TryGetValue(m_quality, out string symbols);
+            float symbolSize = itemQualitySymbolSize.Value;
+            string symbol = GetQualitySymbol().ToString();
+            quality.text = useSymbols
+                ? symbols
+                : $"{m_quality} <size={symbolSize.ToString(CultureInfo.InvariantCulture)}>{symbol}</size>";
             quality.textWrappingMode = TextWrappingModes.PreserveWhitespaceNoWrap;
-            quality.fontSize = itemQualitySymbolSize.Value;
+            quality.fontSize = useSymbols ? symbolSize : DefaultQualityStyle.fontSize;
+            quality.richText = useSymbols ? DefaultQualityStyle.richText : true;
             quality.color = itemQualitySymbolColor.Value;
-            quality.isRightToLeftText = true;
+            quality.isRightToLeftText = useSymbols;
             quality.lineSpacing = itemQualityLineSpacing.Value;
             quality.characterSpacing = itemQualityCharacterSpacing.Value;
         }

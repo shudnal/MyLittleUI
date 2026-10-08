@@ -30,7 +30,7 @@ namespace MyLittleUI
     {
         public const string pluginID = "shudnal.MyLittleUI";
         public const string pluginName = "My Little UI";
-        public const string pluginVersion = "1.2.26";
+        public const string pluginVersion = "1.2.28";
 
         private readonly Harmony harmony = new Harmony(pluginID);
 
@@ -151,6 +151,7 @@ namespace MyLittleUI
         public static ConfigEntry<Color> itemQualitySymbolColor;
         public static ConfigEntry<float> itemQualitySymbolSize;
         public static ConfigEntry<int> itemQualityMax;
+        public static ConfigEntry<int> itemQualityNumericThreshold;
         public static ConfigEntry<int> itemQualityRows;
         public static ConfigEntry<int> itemQualityColumns;
         public static ConfigEntry<float> itemQualityLineSpacing;
@@ -638,6 +639,7 @@ namespace MyLittleUI
             itemQualitySymbolColor = config("Item - Quality", "Symbol Color", defaultValue: new Color(1f, 0.65f, 0f, 1f), "Symbol color");
             itemQualitySymbolSize = config("Item - Quality", "Symbol Size", defaultValue: 10f, "Symbol size");
             itemQualityMax = config("Item - Quality", "Maximum symbols", defaultValue: 8, "Maximum amount of symbols to show.");
+            itemQualityNumericThreshold = config("Item - Quality", "Numeric quality above level", defaultValue: 8, "Show the quality level followed by one symbol (for example, 9 ★) above this level. Maximum symbols, rows and columns may limit repeated symbols earlier.");
             itemQualityRows = config("Item - Quality", "Maximum rows", defaultValue: 2, "Maximum amount of rows to show.");
             itemQualityColumns = config("Item - Quality", "Maximum columns", defaultValue: 4, "Maximum amount of columns to show.");
             itemQualityLineSpacing = config("Item - Quality", "Space between lines", defaultValue: -35.0f, "Line spacing.");
@@ -653,6 +655,7 @@ namespace MyLittleUI
 
             itemQualitySymbol.SettingChanged += (sender, args) => ItemIcon.FillItemQualityCache();
             itemQualityMax.SettingChanged += (sender, args) => ItemIcon.FillItemQualityCache();
+            itemQualityNumericThreshold.SettingChanged += (sender, args) => ItemIcon.FillItemQualityCache();
             itemQualityRows.SettingChanged += (sender, args) => ItemIcon.FillItemQualityCache();
             itemQualityColumns.SettingChanged += (sender, args) => ItemIcon.FillItemQualityCache();
 

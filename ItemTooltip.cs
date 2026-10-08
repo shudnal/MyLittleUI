@@ -439,7 +439,7 @@ namespace MyLittleUI
                     }
 
                     ReorderTooltip(item, qualityLevel, worldLevel,
-                        upgradingTooltip: crafting && qualityLevel > 1 && qualityLevel <= item.m_shared.m_maxQuality);
+                        upgradingTooltip: crafting && qualityLevel > 1);
                     sb.Append(footer);
                     __result = RecolorTooltip(sb.ToString());
                     if (!crafting)

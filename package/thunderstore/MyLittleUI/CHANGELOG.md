@@ -1,3 +1,11 @@
+# 1.2.28
+* Keep normal-sized quality numbers and scale only the symbol using TextMeshPro size tags in mixed quality labels (e.g. 9 ★); symbol-only grids retain their configured font size.
+* Respect __runOriginal in the Container.GetHoverText postfix so other mods can override container hover text without My Little UI replacing it.
+
+# 1.2.27
+* Restored upgrade stat comparisons in tooltips for refinement-forge improvements beyond an item's normal maximum quality.
+* Added Item - Quality / Numeric quality above level (default 8): quality 1–8 uses the existing star grid, higher levels show the level and one configured symbol (e.g. 9 ★); quality 0 is hidden.
+
 # 1.2.26
 * Added compatibility with PlanBuild Plan Totem hover and interactions.
 
