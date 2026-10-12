@@ -37,6 +37,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="AmmoCountIcon.cs" />
+    <Compile Include="AmmoCountTemplates.cs" />
     <Compile Include="ChestHoverText.cs" />
     <Compile Include="ChatItemLinks.cs" />
     <Compile Include="RadialMenuHover.cs" />

@@ -325,8 +325,13 @@ namespace MyLittleUI
                 }
 
                 Player player = Player.m_localPlayer;
-                if (!player || !player.GetHoverObject())
+                Hud hud = Hud.instance;
+                if (!player || !player.GetHoverObject()
+                    || !hud || !hud.m_hoverName || !hud.m_hoverName.isActiveAndEnabled
+                    || string.IsNullOrWhiteSpace(hud.m_hoverName.text))
+                {
                     return;
+                }
 
                 radial?.QueuedClose();
                 __result = true;

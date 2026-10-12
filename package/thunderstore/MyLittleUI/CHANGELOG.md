@@ -1,3 +1,8 @@
+# 1.2.30
+* Fixed chest renaming after cancelling sign editing. It no longer changes the sign text or fails if the sign was destroyed.
+* Fixed "Suppress default radial while hovering" blocking the standard radial menu over objects without visible hover text.
+* Updated hotbar ammo, bait, and mead indicators to improve stability when leaving and rejoining worlds.
+
 # 1.2.29
 * Added support for new Valheim item tooltip tokens: health and eitr return on hit, heat and stamina-related equipment modifiers, and maximum adrenaline.
 * Updated tooltip token grouping and ordering; unknown lines continue to stay attached to the preceding recognized token.

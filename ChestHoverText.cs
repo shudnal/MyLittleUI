@@ -311,6 +311,8 @@ namespace MyLittleUI
                 }
 
                 textInputForContainer = __instance;
+                // Show does not clear the text receiver left by a previous dialog.
+                TextInput.instance.m_queuedSign = null;
                 TextInput.instance.Show("$hud_rename " + __instance.m_name, __instance.m_nview.GetZDO().GetString(ZDOVars.s_text), 32);
 
                 return false;

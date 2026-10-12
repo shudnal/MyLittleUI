@@ -30,7 +30,7 @@ namespace MyLittleUI
     {
         public const string pluginID = "shudnal.MyLittleUI";
         public const string pluginName = "My Little UI";
-        public const string pluginVersion = "1.2.28";
+        public const string pluginVersion = "1.2.30";
 
         private readonly Harmony harmony = new Harmony(pluginID);
 
@@ -423,6 +423,7 @@ namespace MyLittleUI
         private void OnDestroy()
         {
             StationRepair.StopWorker();
+            AmmoCountIcon.Shutdown();
             Config.Save();
             harmony?.UnpatchSelf();
         }
@@ -449,7 +450,7 @@ namespace MyLittleUI
             disableMinimap = config("General", "Disable minimap", defaultValue: false, "Disable the small minimap while keeping the large map available. Does nothing when the world is in nomap mode.");
             fixStatusEffectAndForecastPosition = config("General", "Status effects and forecast position fix", defaultValue: true, "If status effect position was not changed prior to 1.0.11 version - fix status effect list position for forecast.");
 
-            modEnabled.SettingChanged += (s, e) => { InfoBlocks.UpdateVisibility(); CustomStatusEffectsList.InitializeStatusEffectTemplate(); CustomStatusEffectsList.ChangeSailingIndicator(); ZInput_GetBoundKeyString_NonlocalizedButtons.OnChange(); RadialMenuHover.ApplyHoverTextWidth(); };
+            modEnabled.SettingChanged += (s, e) => { InfoBlocks.UpdateVisibility(); CustomStatusEffectsList.InitializeStatusEffectTemplate(); CustomStatusEffectsList.ChangeSailingIndicator(); ZInput_GetBoundKeyString_NonlocalizedButtons.OnChange(); RadialMenuHover.ApplyHoverTextWidth(); AmmoCountIcon.UpdateVisibility(); };
             disableMinimap.SettingChanged += (s, e) => { InfoBlocks.ApplyMinimapToggle(); InfoBlocks.UpdateVisibility(); InfoBlocks.UpdateWindsBlock(forceRebuildList: true); CustomStatusEffectsList.UpdateStatusEffectList(); };
             nonlocalizedButtons.SettingChanged += (s, e) => ZInput_GetBoundKeyString_NonlocalizedButtons.OnChange();
 
@@ -710,7 +711,7 @@ namespace MyLittleUI
             radialMenuInitialCursorDistance = config("Radial Menu", "Initial cursor distance", defaultValue: 0.5f,
                 new ConfigDescription("Position of the mouse cursor along the line from the radial menu center (ElementInfo title position) to the initially selected radial element. 0 is the radial center, 1 is the selected element, and 2 is twice the selected-element distance.", new AcceptableValueRange<float>(0f, 2f)));
             hoverRadialMenuHint = config("Radial Menu", "Show radial menu hint", defaultValue: true, "Show the Open Radial action in hover text when the hovered object can currently accept an item through its contextual radial menu.");
-            hoverRadialMenuSuppressDefault = config("Radial Menu", "Suppress default radial while hovering", defaultValue: false, "Prevent the standard radial menu from opening while the player is hovering an object, even when no contextual radial menu was opened.");
+            hoverRadialMenuSuppressDefault = config("Radial Menu", "Suppress default radial while hovering", defaultValue: false, "Prevent the standard radial menu from opening while hover text is visible, even when no contextual radial menu was opened.");
             radialMenuFermenterItemSelection = config("Radial Menu", "Fermenter item selection", defaultValue: true, "Enable contextual radial item selection for fermenters and show only mead bases accepted by the hovered fermenter.");
             radialMenuShieldGeneratorItemSelection = config("Radial Menu", "Shield generator item selection", defaultValue: true, "Enable contextual radial item selection for shield generators and show only fuel accepted by the hovered generator.");
             radialMenuUseNativeItemSearch = config(
