@@ -1,3 +1,6 @@
+# 1.2.31
+* Added support for item links and item tooltips in Chatter.
+
 # 1.2.30
 * Fixed chest renaming after cancelling sign editing. It no longer changes the sign text or fails if the sign was destroyed.
 * Fixed "Suppress default radial while hovering" blocking the standard radial menu over objects without visible hover text.

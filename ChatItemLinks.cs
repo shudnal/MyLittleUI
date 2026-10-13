@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
+using static MyLittleUI.MyLittleUI;
 
 namespace MyLittleUI
 {
@@ -25,8 +26,8 @@ namespace MyLittleUI
         internal static bool TrySendItemLink(ItemDrop.ItemData item)
         {
             Player player = Player.m_localPlayer;
-            if (!MyLittleUI.modEnabled.Value
-                || MyLittleUI.chatItemLinksEnabled?.Value != true
+            if (!modEnabled.Value
+                || chatItemLinksEnabled?.Value != true
                 || !player
                 || item == null)
                 return false;
@@ -39,7 +40,7 @@ namespace MyLittleUI
             ZPackage payload = SerializeItem(item);
             if (payload == null || payload.Size() > MaxPayloadBytes)
             {
-                MyLittleUI.LogWarning(
+                LogWarning(
                     $"Item link payload for '{item.m_shared?.m_name ?? "unknown item"}' is too large; sending plain chat text instead.");
                 talker.Say(Talker.Type.Normal, fallbackText);
                 return true;
@@ -99,7 +100,7 @@ namespace MyLittleUI
         {
             bool localTarget = target == ZNet.GetUID();
             bool supportsItemLinks = localTarget
-                || global::ConditionalConfigSync.ConditionalConfigSync.HasCompatibleConsumer(MyLittleUI.pluginID, target);
+                || global::ConditionalConfigSync.ConditionalConfigSync.HasCompatibleConsumer(pluginID, target);
 
             if (supportsItemLinks)
             {
@@ -135,7 +136,7 @@ namespace MyLittleUI
             }
             catch (Exception exception)
             {
-                MyLittleUI.LogWarning($"Failed to serialize chat item link.{Environment.NewLine}{exception}");
+                LogWarning($"Failed to serialize chat item link.{Environment.NewLine}{exception}");
                 return null;
             }
         }
@@ -170,7 +171,7 @@ namespace MyLittleUI
             }
             catch (Exception exception)
             {
-                MyLittleUI.LogWarning($"Failed to deserialize chat item link.{Environment.NewLine}{exception}");
+                LogWarning($"Failed to deserialize chat item link.{Environment.NewLine}{exception}");
                 return false;
             }
         }
@@ -200,8 +201,8 @@ namespace MyLittleUI
                 return;
 
             string message = fallbackText;
-            if (MyLittleUI.modEnabled.Value
-                && MyLittleUI.chatItemLinksEnabled?.Value == true
+            if (modEnabled.Value
+                && chatItemLinksEnabled?.Value == true
                 && TryDeserializeItem(payload, out ItemDrop.ItemData item))
             {
                 int linkId = StoreLinkedItem(item);
@@ -303,13 +304,30 @@ namespace MyLittleUI
             return text.Remove(markerStart, markerLength).Insert(markerStart, BuildChatLink(linkId, item));
         }
 
+        internal static void TryRenderLinkLabel(TMP_Text label)
+        {
+            if (!label || !modEnabled.Value || chatItemLinksEnabled?.Value != true)
+                return;
+
+            string renderedText = RenderChatLink(label.text);
+            if (renderedText == label.text)
+                return;
+
+            label.text = renderedText;
+            ChatItemLinkHover hover = label.GetComponent<ChatItemLinkHover>();
+            if (!hover)
+                hover = label.gameObject.AddComponent<ChatItemLinkHover>();
+
+            hover.ConfigureForChatter();
+        }
+
         private static string BuildChatLink(int linkId, ItemDrop.ItemData item)
         {
             string name = EscapeRichText(Localization.instance.Localize(item.m_shared.m_name));
             string amount = item.m_stack > 1 ? $" x{item.m_stack}" : string.Empty;
 
-            Color linkColor = MyLittleUI.chatItemLinkColor?.Value ?? new Color(1f, 0.75f, 0f, 1f);
-            Color bracketsColor = MyLittleUI.chatItemLinkBracketsColor?.Value ?? linkColor;
+            Color linkColor = chatItemLinkColor?.Value ?? new Color(1f, 0.75f, 0f, 1f);
+            Color bracketsColor = chatItemLinkBracketsColor?.Value ?? linkColor;
             string linkColorHtml = ColorUtility.ToHtmlStringRGBA(linkColor);
             string bracketsColorHtml = ColorUtility.ToHtmlStringRGBA(bracketsColor);
 
@@ -324,24 +342,24 @@ namespace MyLittleUI
         private static string ApplyLinkStyle(string text)
         {
             MyLittleUI.ChatItemLinkStyle style =
-                MyLittleUI.chatItemLinkStyle?.Value ?? MyLittleUI.ChatItemLinkStyle.Underline;
+                chatItemLinkStyle?.Value ?? ChatItemLinkStyle.Underline;
 
             string prefix = string.Empty;
             string suffix = string.Empty;
 
-            if ((style & MyLittleUI.ChatItemLinkStyle.Bold) != 0)
+            if ((style & ChatItemLinkStyle.Bold) != 0)
             {
                 prefix += "<b>";
                 suffix = "</b>" + suffix;
             }
 
-            if ((style & MyLittleUI.ChatItemLinkStyle.Italic) != 0)
+            if ((style & ChatItemLinkStyle.Italic) != 0)
             {
                 prefix += "<i>";
                 suffix = "</i>" + suffix;
             }
 
-            if ((style & MyLittleUI.ChatItemLinkStyle.Underline) != 0)
+            if ((style & ChatItemLinkStyle.Underline) != 0)
             {
                 prefix += "<u>";
                 suffix = "</u>" + suffix;
@@ -362,23 +380,23 @@ namespace MyLittleUI
 
         private static bool IsLinkModifierHeld()
         {
-            if (MyLittleUI.chatItemLinkModifier == null)
+            if (chatItemLinkModifier == null)
                 return false;
 
-            KeyboardShortcut shortcut = MyLittleUI.chatItemLinkModifier.Value;
+            KeyboardShortcut shortcut = chatItemLinkModifier.Value;
             return shortcut.MainKey != KeyCode.None && shortcut.IsPressed();
         }
 
         private static bool IsChatInspectionHeld()
         {
-            if (!MyLittleUI.modEnabled.Value
-                || MyLittleUI.chatItemLinksEnabled?.Value != true
-                || MyLittleUI.chatItemLinkInspectModifier == null)
+            if (!modEnabled.Value
+                || chatItemLinksEnabled?.Value != true
+                || chatItemLinkInspectModifier == null)
             {
                 return false;
             }
 
-            KeyboardShortcut shortcut = MyLittleUI.chatItemLinkInspectModifier.Value;
+            KeyboardShortcut shortcut = chatItemLinkInspectModifier.Value;
             if (shortcut.MainKey == KeyCode.None || !ZInput.GetKey(shortcut.MainKey))
                 return false;
 
@@ -403,6 +421,8 @@ namespace MyLittleUI
         {
             private TMP_Text output;
             private UITooltip tooltip;
+            private CanvasGroup chatterPanelCanvasGroup;
+            private bool chatterLabelNeedsMeshUpdate;
             private int currentLinkId = -1;
 
             private void Awake()
@@ -410,15 +430,36 @@ namespace MyLittleUI
                 output = GetComponent<TMP_Text>();
             }
 
+            internal void ConfigureForChatter()
+            {
+                chatterPanelCanvasGroup = GetComponentInParent<CanvasGroup>();
+                chatterLabelNeedsMeshUpdate = true;
+            }
+
             private void LateUpdate()
             {
-                if (!MyLittleUI.modEnabled.Value
-                    || MyLittleUI.chatItemLinksEnabled?.Value != true
+                if (!modEnabled.Value
+                    || chatItemLinksEnabled?.Value != true
                     || !output
                     || !output.gameObject.activeInHierarchy)
                 {
                     HideTooltip();
                     return;
+                }
+
+                if (chatterPanelCanvasGroup
+                    && (!chatterPanelCanvasGroup.blocksRaycasts || chatterPanelCanvasGroup.alpha <= 0f))
+                {
+                    HideTooltip();
+                    return;
+                }
+
+                // Chatter sets the label's font and size after its text is built. Refresh the link geometry once
+                // after the row is laid out so TMP hit-testing does not use the previous text mesh.
+                if (chatterLabelNeedsMeshUpdate)
+                {
+                    output.ForceMeshUpdate();
+                    chatterLabelNeedsMeshUpdate = false;
                 }
 
                 int linkIndex = TMP_TextUtilities.FindIntersectingLink(output, ZInput.pointerPosition, null);
@@ -490,8 +531,8 @@ namespace MyLittleUI
         {
             private static bool Prefix(InventoryGrid __instance, UIInputHandler clickHandler)
             {
-                if (!MyLittleUI.modEnabled.Value
-                    || MyLittleUI.chatItemLinksEnabled?.Value != true
+                if (!modEnabled.Value
+                    || chatItemLinksEnabled?.Value != true
                     || !IsLinkModifierHeld()
                     || clickHandler == null
                     || __instance.m_inventory == null)
@@ -545,6 +586,14 @@ namespace MyLittleUI
         [HarmonyPatch(typeof(Chat), nameof(Chat.Update))]
         private static class Chat_Update_InspectItemLinks
         {
+            [HarmonyPriority(Priority.First)]
+            private static void Prefix(Chat __instance)
+            {
+                // Apply the existing inspection shortcut before Chatter and vanilla chat evaluate hide timers.
+                if (IsChatInspectionHeld())
+                    __instance.m_hideTimer = 0f;
+            }
+
             [HarmonyPriority(Priority.Last)]
             private static void Postfix(Chat __instance)
             {

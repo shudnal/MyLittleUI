@@ -6,6 +6,7 @@ using System.Reflection;
 using System.Reflection.Emit;
 using UnityEngine;
 using Valheim.UI;
+using static MyLittleUI.MyLittleUI;
 
 namespace MyLittleUI
 {
@@ -66,7 +67,7 @@ namespace MyLittleUI
             {
                 if (hoverMenuType == null || CanUseErrorTypes.Add(hoverMenuType))
                 {
-                    MyLittleUI.LogWarning(
+                    LogWarning(
                         $"Failed to evaluate contextual radial availability for '{hoverMenuType?.FullName ?? "unknown type"}'.{Environment.NewLine}{exception}");
                 }
             }
@@ -76,8 +77,8 @@ namespace MyLittleUI
 
         internal static string AddRadialHint(string hoverText)
         {
-            if (!MyLittleUI.modEnabled.Value
-                || MyLittleUI.hoverRadialMenuHint?.Value != true
+            if (!modEnabled.Value
+                || hoverRadialMenuHint?.Value != true
                 || string.IsNullOrWhiteSpace(hoverText)
                 || hoverText.IndexOf(RadialKey, StringComparison.Ordinal) >= 0)
             {
@@ -111,8 +112,8 @@ namespace MyLittleUI
 
         private static void SetInitialMousePosition(Vector2 selectedPosition, RadialBase radial)
         {
-            float distance = MyLittleUI.modEnabled.Value && MyLittleUI.radialMenuInitialCursorDistance != null
-                ? Mathf.Clamp(MyLittleUI.radialMenuInitialCursorDistance.Value, 0f, 2f)
+            float distance = modEnabled.Value && radialMenuInitialCursorDistance != null
+                ? Mathf.Clamp(radialMenuInitialCursorDistance.Value, 0f, 2f)
                 : 1f;
             Vector2 radialCenter = radial && radial.m_elementInfo && radial.m_elementInfo.m_title
                 ? (Vector2)radial.m_elementInfo.m_title.transform.position
@@ -176,7 +177,7 @@ namespace MyLittleUI
         internal static void ApplyHoverTextWidth(Hud hud = null)
         {
             hud ??= Hud.instance;
-            if (!hud || !hud.m_hoverName || MyLittleUI.hoverTextWidth == null)
+            if (!hud || !hud.m_hoverName || hoverTextWidth == null)
                 return;
 
             RectTransform rectTransform = hud.m_hoverName.rectTransform;
@@ -188,7 +189,7 @@ namespace MyLittleUI
 
             rectTransform.SetSizeWithCurrentAnchors(
                 RectTransform.Axis.Horizontal,
-                MyLittleUI.modEnabled.Value ? MyLittleUI.hoverTextWidth.Value : originalHoverTextWidth);
+                modEnabled.Value ? hoverTextWidth.Value : originalHoverTextWidth);
         }
 
         [HarmonyPatch]
@@ -239,7 +240,7 @@ namespace MyLittleUI
             [HarmonyPriority(Priority.First)]
             private static bool Prefix(OpenRadialConfig __instance, RadialBase radial, ref bool __result)
             {
-                if (!MyLittleUI.modEnabled.Value)
+                if (!modEnabled.Value)
                     return true;
 
                 Player player = Player.m_localPlayer;
@@ -318,8 +319,8 @@ namespace MyLittleUI
             private static void Postfix(RadialBase radial, ref bool __result)
             {
                 if (__result
-                    || !MyLittleUI.modEnabled.Value
-                    || MyLittleUI.hoverRadialMenuSuppressDefault?.Value != true)
+                    || !modEnabled.Value
+                    || hoverRadialMenuSuppressDefault?.Value != true)
                 {
                     return;
                 }

@@ -24,13 +24,14 @@ namespace MyLittleUI
     [BepInDependency("Azumatt.AzuAntiArthriticCrafting", BepInDependency.DependencyFlags.SoftDependency)]
     [BepInDependency("org.bepinex.plugins.jewelcrafting", BepInDependency.DependencyFlags.SoftDependency)]
     [BepInDependency(Advize_StumpsRegrow_Compat.GUID, BepInDependency.DependencyFlags.SoftDependency)]
+    [BepInDependency(ChatterCompatibility.GUID, BepInDependency.DependencyFlags.SoftDependency)]
     [BepInDependency("_shudnal.ConditionalConfigSync", "1.0.9")]
     [BepInIncompatibility("randyknapp.mods.auga")]
     public class MyLittleUI : BaseUnityPlugin
     {
         public const string pluginID = "shudnal.MyLittleUI";
         public const string pluginName = "My Little UI";
-        public const string pluginVersion = "1.2.30";
+        public const string pluginVersion = "1.2.31";
 
         private readonly Harmony harmony = new Harmony(pluginID);
 

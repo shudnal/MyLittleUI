@@ -89,7 +89,7 @@ namespace MyLittleUI
             private T CreateDecoration<T>(T template) where T : Graphic
             {
                 // The template is inactive. Set data before enabling the copy.
-                T copy = Object.Instantiate(template, Cell.transform, false);
+                T copy = UnityEngine.Object.Instantiate(template, Cell.transform, false);
                 copy.name = template.name;
                 return copy;
             }
