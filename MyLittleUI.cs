@@ -124,6 +124,7 @@ namespace MyLittleUI
         public static ConfigEntry<Color> availableItemsAmountColor;
         public static ConfigEntry<bool> showMulticraftButtons;
         public static ConfigEntry<bool> stopMulticraftOnCancellation;
+        public static ConfigEntry<bool> multicraftButtonSounds;
 
         public static ConfigEntry<bool> craftingFilterEnabled;
         public static ConfigEntry<bool> craftingSortingEnabled;
@@ -594,8 +595,11 @@ namespace MyLittleUI
             showMulticraftButtons = config("Item - Available resources amount", "Multicraft", defaultValue: true, "Show multicraft buttons [Synced with Server]", synchronizedSetting: true);
             stopMulticraftOnCancellation = config("Item - Available resources amount", "Stop multicraft on cancellation", defaultValue: true,
                 "Stop the multicraft queue if crafting is cancelled before it finishes. Manual cancellation always stops the queue.", synchronizedSetting: false);
+            multicraftButtonSounds = config("Item - Available resources amount", "Multicraft button sounds", defaultValue: true,
+                "Play a click sound when changing the MultiCraft amount with the + and - buttons or mouse wheel.", synchronizedSetting: false);
 
             showMulticraftButtons.SettingChanged += (sender, args) => MultiCraft.UpdateMulticraftPanel();
+            multicraftButtonSounds.SettingChanged += (sender, args) => MultiCraft.UpdateMulticraftButtonSounds();
 
             craftingFilterEnabled = config("Item - Crafting - Filter", "Enabled", defaultValue: true, "Enable filtering of craft list. [Synced with Server]", synchronizedSetting: true);
             craftingSortingEnabled = config("Item - Crafting - Filter", "Enable sorting panels", defaultValue: true, "Enable sorting and filtering of craft list. [Synced with Server]", synchronizedSetting: true);

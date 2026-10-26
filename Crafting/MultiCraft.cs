@@ -168,8 +168,24 @@ namespace MyLittleUI
             GameObject clone = UnityEngine.Object.Instantiate(craftButton.gameObject, panel);
             clone.name = name;
             Button button = clone.GetComponent<Button>();
+            // Rebind ButtonSfx after replacing onClick: the clone can already
+            // have a subscribed ButtonSfx component from its source prefab.
+            ButtonSfx clickSfx = clone.GetComponent<ButtonSfx>();
+            if (clickSfx)
+                clickSfx.enabled = false;
+
             button.onClick = new Button.ButtonClickedEvent();
             button.onClick.AddListener(() => ChangeAmount(increase ? 1 : -1));
+
+            if (!clickSfx)
+                clickSfx = clone.AddComponent<ButtonSfx>();
+            ButtonSfx tabSfx = InventoryGui.instance.m_tabCraft
+                ? InventoryGui.instance.m_tabCraft.GetComponent<ButtonSfx>()
+                : null;
+            if (tabSfx && tabSfx.m_sfxPrefab)
+                clickSfx.m_sfxPrefab = tabSfx.m_sfxPrefab;
+            clickSfx.enabled = multicraftButtonSounds.Value;
+
             foreach (EventTrigger trigger in clone.GetComponentsInChildren<EventTrigger>(true))
                 trigger.triggers = new List<EventTrigger.Entry>();
 
@@ -226,6 +242,23 @@ namespace MyLittleUI
             textAmount.SetText("1");
         }
 
+        internal static void UpdateMulticraftButtonSounds()
+        {
+            bool enabled = multicraftButtonSounds?.Value ?? true;
+            if (buttonIncrease)
+            {
+                ButtonSfx sound = buttonIncrease.GetComponent<ButtonSfx>();
+                if (sound)
+                    sound.enabled = enabled;
+            }
+            if (buttonDecrease)
+            {
+                ButtonSfx sound = buttonDecrease.GetComponent<ButtonSfx>();
+                if (sound)
+                    sound.enabled = enabled;
+            }
+        }
+
         internal static void UpdateMulticraftPanel()
         {
             InventoryGui gui = InventoryGui.instance;
@@ -241,8 +274,8 @@ namespace MyLittleUI
             InventoryGui gui = InventoryGui.instance;
             if (!showPanel || !CanQueue(gui))
                 return;
-            int delta = UnityInput.Current.GetKey(KeyCode.LeftControl) || UnityInput.Current.GetKey(KeyCode.RightControl) ? maximumAmount
-                : UnityInput.Current.GetKey(KeyCode.LeftShift) || UnityInput.Current.GetKey(KeyCode.RightShift) ? 10 : 1;
+            int delta = UnityInput.Current.GetKey(KeyCode.LeftControl) || UnityInput.Current.GetKey(KeyCode.RightControl)
+                ? Mathf.Max(1, gui.m_multiCraftAmount) : 1;
             int maximum = GetMaximumCached(gui.m_selectedRecipe.Recipe, Player.m_localPlayer);
             amount = Mathf.Clamp(amount + direction * delta, 1, Math.Max(1, maximum));
         }
@@ -364,7 +397,11 @@ namespace MyLittleUI
                         float scroll = ZInput.GetMouseScrollWheel();
                         if (scroll != 0f)
                         {
-                            ChangeAmount(scroll > 0f ? 1 : -1);
+                            Button scrollButton = scroll > 0f ? buttonIncrease : buttonDecrease;
+                            bool canChange = scroll > 0f ? amount < maximum : amount > 1;
+                            if (canChange && __instance.m_craftButton.interactable
+                                && scrollButton && scrollButton.isActiveAndEnabled)
+                                scrollButton.onClick.Invoke();
                             lastScrollTriggerFrame = Time.frameCount;
                         }
                     }
