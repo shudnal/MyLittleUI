@@ -168,8 +168,24 @@ namespace MyLittleUI
             GameObject clone = UnityEngine.Object.Instantiate(craftButton.gameObject, panel);
             clone.name = name;
             Button button = clone.GetComponent<Button>();
+            // Rebind ButtonSfx after replacing onClick: the clone can already
+            // have a subscribed ButtonSfx component from its source prefab.
+            ButtonSfx clickSfx = clone.GetComponent<ButtonSfx>();
+            if (clickSfx)
+                clickSfx.enabled = false;
+
             button.onClick = new Button.ButtonClickedEvent();
             button.onClick.AddListener(() => ChangeAmount(increase ? 1 : -1));
+
+            if (!clickSfx)
+                clickSfx = clone.AddComponent<ButtonSfx>();
+            ButtonSfx tabSfx = InventoryGui.instance.m_tabCraft
+                ? InventoryGui.instance.m_tabCraft.GetComponent<ButtonSfx>()
+                : null;
+            if (tabSfx && tabSfx.m_sfxPrefab)
+                clickSfx.m_sfxPrefab = tabSfx.m_sfxPrefab;
+            clickSfx.enabled = true;
+
             foreach (EventTrigger trigger in clone.GetComponentsInChildren<EventTrigger>(true))
                 trigger.triggers = new List<EventTrigger.Entry>();
 
