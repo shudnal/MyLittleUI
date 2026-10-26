@@ -31,7 +31,7 @@ namespace MyLittleUI
     {
         public const string pluginID = "shudnal.MyLittleUI";
         public const string pluginName = "My Little UI";
-        public const string pluginVersion = "1.2.31";
+        public const string pluginVersion = "1.2.32";
 
         private readonly Harmony harmony = new Harmony(pluginID);
 
@@ -123,6 +123,7 @@ namespace MyLittleUI
         public static ConfigEntry<bool> showAvailableItemsAmount;
         public static ConfigEntry<Color> availableItemsAmountColor;
         public static ConfigEntry<bool> showMulticraftButtons;
+        public static ConfigEntry<bool> stopMulticraftOnCancellation;
 
         public static ConfigEntry<bool> craftingFilterEnabled;
         public static ConfigEntry<bool> craftingSortingEnabled;
@@ -591,7 +592,9 @@ namespace MyLittleUI
             showAvailableItemsAmount = config("Item - Available resources amount", "Enabled", defaultValue: true, "Show amount of available resources for crafting in requirements list (player inventory only) [Synced with Server]", synchronizedSetting: true);
             availableItemsAmountColor = config("Item - Available resources amount", "Color", defaultValue: new Color(0.68f, 0.85f, 0.90f), "Color of amount of available resources.");
             showMulticraftButtons = config("Item - Available resources amount", "Multicraft", defaultValue: true, "Show multicraft buttons [Synced with Server]", synchronizedSetting: true);
-            
+            stopMulticraftOnCancellation = config("Item - Available resources amount", "Stop multicraft on cancellation", defaultValue: true,
+                "Stop the multicraft queue if crafting is cancelled before it finishes. Manual cancellation always stops the queue.", synchronizedSetting: false);
+
             showMulticraftButtons.SettingChanged += (sender, args) => MultiCraft.UpdateMulticraftPanel();
 
             craftingFilterEnabled = config("Item - Crafting - Filter", "Enabled", defaultValue: true, "Enable filtering of craft list. [Synced with Server]", synchronizedSetting: true);

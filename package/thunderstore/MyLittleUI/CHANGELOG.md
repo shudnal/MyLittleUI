@@ -1,3 +1,7 @@
+# 1.2.32
+* Fixed MultiCraft stopping when a Jewelcrafting gem breaks during crafting.
+* Added an option to stop MultiCraft when crafting is cancelled (enabled by default).
+
 # 1.2.31
 * Added support for item links and item tooltips in Chatter.
 
