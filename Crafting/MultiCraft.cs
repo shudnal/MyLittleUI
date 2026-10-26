@@ -44,6 +44,9 @@ namespace MyLittleUI
         private static CraftingStation queueStation;
         private static int queueVariant;
         private static bool queueNextCraft;
+        private static float lastQueueCraftTimer = -1f;
+        private static float lastQueueCraftDuration;
+
         public static int lastScrollTriggerFrame;
         public const int minScrollDeltaFrames = 2;
         public static bool IsMulticraftEnabled => modEnabled.Value && showMulticraftButtons.Value && !AAA_Crafting;
@@ -77,6 +80,8 @@ namespace MyLittleUI
             queueRecipe = null;
             queueStation = null;
             queueNextCraft = false;
+            lastQueueCraftTimer = -1f;
+            lastQueueCraftDuration = 0f;
             amount = resetAmount ? 1 : Mathf.Clamp(amount, 1, maximumAmount);
         }
 
@@ -261,6 +266,8 @@ namespace MyLittleUI
                 queueStation = queuePlayer.GetCurrentCraftingStation();
                 queueVariant = __instance.m_craftVariant;
                 queueNextCraft = false;
+                lastQueueCraftTimer = __instance.m_craftTimer;
+                lastQueueCraftDuration = 0f;
             }
 
             private static void Finalizer(Exception __exception)
@@ -275,26 +282,54 @@ namespace MyLittleUI
         {
             internal static bool isCrafting;
 
-            private static void Prefix(InventoryGui __instance, out bool __state)
-                => __state = IsCrafting(__instance);
+            private static void Prefix(InventoryGui __instance, out float __state)
+                => __state = __instance.m_craftTimer;
 
             [HarmonyPriority(Priority.Last)]
             [HarmonyAfter("Azumatt.AzuCraftyBoxes", "aedenthorn.CraftFromContainers", "org.bepinex.plugins.valheim_plus")]
-            public static void Postfix(InventoryGui __instance, bool __state)
+            public static void Postfix(InventoryGui __instance, float dt, float __state)
             {
                 isCrafting = IsCrafting(__instance);
                 if (queueGui && !QueueContextMatches())
                     StopQueue();
 
-                // A completed craft attempt counts even when a mod consumes the
-                // materials without producing the recipe output (for example, broken gems).
-                if (queueGui == __instance && __state && !isCrafting)
+                if (queueGui == __instance)
                 {
-                    amount = Math.Max(0, amount - 1);
-                    queueNextCraft = amount > 0;
-                    cacheUntil = 0f;
-                    if (!queueNextCraft)
-                        StopQueue(resetAmount: false);
+                    // Valheim sets this to the actual craft duration (including the
+                    // crafting skill modifier) before advancing m_craftTimer.
+                    float duration = __instance.m_craftProgressBar
+                        ? __instance.m_craftProgressBar.m_maxValue : 0f;
+                    if (duration <= 0f || float.IsNaN(duration) || float.IsInfinity(duration))
+                        duration = lastQueueCraftDuration;
+
+                    if (isCrafting)
+                    {
+                        lastQueueCraftTimer = __instance.m_craftTimer;
+                        if (duration > 0f)
+                            lastQueueCraftDuration = duration;
+                    }
+                    else if (__state >= 0f || lastQueueCraftTimer >= 0f)
+                    {
+                        // A reset between UpdateRecipe calls has __state == -1,
+                        // but the previous call still observed an active craft.
+                        // Normal completion always satisfies this same comparison
+                        // inside Valheim's UpdateRecipe, even when crafting fails.
+                        bool finishedOnTime = __state >= 0f && duration > 0f && __state + dt >= duration;
+                        if (stopMulticraftOnCancellation.Value && duration > 0f && !finishedOnTime)
+                        {
+                            StopQueue();
+                        }
+                        else
+                        {
+                            lastQueueCraftTimer = -1f;
+                            lastQueueCraftDuration = 0f;
+                            amount = Math.Max(0, amount - 1);
+                            queueNextCraft = amount > 0;
+                            cacheUntil = 0f;
+                            if (!queueNextCraft)
+                                StopQueue(resetAmount: false);
+                        }
+                    }
                 }
 
                 UpdateMulticraftPanel();
