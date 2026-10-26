@@ -44,18 +44,6 @@ namespace MyLittleUI
         private static CraftingStation queueStation;
         private static int queueVariant;
         private static bool queueNextCraft;
-        private static CraftAttempt activeAttempt;
-
-        private sealed class CraftAttempt
-        {
-            public CraftAttempt Previous;
-            public InventoryGui Gui;
-            public Player Player;
-            public Recipe Recipe;
-            public bool Owned;
-            public bool ProducedItem;
-        }
-
         public static int lastScrollTriggerFrame;
         public const int minScrollDeltaFrames = 2;
         public static bool IsMulticraftEnabled => modEnabled.Value && showMulticraftButtons.Value && !AAA_Crafting;
@@ -282,75 +270,33 @@ namespace MyLittleUI
             }
         }
 
-        [HarmonyPatch(typeof(InventoryGui), nameof(InventoryGui.DoCrafting))]
-        private static class InventoryGui_DoCrafting_ObserveCompletion
-        {
-            private static void Prefix(InventoryGui __instance, Player player, out CraftAttempt __state)
-            {
-                __state = new CraftAttempt
-                {
-                    Previous = activeAttempt,
-                    Gui = __instance,
-                    Player = player,
-                    Recipe = __instance.m_craftRecipe,
-                    Owned = queueGui == __instance && QueueContextMatches()
-                };
-                activeAttempt = __state;
-            }
-
-            private static void Postfix(CraftAttempt __state)
-            {
-                if (!__state.Owned || queueGui != __state.Gui)
-                    return;
-                if (!__state.ProducedItem || !QueueContextMatches())
-                {
-                    StopQueue();
-                    return;
-                }
-                amount = Math.Max(0, amount - 1);
-                queueNextCraft = amount > 0;
-                cacheUntil = 0f;
-                if (!queueNextCraft)
-                    StopQueue(resetAmount: false);
-            }
-
-            private static void Finalizer(CraftAttempt __state, Exception __exception)
-            {
-                if (__state != null)
-                    activeAttempt = __state.Previous;
-                if (__exception != null)
-                    StopQueue();
-            }
-        }
-
-        [HarmonyPatch(typeof(Inventory), nameof(Inventory.AddItem), typeof(string), typeof(int), typeof(int), typeof(int),
-            typeof(long), typeof(string), typeof(Vector2i), typeof(bool), typeof(bool), typeof(bool))]
-        private static class Inventory_AddItem_ObserveCraftedOutput
-        {
-            private static void Postfix(Inventory __instance, string name, ItemDrop.ItemData __result)
-            {
-                if (__instance.m_temoraryInventory)
-                    return;
-
-                CraftAttempt attempt = activeAttempt;
-                if (attempt != null && attempt.Owned && attempt.Player && attempt.Recipe && attempt.Recipe.m_item
-                    && __result != null && __instance == attempt.Player.GetInventory() && name == attempt.Recipe.m_item.gameObject.name)
-                    attempt.ProducedItem = true;
-            }
-        }
-
         [HarmonyPatch(typeof(InventoryGui), nameof(InventoryGui.UpdateRecipe))]
         public static class InventoryGui_UpdateRecipe_MulticraftShowButtons
         {
             internal static bool isCrafting;
 
+            private static void Prefix(InventoryGui __instance, out bool __state)
+                => __state = IsCrafting(__instance);
+
             [HarmonyPriority(Priority.Last)]
             [HarmonyAfter("Azumatt.AzuCraftyBoxes", "aedenthorn.CraftFromContainers", "org.bepinex.plugins.valheim_plus")]
-            public static void Postfix(InventoryGui __instance)
+            public static void Postfix(InventoryGui __instance, bool __state)
             {
                 isCrafting = IsCrafting(__instance);
                 if (queueGui && !QueueContextMatches())
                     StopQueue();
+
+                // A completed craft attempt counts even when a mod consumes the
+                // materials without producing the recipe output (for example, broken gems).
+                if (queueGui == __instance && __state && !isCrafting)
+                {
+                    amount = Math.Max(0, amount - 1);
+                    queueNextCraft = amount > 0;
+                    cacheUntil = 0f;
+                    if (!queueNextCraft)
+                        StopQueue(resetAmount: false);
+                }
+
                 UpdateMulticraftPanel();
                 if (textCrafting)
                 {
@@ -365,40 +311,52 @@ namespace MyLittleUI
                         progressTextChanged = false;
                     }
                 }
-                if (!IsMulticraftEnabled || !showPanel)
+
+                if (!IsMulticraftEnabled)
                 {
-                    if (queueNextCraft && !isCrafting)
+                    if (queueGui)
                         StopQueue();
                     return;
                 }
 
-                int maximum = GetMaximumCached(__instance.m_selectedRecipe.Recipe, Player.m_localPlayer);
-                amount = Mathf.Clamp(amount, 1, Math.Max(1, maximum));
-                if (AmountScrollHandler.hovered && panel.gameObject.activeInHierarchy
-                    && Time.frameCount - lastScrollTriggerFrame > minScrollDeltaFrames)
+                if (showPanel)
                 {
-                    float scroll = ZInput.GetMouseScrollWheel();
-                    if (scroll != 0f)
+                    int maximum = GetMaximumCached(__instance.m_selectedRecipe.Recipe, Player.m_localPlayer);
+                    amount = Mathf.Clamp(amount, 1, Math.Max(1, maximum));
+                    if (AmountScrollHandler.hovered && panel.gameObject.activeInHierarchy
+                        && Time.frameCount - lastScrollTriggerFrame > minScrollDeltaFrames)
                     {
-                        ChangeAmount(scroll > 0f ? 1 : -1);
-                        lastScrollTriggerFrame = Time.frameCount;
+                        float scroll = ZInput.GetMouseScrollWheel();
+                        if (scroll != 0f)
+                        {
+                            ChangeAmount(scroll > 0f ? 1 : -1);
+                            lastScrollTriggerFrame = Time.frameCount;
+                        }
                     }
+                    if (textAmount)
+                        textAmount.SetText(maximum > 0 ? amount.ToString() : "0");
+                    if (buttonIncrease)
+                        buttonIncrease.interactable = __instance.m_craftButton.interactable && amount < maximum;
+                    if (buttonDecrease)
+                        buttonDecrease.interactable = __instance.m_craftButton.interactable && amount > 1;
                 }
-                if (textAmount)
-                    textAmount.SetText(maximum > 0 ? amount.ToString() : "0");
-                if (buttonIncrease)
-                    buttonIncrease.interactable = __instance.m_craftButton.interactable && amount < maximum;
-                if (buttonDecrease)
-                    buttonDecrease.interactable = __instance.m_craftButton.interactable && amount > 1;
 
                 if (!queueNextCraft || isCrafting)
                     return;
-                queueNextCraft = false;
-                // Revalidate actual requirements; display cache entries never authorize crafting.
-                if (QueueContextMatches() && __instance.m_craftButton.interactable && GetMaximumAmount(queueRecipe, queuePlayer) > 0)
-                    __instance.m_craftButton.onClick.Invoke();
-                else
+
+                // Wait until the ordinary Craft button is available again.
+                // Stop if the recipe, station, or resources can no longer be used.
+                if (!QueueContextMatches() || GetMaximumAmount(queueRecipe, queuePlayer) < 1)
+                {
                     StopQueue();
+                    return;
+                }
+                if (__instance.m_craftButton && __instance.m_craftButton.isActiveAndEnabled
+                    && __instance.m_craftButton.interactable)
+                {
+                    queueNextCraft = false;
+                    __instance.m_craftButton.onClick.Invoke();
+                }
             }
         }
 
@@ -420,7 +378,9 @@ namespace MyLittleUI
             private static void Postfix()
             {
                 cacheUntil = 0f;
-                if (queueGui && !QueueContextMatches())
+                // Mods may temporarily replace the recipe while completing a craft.
+                // Validate the final selection in UpdateRecipe instead.
+                if (queueGui && !IsCrafting(queueGui) && !QueueContextMatches())
                     StopQueue();
             }
         }
