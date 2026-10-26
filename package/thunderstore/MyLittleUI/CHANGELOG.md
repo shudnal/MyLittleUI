@@ -1,7 +1,8 @@
 # 1.2.32
 * Fixed MultiCraft stopping when a Jewelcrafting gem breaks during crafting.
 * Added an option to stop MultiCraft when crafting is cancelled (enabled by default).
-* Restored click sounds for the MultiCraft + and - buttons.
+* Restored click sounds for the MultiCraft + and - buttons, including mouse wheel changes.
+* Ctrl now changes the MultiCraft amount by the game's batch size instead of selecting the maximum.
 
 # 1.2.31
 * Added support for item links and item tooltips in Chatter.

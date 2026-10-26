@@ -257,8 +257,8 @@ namespace MyLittleUI
             InventoryGui gui = InventoryGui.instance;
             if (!showPanel || !CanQueue(gui))
                 return;
-            int delta = UnityInput.Current.GetKey(KeyCode.LeftControl) || UnityInput.Current.GetKey(KeyCode.RightControl) ? maximumAmount
-                : UnityInput.Current.GetKey(KeyCode.LeftShift) || UnityInput.Current.GetKey(KeyCode.RightShift) ? 10 : 1;
+            int delta = UnityInput.Current.GetKey(KeyCode.LeftControl) || UnityInput.Current.GetKey(KeyCode.RightControl)
+                ? Mathf.Max(1, gui.m_multiCraftAmount) : 1;
             int maximum = GetMaximumCached(gui.m_selectedRecipe.Recipe, Player.m_localPlayer);
             amount = Mathf.Clamp(amount + direction * delta, 1, Math.Max(1, maximum));
         }
@@ -380,7 +380,11 @@ namespace MyLittleUI
                         float scroll = ZInput.GetMouseScrollWheel();
                         if (scroll != 0f)
                         {
-                            ChangeAmount(scroll > 0f ? 1 : -1);
+                            Button scrollButton = scroll > 0f ? buttonIncrease : buttonDecrease;
+                            bool canChange = scroll > 0f ? amount < maximum : amount > 1;
+                            if (canChange && __instance.m_craftButton.interactable
+                                && scrollButton && scrollButton.isActiveAndEnabled)
+                                scrollButton.onClick.Invoke();
                             lastScrollTriggerFrame = Time.frameCount;
                         }
                     }
