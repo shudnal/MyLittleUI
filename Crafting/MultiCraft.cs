@@ -184,7 +184,7 @@ namespace MyLittleUI
                 : null;
             if (tabSfx && tabSfx.m_sfxPrefab)
                 clickSfx.m_sfxPrefab = tabSfx.m_sfxPrefab;
-            clickSfx.enabled = true;
+            clickSfx.enabled = multicraftButtonSounds.Value;
 
             foreach (EventTrigger trigger in clone.GetComponentsInChildren<EventTrigger>(true))
                 trigger.triggers = new List<EventTrigger.Entry>();
@@ -240,6 +240,23 @@ namespace MyLittleUI
             rect.sizeDelta = new Vector2(-4f, 0f);
             textAmount.fontSizeMax = 32f;
             textAmount.SetText("1");
+        }
+
+        internal static void UpdateMulticraftButtonSounds()
+        {
+            bool enabled = multicraftButtonSounds?.Value ?? true;
+            if (buttonIncrease)
+            {
+                ButtonSfx sound = buttonIncrease.GetComponent<ButtonSfx>();
+                if (sound)
+                    sound.enabled = enabled;
+            }
+            if (buttonDecrease)
+            {
+                ButtonSfx sound = buttonDecrease.GetComponent<ButtonSfx>();
+                if (sound)
+                    sound.enabled = enabled;
+            }
         }
 
         internal static void UpdateMulticraftPanel()
