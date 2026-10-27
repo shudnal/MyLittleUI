@@ -793,7 +793,22 @@ namespace MyLittleUI
                 return 0;
             });
 
+            if (craftingCraftableFirst.Value)
+                PutCraftableRecipesFirst();
+
             SortAvailableRecipes();
+        }
+
+        private static void PutCraftableRecipesFirst()
+        {
+            var recipes = InventoryGui.instance.m_availableRecipes;
+            var craftableRecipes = recipes.Where(pair => pair.CanCraft).ToList();
+            if (craftableRecipes.Count == 0 || craftableRecipes.Count == recipes.Count)
+                return;
+
+            craftableRecipes.AddRange(recipes.Where(pair => !pair.CanCraft));
+            recipes.Clear();
+            recipes.AddRange(craftableRecipes);
         }
 
         public static void SortAvailableRecipes()

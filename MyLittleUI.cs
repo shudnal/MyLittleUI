@@ -31,7 +31,7 @@ namespace MyLittleUI
     {
         public const string pluginID = "shudnal.MyLittleUI";
         public const string pluginName = "My Little UI";
-        public const string pluginVersion = "1.2.32";
+        public const string pluginVersion = "1.2.33";
 
         private readonly Harmony harmony = new Harmony(pluginID);
 
@@ -128,6 +128,7 @@ namespace MyLittleUI
 
         public static ConfigEntry<bool> craftingFilterEnabled;
         public static ConfigEntry<bool> craftingSortingEnabled;
+        public static ConfigEntry<bool> craftingCraftableFirst;
 
         public static ConfigEntry<bool> craftingNewMarkEnabled;
         public static ConfigEntry<bool> craftingNewMarkShowOnlyWithUnlocks;
@@ -146,6 +147,8 @@ namespace MyLittleUI
         public static ConfigEntry<Color> itemEquippedColor;
 
         public static ConfigEntry<bool> itemTooltip;
+        public static ConfigEntry<bool> itemTooltipOriginalShortcutEnabled;
+        public static ConfigEntry<KeyboardShortcut> itemTooltipOriginalShortcut;
         public static ConfigEntry<bool> itemTooltipColored;
         public static ConfigEntry<float> itemTooltipRecipeFontSize;
 
@@ -603,10 +606,17 @@ namespace MyLittleUI
 
             craftingFilterEnabled = config("Item - Crafting - Filter", "Enabled", defaultValue: true, "Enable filtering of craft list. [Synced with Server]", synchronizedSetting: true);
             craftingSortingEnabled = config("Item - Crafting - Filter", "Enable sorting panels", defaultValue: true, "Enable sorting and filtering of craft list. [Synced with Server]", synchronizedSetting: true);
+            craftingCraftableFirst = config("Item - Crafting - Filter", "Craftable recipes first", defaultValue: true,
+                "Keep craftable recipes above unavailable recipes when using sorting panels. Preserve the selected order within each group.");
 
             craftingFilterEnabled.SettingChanged += (s, e) => CraftFilter.UpdateVisibility();
 
             craftingSortingEnabled.SettingChanged += (s, e) => CraftSort.CheckPanels();
+            craftingCraftableFirst.SettingChanged += (s, e) =>
+            {
+                if (InventoryGui.instance && Player.m_localPlayer)
+                    InventoryGui.instance.UpdateCraftingPanel();
+            };
 
             craftingNewMarkEnabled = config("Item - Crafting - New Mark", "Enabled", defaultValue: true, "Enable mark of new items in craft list. [Synced with Server]", synchronizedSetting: true);
             craftingNewMarkShowOnlyWithUnlocks = config("Item - Crafting - New Mark", "Show only unlocks", defaultValue: true, "Show only items that, when crafted, will potentially unlock new recipes." +
@@ -637,7 +647,11 @@ namespace MyLittleUI
             itemIconScale = config("Item - Icon", "Icon scale", defaultValue: 1.0f, "Relative scale size of item icons.");
             itemEquippedColor = config("Item - Icon", "Equipped color", defaultValue: Color.clear, "Override for color of equipped items.");
 
-            itemTooltip = config("Item - Tooltip", "Enabled", defaultValue: true, "Updated item tooltip. Hold Alt to see original tooltip");
+            itemTooltip = config("Item - Tooltip", "Enabled", defaultValue: true, "Reorder item tooltip details.");
+            itemTooltipOriginalShortcutEnabled = config("Item - Tooltip", "Original tooltip shortcut enabled", defaultValue: true,
+                "Allow holding a shortcut to show the original item tooltip.");
+            itemTooltipOriginalShortcut = config("Item - Tooltip", "Original tooltip shortcut", defaultValue: new KeyboardShortcut(KeyCode.LeftAlt),
+                "Hold this shortcut to show the original item tooltip. Set to None to disable the shortcut.");
             itemTooltipColored = config("Item - Tooltip", "Colored numbers", defaultValue: true, "Orange and yellow value numbers in tooltip, light blue if disabled");
             itemTooltipRecipeFontSize = config("Item - Tooltip", "Recipe description min font size", defaultValue: 9f, "Make description font smaller to fit more lines");
 

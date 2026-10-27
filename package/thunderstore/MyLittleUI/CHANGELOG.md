@@ -1,3 +1,7 @@
+# 1.2.33
+* Added options to disable or change the shortcut for viewing original item tooltips (Left Alt by default).
+* Crafting filters now keep craftable recipes above unavailable recipes by default. This can be disabled in the settings.
+
 # 1.2.32
 * Fixed MultiCraft stopping when a Jewelcrafting gem breaks during crafting.
 * Added an option to stop MultiCraft when crafting is cancelled (enabled by default).
