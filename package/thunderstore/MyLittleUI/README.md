@@ -16,12 +16,12 @@ Bunch of little UI tweaks. Tooltips for production timers, player status, items.
 * Configurable icon scale
 * Reordered item tooltips (EpicLoot supported)
 * Highlight stats to be upgraded in crafting description
-* Hold Alt to disable item tooltip altering
+* Hold a configurable shortcut (Left Alt by default) to view the original item tooltip. The shortcut can be disabled.
 * Present quality level as configurable symbols (star by default)
 * Configurable ammo and bait icons and amount for weapons using ammo
 * Craft list filter
 * Hold the keyboard or controller interaction button at a crafting station to repair all eligible items and close the station. Requires both `Inventory / Enable repair on hold` and `Hover - Stations / Hold to mass repair`; releasing the button cancels the operation.
-* Panels for fast filtering and sorting in Crafting window
+* Panels for fast filtering and sorting in Crafting window, with optional craftable-first ordering
 
 ## Clock
 * Default position is above the minimap (you can move it to any position in the screen)

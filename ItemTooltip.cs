@@ -382,6 +382,22 @@ namespace MyLittleUI
                 .Replace("\n\n\n", "\n\n");
         }
 
+        private static bool IsOriginalTooltipShortcutHeld()
+        {
+            if (itemTooltipOriginalShortcutEnabled?.Value != true || itemTooltipOriginalShortcut == null)
+                return false;
+
+            var shortcut = itemTooltipOriginalShortcut.Value;
+            if (shortcut.MainKey == KeyCode.None || !UnityInput.Current.GetKey(shortcut.MainKey))
+                return false;
+
+            foreach (KeyCode modifier in shortcut.Modifiers)
+                if (!UnityInput.Current.GetKey(modifier))
+                    return false;
+
+            return true;
+        }
+
         [HarmonyPatch(typeof(ItemDrop.ItemData), nameof(ItemDrop.ItemData.GetTooltip), typeof(ItemDrop.ItemData), typeof(int),
             typeof(bool), typeof(float), typeof(int), typeof(bool))]
         private class ItemDropItemData_GetTooltip_ItemTooltip
@@ -391,7 +407,7 @@ namespace MyLittleUI
             {
                 if (!modEnabled.Value || !itemTooltip.Value || buildingTooltip || item?.m_shared == null
                     || !Player.m_localPlayer || string.IsNullOrEmpty(__result)
-                    || UnityInput.Current.GetKey(KeyCode.LeftAlt) || UnityInput.Current.GetKey(KeyCode.RightAlt))
+                    || IsOriginalTooltipShortcutHeld())
                     return;
 
                 ItemDrop appended = item.m_shared.m_appendToolTip;
