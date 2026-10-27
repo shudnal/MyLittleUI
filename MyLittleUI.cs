@@ -648,7 +648,7 @@ namespace MyLittleUI
             itemEquippedColor = config("Item - Icon", "Equipped color", defaultValue: Color.clear, "Override for color of equipped items.");
 
             itemTooltip = config("Item - Tooltip", "Enabled", defaultValue: true, "Reorder item tooltip details.");
-            itemTooltipOriginalShortcutEnabled = config("Item - Tooltip", "Original tooltip shortcut enabled", defaultValue: true,
+            itemTooltipOriginalShortcutEnabled = config("Item - Tooltip", "Original tooltip shortcut enabled", defaultValue: false,
                 "Allow holding a shortcut to show the original item tooltip.");
             itemTooltipOriginalShortcut = config("Item - Tooltip", "Original tooltip shortcut", defaultValue: new KeyboardShortcut(KeyCode.LeftAlt),
                 "Hold this shortcut to show the original item tooltip. Set to None to disable the shortcut.");
