@@ -1,3 +1,6 @@
+# 1.2.34
+* Fixed an error when loading characters if a building piece is missing.
+
 # 1.2.33
 * Added options to disable or change the shortcut for viewing original item tooltips (Left Alt by default).
 * Crafting filters now keep craftable recipes above unavailable recipes by default. This can be disabled in the settings.
