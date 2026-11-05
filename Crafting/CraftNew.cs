@@ -65,7 +65,7 @@ namespace MyLittleUI.Crafting
                     if (item != null && item.GetComponent<ItemDrop>() is ItemDrop itemDrop && itemDrop.m_itemData is ItemDrop.ItemData itemData
                                      && itemData.m_shared is ItemDrop.ItemData.SharedData shared && shared.m_buildPieces is PieceTable pieceTable)
                         foreach (GameObject pieceObject in pieceTable.m_pieces)
-                            if (pieceObject.GetComponent<Piece>() is Piece piece && piece.m_resources != null)
+                            if (pieceObject != null && pieceObject.GetComponent<Piece>() is Piece piece && piece.m_resources != null)
                                 foreach (var itemRes in piece.m_resources)
                                     if (itemRes.m_resItem != null && itemRes.m_resItem.m_itemData is ItemDrop.ItemData itemDataRes
                                      && itemDataRes.m_shared is ItemDrop.ItemData.SharedData sharedRes)
