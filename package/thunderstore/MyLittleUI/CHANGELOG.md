@@ -1,3 +1,6 @@
+# 1.2.35
+* Fixed repeated font warnings from status effect names after the Valheim 1.0.30 update.
+
 # 1.2.34
 * Fixed an error when loading characters if a building piece is missing.
 

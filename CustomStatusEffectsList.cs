@@ -166,7 +166,7 @@ namespace MyLittleUI
 
                         name.verticalAlignment = timeHidden ? VerticalAlignmentOptions.Middle : VerticalAlignmentOptions.Top;
                         name.textWrappingMode = timeHidden ? TextWrappingModes.Normal : TextWrappingModes.NoWrap;
-                        name.overflowMode = timeHidden ? TextOverflowModes.Overflow : TextOverflowModes.Ellipsis;
+                        name.overflowMode = timeHidden ? TextOverflowModes.Overflow : TextOverflowModes.Truncate;
                         time.verticalAlignment = !timeHidden && string.IsNullOrWhiteSpace(name.text) ? VerticalAlignmentOptions.Middle : VerticalAlignmentOptions.Bottom;
                     }
                 }
