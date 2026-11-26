@@ -37,6 +37,7 @@ namespace MyLittleUI
         private static int amount = 1;
         private static bool showPanel;
         private static bool progressTextChanged;
+        private static bool updatingRecipe;
 
         private static InventoryGui queueGui;
         private static Player queuePlayer;
@@ -316,12 +317,16 @@ namespace MyLittleUI
             internal static bool isCrafting;
 
             private static void Prefix(InventoryGui __instance, out float __state)
-                => __state = __instance.m_craftTimer;
+            {
+                updatingRecipe = true;
+                __state = __instance.m_craftTimer;
+            }
 
             [HarmonyPriority(Priority.Last)]
             [HarmonyAfter("Azumatt.AzuCraftyBoxes", "aedenthorn.CraftFromContainers", "org.bepinex.plugins.valheim_plus")]
             public static void Postfix(InventoryGui __instance, float dt, float __state)
             {
+                updatingRecipe = false;
                 isCrafting = IsCrafting(__instance);
                 if (queueGui && !QueueContextMatches())
                     StopQueue();
@@ -391,6 +396,10 @@ namespace MyLittleUI
                 {
                     int maximum = GetMaximumCached(__instance.m_selectedRecipe.Recipe, Player.m_localPlayer);
                     amount = Mathf.Clamp(amount, 1, Math.Max(1, maximum));
+                    Recipe recipe = __instance.m_selectedRecipe.Recipe;
+                    string suffix = $" x{recipe.m_amount}";
+                    if (amount > 1 && recipe.m_amount > 1 && __instance.m_recipeName.text.EndsWith(suffix))
+                        __instance.m_recipeName.text = __instance.m_recipeName.text.Substring(0, __instance.m_recipeName.text.Length - suffix.Length) + $" x{recipe.m_amount * amount}";
                     if (AmountScrollHandler.hovered && panel.gameObject.activeInHierarchy
                         && Time.frameCount - lastScrollTriggerFrame > minScrollDeltaFrames)
                     {
@@ -429,6 +438,30 @@ namespace MyLittleUI
                     queueNextCraft = false;
                     __instance.m_craftButton.onClick.Invoke();
                 }
+            }
+        }
+
+        [HarmonyPatch(typeof(InventoryGui), nameof(InventoryGui.SetupRequirementList))]
+        private static class InventoryGui_SetupRequirementList_MulticraftAmount
+        {
+            private static void Prefix(InventoryGui __instance, ref int amount)
+            {
+                // Native batch crafting passes its own multiplier and is excluded by CanQueue.
+                if (showPanel && amount == 1 && CanQueue(__instance))
+                    amount = MultiCraft.amount;
+            }
+        }
+
+        [HarmonyPatch(typeof(ItemDrop.ItemData), nameof(ItemDrop.ItemData.GetTooltip), typeof(ItemDrop.ItemData), typeof(int),
+            typeof(bool), typeof(float), typeof(int), typeof(bool))]
+        private static class ItemData_GetTooltip_MulticraftTotal
+        {
+            private static void Prefix(ItemDrop.ItemData item, bool crafting, ref int stackOverride)
+            {
+                InventoryGui gui = InventoryGui.instance;
+                if (updatingRecipe && crafting && showPanel && amount > 1 && CanQueue(gui)
+                    && item == gui.m_selectedRecipe.Recipe.m_item.m_itemData && stackOverride == gui.m_selectedRecipe.Recipe.m_amount)
+                    stackOverride *= amount;
             }
         }
 
@@ -488,6 +521,16 @@ namespace MyLittleUI
                     craftButtonAnchorMax = craftButton.anchorMax;
                 CreateMulticraftPanel();
                 UpdateMulticraftPanel();
+                foreach (GameObject element in __instance.m_recipeRequirementList)
+                {
+                    TMP_Text text = element ? element.transform.Find("res_amount")?.GetComponent<TMP_Text>() : null;
+                    if (!text)
+                        continue;
+                    text.enableWordWrapping = false;
+                    text.fontSizeMax = text.fontSize;
+                    text.fontSizeMin = Mathf.Min(text.fontSizeMin, text.fontSize / 2f);
+                    text.enableAutoSizing = true;
+                }
             }
         }
 
